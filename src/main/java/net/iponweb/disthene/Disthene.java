@@ -2,26 +2,15 @@ package net.iponweb.disthene;
 
 import net.iponweb.disthene.config.CarbonConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import org.apache.commons.cli.*;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.context.config.ConfigFileApplicationListener;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.env.YamlPropertySourceLoader;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.PropertySource;
-import org.springframework.core.io.FileSystemResource;
-import org.yaml.snakeyaml.Yaml;
-
-import javax.annotation.Resource;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 /**
  * @author Andrei Ivanov
@@ -32,29 +21,38 @@ import java.nio.file.Paths;
 @ComponentScan
 @EnableConfigurationProperties(CarbonConfiguration.class)
 public class Disthene implements CommandLineRunner {
+    Logger logger = Logger.getLogger(Disthene.class);
 
-    @Value("${config:/etc/disthene/disthene.yml}")
-    private String config;
+    private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yml";
+    private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
     @Autowired
     private DistheneConfiguration configuration;
 
     @Override
     public void run(String... args) throws Exception {
-        configuration.parseConfiguration(config);
-        System.out.println("Hello World!" + config + " / ");// + configuration.getPort());
+        logger.error("aaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        System.out.println("Hello World!" + " / " + configuration.getCarbon().getBind().getHostAddress());// + configuration.getPort());
     }
 
-/*
-    @Bean
-    public PropertySource<?> yamlPropertySourceLoader() throws IOException {
-        YamlPropertySourceLoader loader = new YamlPropertySourceLoader();
-        PropertySource<?> applicationYamlPropertySource = loader.load("application.yml", new FileSystemResource(config),null);
-        return applicationYamlPropertySource;
-    }
-*/
-
+    @SuppressWarnings("static-access")
     public static void main(String[] args) {
-        SpringApplication.run(Disthene.class, args);
+        Options options = new Options();
+        options.addOption("c", "config", true, "config location");
+        options.addOption("l", "log-config", true, "log config location");
+
+        CommandLineParser parser = new GnuParser();
+        try {
+            CommandLine commandLine = parser.parse(options, args);
+            System.getProperties().setProperty("spring.config.location", "file:" + commandLine.getOptionValue("c", DEFAULT_CONFIG_LOCATION));
+            System.getProperties().setProperty("logging.config", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
+
+            SpringApplication springApplication = new SpringApplication(Disthene.class);
+            springApplication.setShowBanner(false);
+            springApplication.run(args);
+        } catch (ParseException e) {
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp("Disthene", options);
+        }
     }
 }

@@ -1,9 +1,5 @@
 package net.iponweb.disthene.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
@@ -11,6 +7,7 @@ import java.net.InetAddress;
 /**
  * @author Andrei Ivanov
  */
+@SuppressWarnings("UnusedDeclaration")
 @Component
 public class CarbonConfiguration {
 
