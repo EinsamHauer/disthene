@@ -1,7 +1,7 @@
 package net.iponweb.disthene;
 
+import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.CarbonConfiguration;
-import net.iponweb.disthene.config.DistheneConfiguration;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,12 +27,17 @@ public class Disthene implements CommandLineRunner {
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
     @Autowired
-    private DistheneConfiguration configuration;
+    private CarbonServer carbonServer;
 
     @Override
     public void run(String... args) throws Exception {
-        logger.error("aaaaaaaaaaaaaaaaaaaaaaaaaaa");
-        System.out.println("Hello World!" + " / " + configuration.getCarbon().getBind().getHostAddress());// + configuration.getPort());
+        carbonServer.run();
+        logger.info("Carbon server started");
+/*
+        Thread.sleep(10000);
+        carbonServer.shutdown();
+        System.out.println("Carbon server stopped");
+*/
     }
 
     @SuppressWarnings("static-access")
