@@ -1,0 +1,13 @@
+'bidswitch':
+  - '^sum.*\.system\..*'
+  - '^.*\.\..*'
+  - '^(userverlua|staging).*\.ssp\.rubicon\..*'
+  - '^(userverlua|staging).*\.ssp\.apnexus\..*'
+'tokyo':
+  - '^(userverlua|staging).*\.(campaign|site|publisher|line_item|pixel)\..*'
+  - '^(userverlua|staging).*\.bids\.technical_providers\..*\.publishers\..*'
+'adnetik-rtb':
+  - '^[a-z]*-rtb-[a-z0-9]*\.[a-z_]*\.(virginia|california|ireland|singapore)\.(campaign|line_item|requests)\..*'
+  - '^sum\.(mongo|nginx|system)\..*'
+  - '^sum\.userver\.(budget|connections|cookie|coroutines|failed_requests|http|kvstorage|limits|lua|memory|mongo|predict|real_ip_from|requests|resolver|response|thread|traffic_shaper|userver)\..*'
+  - '^[a-z]*-rtb-[a-z0-9]*\.line_item\..*'

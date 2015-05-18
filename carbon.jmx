@@ -61,7 +61,7 @@
         <hashTree/>
         <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
-          <stringProp name="LoopController.loops">100</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </LoopController>
         <hashTree>
           <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="Counter" enabled="true">
@@ -89,6 +89,8 @@
             <boolProp name="TCPSampler.nodelay">true</boolProp>
             <stringProp name="TCPSampler.timeout">1</stringProp>
             <stringProp name="TCPSampler.request">userverlua-eu-gce-12.ssp.switchconcepts.imps.ip_mismatch ${c} ${t} bidswitch
+userverlua-eu-gce-12.ssp.apnexus.imps.ip_mismatch ${c} ${t} bidswitch
+userverlua-us-west-11.ssp.rubicon.imps.ip_mismatch ${c} ${t} bidswitch
 </stringProp>
             <boolProp name="TCPSampler.closeConnection">true</boolProp>
             <stringProp name="ConfigTestElement.username"></stringProp>

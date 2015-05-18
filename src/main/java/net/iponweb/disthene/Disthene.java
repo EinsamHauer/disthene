@@ -1,7 +1,14 @@
 package net.iponweb.disthene;
 
 import net.iponweb.disthene.carbon.CarbonServer;
+import net.iponweb.disthene.config.AggregationConfiguration;
+import net.iponweb.disthene.config.BlackListConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.service.aggregate.Aggregator;
+import net.iponweb.disthene.service.aggregate.BasicAggregator;
+import net.iponweb.disthene.service.blacklist.BlackList;
+import net.iponweb.disthene.service.store.CassandraMetricStore;
+import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
@@ -11,21 +18,27 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Andrei Ivanov
  */
-
 public class Disthene {
     private static Logger logger;
 
-    private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yml";
+    private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yaml";
+    private static final String DEFAULT_BLACKLIST_LOCATION = "/etc/disthene/blacklist.yaml";
+    private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
     public static void main(String[] args) throws MalformedURLException {
         Options options = new Options();
         options.addOption("c", "config", true, "config location");
         options.addOption("l", "log-config", true, "log config location");
+        options.addOption("b", "blacklist", true, "blacklist location");
+        options.addOption("a", "agg-config", true, "aggregation config location");
 
         CommandLineParser parser = new GnuParser();
         try {
@@ -37,10 +50,28 @@ public class Disthene {
             Yaml yaml = new Yaml();
             InputStream in = Files.newInputStream(Paths.get(commandLine.getOptionValue("c", DEFAULT_CONFIG_LOCATION)));
             DistheneConfiguration distheneConfiguration = yaml.loadAs(in, DistheneConfiguration.class);
+            in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
+            logger.info("Creating Cassandra metric store");
+            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration);
+
+            logger.info("Loading blacklists");
+            in = Files.newInputStream(Paths.get(commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION)));
+            BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
+            in.close();
+            logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
+            BlackList blackList = new BlackList(blackListConfiguration);
+
+            logger.info("Loading aggergation rules");
+            in = Files.newInputStream(Paths.get(commandLine.getOptionValue("a", DEFAULT_AGGREGATION_CONFIG_LOCATION)));
+            AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
+            in.close();
+            logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
+            Aggregator aggregator = new BasicAggregator(distheneConfiguration, aggregationConfiguration);
+
             logger.info("Starting carbon");
-            CarbonServer carbonServer = new CarbonServer(distheneConfiguration);
+            CarbonServer carbonServer = new CarbonServer(distheneConfiguration, metricStore, blackList, aggregator);
             carbonServer.run();
 
 

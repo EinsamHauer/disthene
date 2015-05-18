@@ -8,8 +8,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.service.aggregate.Aggregator;
+import net.iponweb.disthene.service.blacklist.BlackList;
 import net.iponweb.disthene.service.store.MetricStore;
-import net.iponweb.disthene.service.store.MetricStoreImpl;
 import org.apache.log4j.Logger;
 
 /**
@@ -22,14 +23,18 @@ public class CarbonServer {
 
     private DistheneConfiguration configuration;
     private MetricStore metricStore;
+    private BlackList blackList;
+    private Aggregator aggregator;
 
     private EventLoopGroup bossGroup = new NioEventLoopGroup(100);
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private ChannelFuture channelFuture;
 
-    public CarbonServer(DistheneConfiguration configuration) {
+    public CarbonServer(DistheneConfiguration configuration, MetricStore metricStore, BlackList blackList, Aggregator aggregator) {
         this.configuration = configuration;
-        metricStore = new MetricStoreImpl();
+        this.metricStore = metricStore;
+        this.blackList = blackList;
+        this.aggregator = aggregator;
     }
 
     public void run() throws InterruptedException {
@@ -42,7 +47,7 @@ public class CarbonServer {
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, false, Delimiters.lineDelimiter()));
-                        p.addLast(new CarbonServerHandler(metricStore, configuration.getCarbon().getBaseRollup()));
+                        p.addLast(new CarbonServerHandler(metricStore, configuration.getCarbon().getBaseRollup(), blackList, aggregator));
                     }
                 });
 
