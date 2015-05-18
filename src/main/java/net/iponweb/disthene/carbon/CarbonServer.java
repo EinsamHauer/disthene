@@ -9,28 +9,28 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.service.store.MetricStore;
+import net.iponweb.disthene.service.store.MetricStoreImpl;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 /**
  * @author Andrei Ivanov
  */
 
-@Component
 public class CarbonServer {
     public static final int MAX_FRAME_LENGTH = 1024;
-    Logger logger = Logger.getLogger(CarbonServer.class);
+    private Logger logger = Logger.getLogger(CarbonServer.class);
 
-    @Autowired
     private DistheneConfiguration configuration;
+    private MetricStore metricStore;
 
-    @Autowired
-    MetricStore metricStore;
-
-    EventLoopGroup bossGroup = new NioEventLoopGroup(100);
-    EventLoopGroup workerGroup = new NioEventLoopGroup();
+    private EventLoopGroup bossGroup = new NioEventLoopGroup(100);
+    private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private ChannelFuture channelFuture;
+
+    public CarbonServer(DistheneConfiguration configuration) {
+        this.configuration = configuration;
+        metricStore = new MetricStoreImpl();
+    }
 
     public void run() throws InterruptedException {
         ServerBootstrap b = new ServerBootstrap();

@@ -10,8 +10,8 @@ public class Rollup {
 
     public Rollup(String s) {
         String[] ss = s.split(":");
-        rollup = Integer.valueOf(ss[0]);
-        period = Long.valueOf(ss[1]);
+        rollup = Integer.valueOf(ss[0].substring(0, ss[0].length() - 1));
+        period = Long.valueOf(ss[1].substring(0, ss[1].length() - 1));
     }
 
     public int getRollup() {
@@ -28,5 +28,13 @@ public class Rollup {
 
     public void setPeriod(long period) {
         this.period = period;
+    }
+
+    @Override
+    public String toString() {
+        return "Rollup{" +
+                "rollup=" + rollup +
+                ", period=" + period +
+                '}';
     }
 }

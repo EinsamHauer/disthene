@@ -1,0 +1,11 @@
+carbon:
+  bind: "127.0.0.0"
+  port: 2003
+  rollups:
+    - 60s:5356800s
+    - 900s:62208000s
+store:
+  cluster:
+    - "cassandra-1a.graphite.devops.iponweb.net"
+    - "cassandra-1b.graphite.devops.iponweb.net"
+  keyspace: 'metric'

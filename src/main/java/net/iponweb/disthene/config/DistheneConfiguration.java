@@ -1,16 +1,13 @@
 package net.iponweb.disthene.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
-
 /**
  * @author Andrei Ivanov
  */
 @SuppressWarnings("UnusedDeclaration")
-@Component
-@ConfigurationProperties
 public final class DistheneConfiguration {
     private CarbonConfiguration carbon;
+    private StoreConfiguration store;
+
 
     public CarbonConfiguration getCarbon() {
         return carbon;
@@ -20,4 +17,19 @@ public final class DistheneConfiguration {
         this.carbon = carbon;
     }
 
+    public StoreConfiguration getStore() {
+        return store;
+    }
+
+    public void setStore(StoreConfiguration store) {
+        this.store = store;
+    }
+
+    @Override
+    public String toString() {
+        return "DistheneConfiguration{" +
+                "carbon=" + carbon +
+                ", store=" + store +
+                '}';
+    }
 }
