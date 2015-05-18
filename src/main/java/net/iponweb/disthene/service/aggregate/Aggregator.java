@@ -8,4 +8,5 @@ import net.iponweb.disthene.bean.Metric;
 public interface Aggregator {
 
     void aggregate(Metric metric);
+    void flush();
 }

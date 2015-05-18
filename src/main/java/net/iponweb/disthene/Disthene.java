@@ -4,8 +4,9 @@ import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.service.aggregate.AggregationFlusher;
 import net.iponweb.disthene.service.aggregate.Aggregator;
-import net.iponweb.disthene.service.aggregate.BasicAggregator;
+import net.iponweb.disthene.service.aggregate.SumAggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
 import net.iponweb.disthene.service.store.CassandraMetricStore;
 import net.iponweb.disthene.service.store.MetricStore;
@@ -18,7 +19,6 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -68,7 +68,12 @@ public class Disthene {
             AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
             in.close();
             logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
-            Aggregator aggregator = new BasicAggregator(distheneConfiguration, aggregationConfiguration);
+            Aggregator aggregator = new SumAggregator(distheneConfiguration, aggregationConfiguration, metricStore);
+
+            logger.info("Creating flusher thread");
+            AggregationFlusher aggregationFlusher = new AggregationFlusher(distheneConfiguration, aggregator);
+            aggregationFlusher.start();
+
 
             logger.info("Starting carbon");
             CarbonServer carbonServer = new CarbonServer(distheneConfiguration, metricStore, blackList, aggregator);

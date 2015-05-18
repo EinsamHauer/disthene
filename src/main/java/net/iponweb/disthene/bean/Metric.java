@@ -8,53 +8,34 @@ import org.joda.time.DateTime;
  */
 public class Metric {
 
-    private String tenant;
-    private String path;
-    private int rollup;
-    private long period;
+    private MetricKey key;
     private double value;
-    private DateTime timestamp;
 
     public Metric(String input, Rollup rollup) {
         String[] splitInput = input.split("\\s");
-        this.path = splitInput[0];
+        this.key = new MetricKey(splitInput[3], splitInput[0], rollup.getRollup(), rollup.getPeriod(), new DateTime(Long.valueOf(splitInput[2])));
         this.value = Double.valueOf(splitInput[1]);
-        this.timestamp = new DateTime(Long.valueOf(splitInput[2]));
-        this.tenant = splitInput[3];
-        this.rollup = rollup.getRollup();
-        this.period = rollup.getPeriod();
+    }
+
+    public Metric(String tenant, String path, int rollup, long period, double value, DateTime timestamp) {
+        this.key = new MetricKey(tenant, path, rollup, period, timestamp);
+        this.value = value;
     }
 
     public String getTenant() {
-        return tenant;
-    }
-
-    public void setTenant(String tenant) {
-        this.tenant = tenant;
+        return key.getTenant();
     }
 
     public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
+        return key.getPath();
     }
 
     public int getRollup() {
-        return rollup;
-    }
-
-    public void setRollup(int rollup) {
-        this.rollup = rollup;
+        return key.getRollup();
     }
 
     public long getPeriod() {
-        return period;
-    }
-
-    public void setPeriod(long period) {
-        this.period = period;
+        return key.getPeriod();
     }
 
     public double getValue() {
@@ -66,15 +47,14 @@ public class Metric {
     }
 
     public DateTime getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(DateTime timestamp) {
-        this.timestamp = timestamp;
+        return key.getTimestamp();
     }
 
     @Override
     public String toString() {
-        return "{" + "tenant : " + tenant + ", path : " + path + ", value : " + value + ", time : " + timestamp.getMillis() * 1000 + ", rollup : " + rollup + ", period : " + period + "}";
+        return "Metric{" +
+                "key=" + key +
+                ", value=" + value +
+                '}';
     }
 }

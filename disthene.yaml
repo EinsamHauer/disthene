@@ -4,6 +4,7 @@ carbon:
   rollups:
     - 60s:5356800s
     - 900s:62208000s
+  aggregatorDelay: 60
 store:
   cluster:
     - "cassandra-1a.graphite.devops.iponweb.net"

@@ -12,7 +12,7 @@ public class CarbonConfiguration {
     private int port;
     private List<Rollup> rollups = new ArrayList<>();
     private Rollup baseRollup;
-
+    private int aggregatorDelay;
 
     public String getBind() {
         return bind;
@@ -28,6 +28,14 @@ public class CarbonConfiguration {
 
     public void setPort(int port) {
         this.port = port;
+    }
+
+    public int getAggregatorDelay() {
+        return aggregatorDelay;
+    }
+
+    public void setAggregatorDelay(int aggregatorDelay) {
+        this.aggregatorDelay = aggregatorDelay;
     }
 
     public List<Rollup> getRollups() {
@@ -50,6 +58,7 @@ public class CarbonConfiguration {
                 ", port=" + port +
                 ", rollups=" + rollups +
                 ", baseRollup=" + baseRollup +
+                ", aggregatorDelay=" + aggregatorDelay +
                 '}';
     }
 }
