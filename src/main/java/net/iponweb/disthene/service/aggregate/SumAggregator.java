@@ -36,6 +36,10 @@ public class SumAggregator implements Aggregator {
         // Get aggregation rules
         List<AggregationRule> rules = aggregationConfiguration.getRules().get(metric.getTenant());
 
+        if (rules == null) {
+            return;
+        }
+
         // create entry for timestamp if needed
         if (!accumulator.containsKey(metric.getTimestamp())) {
             accumulator.put(metric.getTimestamp(), new HashMap<MetricKey, Metric>());
@@ -82,7 +86,7 @@ public class SumAggregator implements Aggregator {
     private void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing metrics");
         for(Metric metric : metricsToFlush) {
-            metricStore.write(metric);
+            metricStore.store(metric);
         }
 
     }

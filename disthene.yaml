@@ -10,3 +10,11 @@ store:
     - "cassandra-1a.graphite.devops.iponweb.net"
     - "cassandra-1b.graphite.devops.iponweb.net"
   keyspace: 'metric'
+index:
+  name: "cyanite"
+  cluster:
+    - "es-1a.graphite.devops.iponweb.net"
+    - "es-1b.graphite.devops.iponweb.net"
+  port: 9300
+  index: "cyanite_paths"
+  type: "path"

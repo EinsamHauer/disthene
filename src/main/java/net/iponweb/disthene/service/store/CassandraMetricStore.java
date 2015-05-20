@@ -19,7 +19,7 @@ public class CassandraMetricStore implements MetricStore {
     }
 
     @Override
-    public void write(Metric metric) {
+    public void store(Metric metric) {
         logger.debug("Storing metric to C*: " + metric);
     }
 }

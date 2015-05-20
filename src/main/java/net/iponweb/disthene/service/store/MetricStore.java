@@ -7,5 +7,5 @@ import net.iponweb.disthene.bean.Metric;
  */
 public interface MetricStore {
 
-    void write(Metric metric);
+    void store(Metric metric);
 }

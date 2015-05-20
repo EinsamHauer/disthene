@@ -1,5 +1,6 @@
 package net.iponweb.disthene;
 
+import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
@@ -8,10 +9,13 @@ import net.iponweb.disthene.service.aggregate.AggregationFlusher;
 import net.iponweb.disthene.service.aggregate.Aggregator;
 import net.iponweb.disthene.service.aggregate.SumAggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
+import net.iponweb.disthene.service.index.ESIndexStore;
+import net.iponweb.disthene.service.index.IndexStore;
 import net.iponweb.disthene.service.store.CassandraMetricStore;
 import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
+import org.joda.time.DateTime;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
@@ -56,6 +60,9 @@ public class Disthene {
             logger.info("Creating Cassandra metric store");
             MetricStore metricStore = new CassandraMetricStore(distheneConfiguration);
 
+            logger.info("Creating ES index store");
+            IndexStore indexStore = new ESIndexStore(distheneConfiguration);
+
             logger.info("Loading blacklists");
             in = Files.newInputStream(Paths.get(commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION)));
             BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
@@ -63,7 +70,7 @@ public class Disthene {
             logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
             BlackList blackList = new BlackList(blackListConfiguration);
 
-            logger.info("Loading aggergation rules");
+            logger.info("Loading aggregation rules");
             in = Files.newInputStream(Paths.get(commandLine.getOptionValue("a", DEFAULT_AGGREGATION_CONFIG_LOCATION)));
             AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
             in.close();
@@ -76,9 +83,8 @@ public class Disthene {
 
 
             logger.info("Starting carbon");
-            CarbonServer carbonServer = new CarbonServer(distheneConfiguration, metricStore, blackList, aggregator);
+            CarbonServer carbonServer = new CarbonServer(distheneConfiguration, metricStore, indexStore, blackList, aggregator);
             carbonServer.run();
-
 
         } catch (ParseException e) {
             HelpFormatter formatter = new HelpFormatter();

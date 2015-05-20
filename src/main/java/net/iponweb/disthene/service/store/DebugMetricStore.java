@@ -13,7 +13,7 @@ public class DebugMetricStore implements MetricStore {
 
 
     @Override
-    public void write(Metric metric) {
+    public void store(Metric metric) {
         logger.debug("Storing metric: " + metric);
     }
 }

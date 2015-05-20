@@ -8,6 +8,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.service.aggregate.Aggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
+import net.iponweb.disthene.service.index.IndexStore;
 import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.log4j.Logger;
 
@@ -18,13 +19,14 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     private Logger logger = Logger.getLogger(CarbonServerHandler.class);
 
     private MetricStore metricStore;
+    private IndexStore indexStore;
     private BlackList blackList;
     private Aggregator aggregator;
     private Rollup baseRollup;
 
-
-    public CarbonServerHandler(MetricStore metricStore, Rollup baseRollup, BlackList blackList, Aggregator aggregator) {
+    public CarbonServerHandler(MetricStore metricStore, IndexStore indexStore, Rollup baseRollup, BlackList blackList, Aggregator aggregator) {
         this.metricStore = metricStore;
+        this.indexStore = indexStore;
         this.baseRollup = baseRollup;
         this.blackList = blackList;
         this.aggregator = aggregator;
@@ -34,6 +36,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ByteBuf in = (ByteBuf) msg;
         Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), baseRollup);
+        in.release();
 
         // aggregate
         aggregator.aggregate(metric);
@@ -41,7 +44,8 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
         if (blackList.isBlackListed(metric)) {
             logger.debug("Blacklisted: " + metric.getPath());
         } else {
-            metricStore.write(metric);
+            indexStore.store(metric);
+            metricStore.store(metric);
         }
     }
 }
