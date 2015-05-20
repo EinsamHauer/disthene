@@ -19,7 +19,7 @@
     </logger>
 
     <logger name="net.iponweb.disthene">
-        <level value="info"/>
+        <level value="debug"/>
     </logger>
 
     <logger name="org.elasticsearch">

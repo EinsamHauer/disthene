@@ -86,6 +86,19 @@ public class Disthene {
             CarbonServer carbonServer = new CarbonServer(distheneConfiguration, metricStore, indexStore, blackList, aggregator);
             carbonServer.run();
 
+            indexStore.store(new Metric("test", "ai1_test_server_1.line_item.118971.rtb_advertiser_payout",
+                    distheneConfiguration.getCarbon().getBaseRollup().getRollup(),
+                    distheneConfiguration.getCarbon().getBaseRollup().getPeriod(),
+                    1,
+                    DateTime.now().withSecondOfMinute(0)
+                            ));
+            indexStore.store(new Metric("test", "ai1_test_server_3.line_item.118971.rtb_advertiser_payout",
+                    distheneConfiguration.getCarbon().getBaseRollup().getRollup(),
+                    distheneConfiguration.getCarbon().getBaseRollup().getPeriod(),
+                    1,
+                    DateTime.now().withSecondOfMinute(0)
+            ));
+
         } catch (ParseException e) {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("Disthene", options);
