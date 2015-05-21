@@ -3,14 +3,10 @@ package net.iponweb.disthene.service.index;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import org.apache.log4j.Logger;
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.index.IndexResponse;
-import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
@@ -18,16 +14,8 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.script.ScriptService;
 
-import javax.xml.ws.Response;
 import java.io.IOException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -40,11 +28,12 @@ public class ESIndexStore implements IndexStore {
     private TransportClient client;
     private String index;
     private String type;
-    private Executor executor = Executors.newFixedThreadPool(1000);
     private AtomicInteger storeCount = new AtomicInteger(0);
     private AtomicLong writeCount = new AtomicLong(0);
     private AtomicLong lastWriteCount = new AtomicLong(0);
     private BulkProcessor bulkProcessor;
+
+    private BulkMetricProcessor processor;
 
     public ESIndexStore(DistheneConfiguration distheneConfiguration) throws IOException {
         Settings settings = ImmutableSettings.settingsBuilder()
@@ -87,10 +76,41 @@ public class ESIndexStore implements IndexStore {
                 .setFlushInterval(TimeValue.timeValueSeconds(5))
                 .setConcurrentRequests(4)
                 .build();
+
+        processor = new BulkMetricProcessor(client, index, type, 10000, TimeValue.timeValueSeconds(5));
     }
 
     @Override
-    public void store(final Metric metric) throws IOException {
+    public void store(final Metric metric) {
+        processor.add(metric);
+
+//        client.prepareMultiGet();
+
+
+//        bulkProcessor.add(new MetricSearchRequest(index, type, metric));
+    }
+
+    private class MetricSearchRequest extends GetRequest {
+        private Metric metric;
+
+        private MetricSearchRequest(String index, String type, Metric metric) {
+            super(index, type, metric.getTenant() + "_" + metric.getPath());
+            this.metric = metric;
+        }
+
+        private MetricSearchRequest(String index, String type, String id, Metric metric) {
+            super(index, type, id);
+            this.metric = metric;
+        }
+
+        public Metric getMetric() {
+            return metric;
+        }
+    }
+
+}
+
+
 /*
         int count = storeCount.addAndGet(1);
 
@@ -98,7 +118,7 @@ public class ESIndexStore implements IndexStore {
             logger.info("Stored " + count + " metrics");
         }
 */
-        long count = writeCount.get();
+/*        long count = writeCount.get();
 
         if (lastWriteCount.get() + 10000 < count) {
             lastWriteCount.getAndSet(count);
@@ -125,178 +145,5 @@ public class ESIndexStore implements IndexStore {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
+        }*/
 
-/*
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                int count = storeCount.addAndGet(1);
-
-                if (count % 1000 == 0) {
-                    logger.info("Processed " + count + " metrics");
-                }
-
-                final String[] parts = metric.getPath().split("\\.");
-                BulkRequestBuilder bulkRequestBuilder = client.prepareBulk();
-
-                final StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < parts.length; i++) {
-                    if (sb.toString().length() > 0) {
-                        sb.append(".");
-                    }
-                    sb.append(parts[i]);
-
-//            logger.debug("Storing to ES: " + sb.toString());
-                    try {
-                        bulkRequestBuilder.add(client.prepareUpdate(index, type, metric.getTenant() + "_" + sb.toString())
-                                        .setUpsert(XContentFactory.jsonBuilder().startObject()
-                                                .field("tenant", metric.getTenant())
-                                                .field("path", sb.toString())
-                                                .field("depth", (i + 1))
-                                                .field("leaf", (i == parts.length - 1))
-                                                .endObject())
-                                        .setScript("", ScriptService.ScriptType.INLINE)
-                        );
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                bulkRequestBuilder.execute().actionGet();
-            }
-        });
-*/
-
-
-//        executor.execute(new MetricStoreTask(metric));
-/*
-        client.prepareSearch("cyanite_paths")
-                .setSize(1)
-                .setQuery(QueryBuilders.boolQuery()
-                        .must(QueryBuilders.termQuery("tenant", metric.getTenant()))
-                        .must(QueryBuilders.termQuery("path", metric.getPath()))
-                        .must(QueryBuilders.termQuery("leaf", true)))
-                .execute().addListener(new ActionListener<SearchResponse>() {
-            @Override
-            public void onResponse(SearchResponse searchResponse) {
-                logger.debug("ES returned " + searchResponse.getHits().totalHits() + " results");
-                if (searchResponse.getHits().totalHits() == 0) {
-                    // Split paths
-                    final String[] parts = metric.getPath().split("\\.");
-
-                    final StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < parts.length; i++) {
-                        if (sb.toString().length() > 0) {
-                            sb.append(".");
-                        }
-                        sb.append(parts[i]);
-
-                        logger.debug("Stroing to ES: " + sb.toString());
-
-                        try {
-                            client.prepareIndex(index, type, metric.getTenant() + "_" + sb.toString())
-                                    .setSource(XContentFactory.jsonBuilder().startObject()
-                                                    .field("tenant", metric.getTenant())
-                                                    .field("path", sb.toString())
-                                                    .field("depth", (i + 1))
-                                                    .field("leaf", (i == parts.length - 1))
-                                                    .endObject()
-                                    )
-                                    .execute();
-                        } catch (Exception e) {
-                            logger.error(e);
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Throwable throwable) {
-                logger.error(throwable);
-            }
-        });
-*/
-    }
-
-    private class MetricStoreTask implements Runnable {
-
-        private Metric metric;
-
-        public MetricStoreTask(Metric metric) {
-            this.metric = metric;
-        }
-
-        @Override
-        public void run() {
-            int count = storeCount.addAndGet(1);
-
-
-            if (count % 1000 == 0) {
-                logger.debug("Processed " + count + " metrics");
-            }
-
-            try {
-                SearchResponse response =
-                        client.prepareSearch(index)
-                                .setSize(1)
-                                .setQuery(QueryBuilders.boolQuery()
-                                        .must(QueryBuilders.termQuery("tenant", metric.getTenant()))
-                                        .must(QueryBuilders.termQuery("path", metric.getPath()))
-                                        .must(QueryBuilders.termQuery("leaf", true)))
-                                .execute().actionGet();
-
-                logger.debug("ES returned " + response.getHits().totalHits() + " results");
-                if (response.getHits().totalHits() == 0) {
-                    final String[] parts = metric.getPath().split("\\.");
-                    BulkRequestBuilder bulkRequestBuilder = client.prepareBulk();
-
-                    final StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < parts.length; i++) {
-                        if (sb.toString().length() > 0) {
-                            sb.append(".");
-                        }
-                        sb.append(parts[i]);
-
-                        logger.debug("Storing to ES: " + sb.toString());
-/*
-                        bulkRequestBuilder.add(client.prepareIndex(index, type, metric.getTenant() + "_" + sb.toString())
-                                .setSource(XContentFactory.jsonBuilder().startObject()
-                                                .field("tenant", metric.getTenant())
-                                                .field("path", sb.toString())
-                                                .field("depth", (i + 1))
-                                                .field("leaf", (i == parts.length - 1))
-                                                .endObject()
-                                ));
-*/
-
-                        bulkRequestBuilder.add(client.prepareUpdate(index, type, metric.getTenant() + "_" + sb.toString())
-                                .setUpsert(XContentFactory.jsonBuilder().startObject()
-                                        .field("tenant", metric.getTenant())
-                                        .field("path", sb.toString())
-                                        .field("depth", (i + 1))
-                                        .field("leaf", (i == parts.length - 1))
-                                        .endObject())
-                                .setScript("", ScriptService.ScriptType.INLINE)
-                                );
-/*
-                        client.prepareIndex(index, type, metric.getTenant() + "_" + sb.toString())
-                                .setSource(XContentFactory.jsonBuilder().startObject()
-                                                .field("tenant", metric.getTenant())
-                                                .field("path", sb.toString())
-                                                .field("depth", (i + 1))
-                                                .field("leaf", (i == parts.length - 1))
-                                                .endObject()
-                                )
-                                .execute();
-*/
-                    }
-                    BulkResponse response1 =  bulkRequestBuilder.execute().actionGet();
-                    logger.debug(response1);
-                }
-            } catch (Exception e) {
-                logger.error(e);
-            }
-        }
-    }
-}

@@ -22,6 +22,10 @@ public class Metric {
         this.value = value;
     }
 
+    public String getId() {
+        return getTenant() + "_" + getPath();
+    }
+
     public String getTenant() {
         return key.getTenant();
     }
