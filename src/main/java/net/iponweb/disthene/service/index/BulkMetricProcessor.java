@@ -180,7 +180,7 @@ public class BulkMetricProcessor {
                         }
                         sb.append(parts[i]);
                         try {
-                            bulkProcessor.add(new IndexRequest(index, type, metric.getId()).source(
+                            bulkProcessor.add(new IndexRequest(index, type, metric.getTenant() + "_" + sb.toString()).source(
                                     XContentFactory.jsonBuilder().startObject()
                                             .field("tenant", metric.getTenant())
                                             .field("path", sb.toString())
