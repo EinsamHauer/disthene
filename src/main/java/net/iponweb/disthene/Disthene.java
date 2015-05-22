@@ -63,7 +63,7 @@ public class Disthene {
             Stats stats = new Stats(distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
 
             logger.info("Creating Cassandra metric store");
-            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration, stats);
+            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), stats);
 
             logger.info("Creating ES index store");
             IndexStore indexStore = new ESIndexStore(distheneConfiguration);

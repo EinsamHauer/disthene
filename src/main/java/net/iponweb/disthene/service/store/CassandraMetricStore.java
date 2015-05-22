@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.config.StoreConfiguration;
 import net.iponweb.disthene.service.stats.Stats;
 import org.apache.log4j.Logger;
 
@@ -31,37 +32,42 @@ public class CassandraMetricStore implements MetricStore {
     private Session session;
     private Executor executor;
     private Stats stats;
+    private boolean batchMode;
 
-    //todo: move all constants to config
-    public CassandraMetricStore(DistheneConfiguration distheneConfiguration, Stats stats) {
+    private BatchMetricProcessor processor;
+
+    public CassandraMetricStore(StoreConfiguration storeConfiguration, Stats stats) {
         this.stats = stats;
+        this.batchMode = storeConfiguration.isBatch();
 
         executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
-        SocketOptions socketOptions = new SocketOptions();
-        socketOptions.setReceiveBufferSize(8388608);
-        socketOptions.setSendBufferSize(1048576);
-        socketOptions.setTcpNoDelay(false);
-        socketOptions.setReadTimeoutMillis(1000000);
-        socketOptions.setReadTimeoutMillis(1000000);
+        SocketOptions socketOptions = new SocketOptions()
+                .setReceiveBufferSize(1024 * 1024)
+                .setSendBufferSize(1024 * 1024)
+                .setTcpNoDelay(false)
+                .setReadTimeoutMillis(storeConfiguration.getReadTimeout() * 1000)
+                .setConnectTimeoutMillis(storeConfiguration.getConnectTimeout() * 1000);
 
         PoolingOptions poolingOptions = new PoolingOptions();
-        poolingOptions.setMaxConnectionsPerHost(HostDistance.LOCAL, 8192);
-        poolingOptions.setMaxConnectionsPerHost(HostDistance.REMOTE, 8192);
-        poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.REMOTE, 128);
-        poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL, 128);
+        poolingOptions.setMaxConnectionsPerHost(HostDistance.LOCAL, storeConfiguration.getMaxConnections());
+        poolingOptions.setMaxConnectionsPerHost(HostDistance.REMOTE, storeConfiguration.getMaxConnections());
+        poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.REMOTE, storeConfiguration.getMaxRequests());
+        poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL, storeConfiguration.getMaxRequests());
 
         Cluster.Builder builder = Cluster.builder()
                 .withSocketOptions(socketOptions)
                 .withCompression(ProtocolOptions.Compression.LZ4)
-//                .withLoadBalancingPolicy(new TokenAwarePolicy(new DCAwareRoundRobinPolicy()))
-                .withLoadBalancingPolicy(new WhiteListPolicy(new DCAwareRoundRobinPolicy(), Collections.singletonList(new InetSocketAddress("cassandra-1a.graphite.devops.iponweb.net", 9042))))
+                .withLoadBalancingPolicy(new TokenAwarePolicy(new DCAwareRoundRobinPolicy()))
+//                .withLoadBalancingPolicy(new WhiteListPolicy(new DCAwareRoundRobinPolicy(), Collections.singletonList(new InetSocketAddress("cassandra-1a.graphite.devops.iponweb.net", 9042))))
                 .withPoolingOptions(poolingOptions)
+                .withQueryOptions(new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE))
                 .withProtocolVersion(ProtocolVersion.V2)
-                .withPort(9042);
-        for(String cp : distheneConfiguration.getStore().getCluster()) {
+                .withPort(storeConfiguration.getPort());
+        for(String cp : storeConfiguration.getCluster()) {
             builder.addContactPoint(cp);
         }
+
         Cluster cluster = builder.build();
         Metadata metadata = cluster.getMetadata();
         logger.debug("Connected to cluster: " + metadata.getClusterName());
@@ -71,10 +77,21 @@ public class CassandraMetricStore implements MetricStore {
 
         session = cluster.connect();
 
+        if (batchMode) {
+            processor = new BatchMetricProcessor(session, storeConfiguration.getBatchSize(), storeConfiguration.getInterval(), stats);
+        }
     }
 
     @Override
     public void store(Metric metric) {
+        if (batchMode) {
+            processor.add(metric);
+        } else {
+            storeInternal(metric);
+        }
+    }
+
+    private void storeInternal(Metric metric) {
         stats.incMetricsWritten(metric);
 
         ResultSetFuture future = session.executeAsync(QUERY,

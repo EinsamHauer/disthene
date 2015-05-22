@@ -8,8 +8,17 @@ carbon:
 store:
   cluster:
     - "cassandra-1a.graphite.devops.iponweb.net"
-#    - "cassandra-1b.graphite.devops.iponweb.net"
+    - "cassandra-1b.graphite.devops.iponweb.net"
+  port: 9042
   keyspace: 'metric'
+#new
+  maxConnections: 2048
+  readTimeout: 10
+  connectTimeout: 10
+  maxRequests: 128
+  batch: true
+  batchSize: 500
+  interval: 5
 index:
   name: "cyanite"
   cluster:

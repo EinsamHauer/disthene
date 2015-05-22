@@ -91,26 +91,26 @@ public class BulkMetricProcessor {
 
     private void executeIfNeeded() {
         if (bulkActions != -1 && metrics.size() >= bulkActions) {
-            execute();
+            execute(bulkActions);
         }
     }
 
-    private synchronized void flush() {
+    private void flush() {
         if (metrics.size() > 0) {
-            execute();
+            execute(1);
         }
     }
 
-    private void execute() {
+    private synchronized void execute(int minBulkSize) {
         // What we do here:
         // - pop bulkActions items from the metrics list
         // - run MultiGet request inside executor with callbacks
 
-        while (metrics.size() >= bulkActions) {
+        while (metrics.size() >= minBulkSize) {
             int currentBatchSize = 0;
             MetricMultiGetRequestBuilder request = new MetricMultiGetRequestBuilder(client, index, type);
 
-            while (currentBatchSize < bulkActions) {
+            while (currentBatchSize < minBulkSize && metrics.size() > 0) {
                 request.add(metrics.remove());
                 currentBatchSize++;
             }

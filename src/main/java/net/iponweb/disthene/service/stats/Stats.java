@@ -61,8 +61,16 @@ public class Stats {
         storeSuccess.addAndGet(1);
     }
 
+    public void incStoreSuccess(int delta) {
+        storeSuccess.addAndGet(delta);
+    }
+
     public void incStoreError() {
         storeError.addAndGet(1);
+    }
+
+    public void incStoreError(int delta) {
+        storeError.addAndGet(delta);
     }
 
     public synchronized void incMetricsWritten(Metric metric) {
