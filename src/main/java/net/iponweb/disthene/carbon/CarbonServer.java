@@ -10,6 +10,7 @@ import io.netty.handler.codec.Delimiters;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.service.aggregate.Aggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
+import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.index.IndexStore;
 import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.log4j.Logger;
@@ -23,21 +24,15 @@ public class CarbonServer {
     private Logger logger = Logger.getLogger(CarbonServer.class);
 
     private DistheneConfiguration configuration;
-    private MetricStore metricStore;
-    private IndexStore indexStore;
-    private BlackList blackList;
-    private Aggregator aggregator;
+    private GeneralStore generalStore;
 
     private EventLoopGroup bossGroup = new NioEventLoopGroup(100);
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private ChannelFuture channelFuture;
 
-    public CarbonServer(DistheneConfiguration configuration, MetricStore metricStore, IndexStore indexStore, BlackList blackList, Aggregator aggregator) {
+    public CarbonServer(DistheneConfiguration configuration, GeneralStore generalStore) {
         this.configuration = configuration;
-        this.metricStore = metricStore;
-        this.indexStore = indexStore;
-        this.blackList = blackList;
-        this.aggregator = aggregator;
+        this.generalStore = generalStore;
     }
 
     public void run() throws InterruptedException {
@@ -50,7 +45,7 @@ public class CarbonServer {
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, false, Delimiters.lineDelimiter()));
-                        p.addLast(new CarbonServerHandler(metricStore, indexStore, configuration.getCarbon().getBaseRollup(), blackList, aggregator));
+                        p.addLast(new CarbonServerHandler(generalStore, configuration.getCarbon().getBaseRollup()));
                     }
                 });
 

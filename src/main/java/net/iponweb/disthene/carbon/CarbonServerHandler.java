@@ -8,6 +8,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.service.aggregate.Aggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
+import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.index.IndexStore;
 import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.log4j.Logger;
@@ -18,18 +19,12 @@ import org.apache.log4j.Logger;
 public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     private Logger logger = Logger.getLogger(CarbonServerHandler.class);
 
-    private MetricStore metricStore;
-    private IndexStore indexStore;
-    private BlackList blackList;
-    private Aggregator aggregator;
+    private GeneralStore generalStore;
     private Rollup baseRollup;
 
-    public CarbonServerHandler(MetricStore metricStore, IndexStore indexStore, Rollup baseRollup, BlackList blackList, Aggregator aggregator) {
-        this.metricStore = metricStore;
-        this.indexStore = indexStore;
+    public CarbonServerHandler(GeneralStore generalStore, Rollup baseRollup) {
+        this.generalStore = generalStore;
         this.baseRollup = baseRollup;
-        this.blackList = blackList;
-        this.aggregator = aggregator;
     }
 
     @Override
@@ -38,14 +33,6 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
         Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), baseRollup);
         in.release();
 
-        // aggregate
-        aggregator.aggregate(metric);
-
-        if (blackList.isBlackListed(metric)) {
-            logger.debug("Blacklisted: " + metric.getPath());
-        } else {
-            indexStore.store(metric);
-            metricStore.store(metric);
-        }
+        generalStore.store(metric);
     }
 }

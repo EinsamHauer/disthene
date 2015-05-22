@@ -15,7 +15,7 @@
     </logger>
 
     <logger name="io.netty">
-        <level value="error"/>
+        <level value="debug"/>
     </logger>
 
     <logger name="net.iponweb.disthene">
@@ -28,7 +28,7 @@
 
     <!-- Root Logger -->
     <root>
-        <priority value="info"/>
+        <priority value="debug"/>
         <appender-ref ref="console"/>
     </root>
 

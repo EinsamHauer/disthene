@@ -9,10 +9,10 @@ public class MetricKey {
     private String tenant;
     private String path;
     private int rollup;
-    private long period;
+    private int period;
     private DateTime timestamp;
 
-    public MetricKey(String tenant, String path, int rollup, long period, DateTime timestamp) {
+    public MetricKey(String tenant, String path, int rollup, int period, DateTime timestamp) {
         this.tenant = tenant;
         this.path = path;
         this.rollup = rollup;
@@ -32,7 +32,7 @@ public class MetricKey {
         return rollup;
     }
 
-    public long getPeriod() {
+    public int getPeriod() {
         return period;
     }
 
@@ -61,7 +61,7 @@ public class MetricKey {
         int result = tenant.hashCode();
         result = 31 * result + path.hashCode();
         result = 31 * result + rollup;
-        result = 31 * result + (int) (period ^ (period >>> 32));
+        result = 31 * result + period;
         result = 31 * result + timestamp.hashCode();
         return result;
     }

@@ -16,24 +16,20 @@ public class AggregationFlusher {
     private static final int RATE = 10;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    private DistheneConfiguration distheneConfiguration;
-    private Aggregator aggregator;
 
-    public AggregationFlusher(DistheneConfiguration distheneConfiguration, Aggregator aggregator) {
-        this.distheneConfiguration = distheneConfiguration;
-        this.aggregator = aggregator;
-    }
-
-    public void start() {
+    public AggregationFlusher(final Aggregator aggregator) {
         // Start the execution
         // We will schedule every 10 seconds, but real work will probably be done every aggregatorDelay seconds
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                logger.debug("Invoke flusher");
+//                logger.debug("Invoke flusher");
                 aggregator.flush();
             }
         }, RATE, RATE, TimeUnit.SECONDS);
+    }
+
+    public void start() {
     }
 
 }

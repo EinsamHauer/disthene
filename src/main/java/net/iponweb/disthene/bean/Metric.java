@@ -2,6 +2,7 @@ package net.iponweb.disthene.bean;
 
 import net.iponweb.disthene.config.Rollup;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 /**
  * @author Andrei Ivanov
@@ -13,11 +14,11 @@ public class Metric {
 
     public Metric(String input, Rollup rollup) {
         String[] splitInput = input.split("\\s");
-        this.key = new MetricKey(splitInput[3], splitInput[0], rollup.getRollup(), rollup.getPeriod(), new DateTime(Long.valueOf(splitInput[2])));
+        this.key = new MetricKey(splitInput[3], splitInput[0], rollup.getRollup(), rollup.getPeriod(), new DateTime(Long.valueOf(splitInput[2]) * 1000L, DateTimeZone.UTC));
         this.value = Double.valueOf(splitInput[1]);
     }
 
-    public Metric(String tenant, String path, int rollup, long period, double value, DateTime timestamp) {
+    public Metric(String tenant, String path, int rollup, int period, double value, DateTime timestamp) {
         this.key = new MetricKey(tenant, path, rollup, period, timestamp);
         this.value = value;
     }
@@ -38,7 +39,7 @@ public class Metric {
         return key.getRollup();
     }
 
-    public long getPeriod() {
+    public int getPeriod() {
         return key.getPeriod();
     }
 
@@ -52,6 +53,10 @@ public class Metric {
 
     public DateTime getTimestamp() {
         return key.getTimestamp();
+    }
+
+    public long getUnixTimestamp() {
+        return key.getTimestamp().getMillis() / 1000;
     }
 
     @Override

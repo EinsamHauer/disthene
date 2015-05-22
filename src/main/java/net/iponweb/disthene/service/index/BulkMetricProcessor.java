@@ -2,25 +2,24 @@ package net.iponweb.disthene.service.index;
 
 import net.iponweb.disthene.bean.Metric;
 import org.apache.log4j.Logger;
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.MultiGetItemResponse;
-import org.elasticsearch.action.get.MultiGetRequest;
 import org.elasticsearch.action.get.MultiGetRequestBuilder;
 import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -39,22 +38,19 @@ public class BulkMetricProcessor {
     private Queue<Metric> metrics = new LinkedBlockingQueue<>();
     private int bulkActions = 1000;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final Executor executor = Executors.newFixedThreadPool(1);
     private BulkProcessor bulkProcessor;
 
     private AtomicLong writeCount = new AtomicLong(0);
 
-
-
-
-    public BulkMetricProcessor(TransportClient client, String index, String type, int bulkActions, TimeValue flushInterval) {
+    public BulkMetricProcessor(TransportClient client, String index, String type, int bulkActions, TimeValue flushInterval, int size) {
         this.client = client;
         this.index = index;
         this.type = type;
         this.bulkActions = bulkActions;
 
         if (flushInterval != null) {
+            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
             scheduler.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
@@ -74,15 +70,6 @@ public class BulkMetricProcessor {
                     public void afterBulk(long executionId, BulkRequest request, BulkResponse response) {
                         writeCount.getAndAdd(response.getItems().length);
                         logger.debug("stored " + writeCount.get() + " metrics");
-/*
-                        int count = writeCount.addAndGet(response.getItems().length);
-
-                        if (count % 1000 == 0) {
-                            logger.info("Processed " + count + " metrics");
-                        }
-                        logger.debug("Metric stored");
-
-*/
                     }
 
                     @Override
@@ -90,9 +77,9 @@ public class BulkMetricProcessor {
                         logger.error(failure);
                     }
                 })
-                .setBulkActions(10000)
-                .setBulkSize(new ByteSizeValue(1, ByteSizeUnit.GB))
-                .setFlushInterval(TimeValue.timeValueSeconds(5))
+                .setBulkActions(bulkActions)
+                .setBulkSize(new ByteSizeValue(size, ByteSizeUnit.MB))
+                .setFlushInterval(flushInterval)
                 .setConcurrentRequests(1)
                 .build();
     }
@@ -155,7 +142,6 @@ public class BulkMetricProcessor {
     private class MetricMultiGetProcessor implements Runnable {
 
         MetricMultiGetRequestBuilder request;
-        Map<String, Metric> metrics = new HashMap<>();
 
         private MetricMultiGetProcessor(MetricMultiGetRequestBuilder request) {
             this.request = request;

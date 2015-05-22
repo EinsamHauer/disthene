@@ -11,3 +11,7 @@
   - '^sum\.(mongo|nginx|system)\..*'
   - '^sum\.userver\.(budget|connections|cookie|coroutines|failed_requests|http|kvstorage|limits|lua|memory|mongo|predict|real_ip_from|requests|resolver|response|thread|traffic_shaper|userver)\..*'
   - '^[a-z]*-rtb-[a-z0-9]*\.line_item\..*'
+'test':
+  - '^xxx_test_server.*\.(campaign|site|publisher|line_item|pixel)\..*'
+  - '^xxx_test_server.*\.bids\.technical_providers\..*\.publishers\..*'
+  - '^xxx_sum.*\.system\..*'

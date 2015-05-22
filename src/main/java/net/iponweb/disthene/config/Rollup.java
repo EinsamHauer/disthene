@@ -6,12 +6,12 @@ package net.iponweb.disthene.config;
 public class Rollup {
 
     private int rollup;
-    private long period;
+    private int period;
 
     public Rollup(String s) {
         String[] ss = s.split(":");
         rollup = Integer.valueOf(ss[0].substring(0, ss[0].length() - 1));
-        period = Long.valueOf(ss[1].substring(0, ss[1].length() - 1));
+        period = (int) (Long.valueOf(ss[1].substring(0, ss[1].length() - 1)) / rollup);
     }
 
     public int getRollup() {
@@ -22,11 +22,11 @@ public class Rollup {
         this.rollup = rollup;
     }
 
-    public long getPeriod() {
+    public int getPeriod() {
         return period;
     }
 
-    public void setPeriod(long period) {
+    public void setPeriod(int period) {
         this.period = period;
     }
 

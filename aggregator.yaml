@@ -15,3 +15,5 @@
   "*rtb-california*.userver.mongo.find_queries": "sum.userver.mongo.california.find_queries"
   "*rtb-california*.userver.mongo.failed_requests.timeout": "sum.userver.mongo.california.timeout"
   "*.nginx.<data>": "sum.nginx.<data>"
+"test":
+  "xxx_test_server*.<data>": "xxx_sum.<data>"

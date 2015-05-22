@@ -9,6 +9,7 @@ import net.iponweb.disthene.service.aggregate.AggregationFlusher;
 import net.iponweb.disthene.service.aggregate.Aggregator;
 import net.iponweb.disthene.service.aggregate.SumAggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
+import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.index.ESIndexStore;
 import net.iponweb.disthene.service.index.IndexStore;
 import net.iponweb.disthene.service.store.CassandraMetricStore;
@@ -47,7 +48,6 @@ public class Disthene {
         CommandLineParser parser = new GnuParser();
         try {
             CommandLine commandLine = parser.parse(options, args);
-            System.out.println(commandLine.getOptionValue("c", DEFAULT_CONFIG_LOCATION));
             System.getProperties().setProperty("log4j.configuration", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
             logger = Logger.getLogger(Disthene.class);
 
@@ -75,17 +75,23 @@ public class Disthene {
             AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
             in.close();
             logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
-            Aggregator aggregator = new SumAggregator(distheneConfiguration, aggregationConfiguration, metricStore);
+            Aggregator aggregator = new SumAggregator(distheneConfiguration, aggregationConfiguration);
 
             logger.info("Creating flusher thread");
-            AggregationFlusher aggregationFlusher = new AggregationFlusher(distheneConfiguration, aggregator);
-            aggregationFlusher.start();
+            AggregationFlusher aggregationFlusher = new AggregationFlusher(aggregator);
+
+            logger.info("Creating general store");
+            GeneralStore generalStore = new GeneralStore(metricStore, indexStore, blackList, aggregator);
+
+            logger.info("Setting store to aggregator");
+            aggregator.setGeneralStore(generalStore);
 
 
             logger.info("Starting carbon");
-            CarbonServer carbonServer = new CarbonServer(distheneConfiguration, metricStore, indexStore, blackList, aggregator);
+            CarbonServer carbonServer = new CarbonServer(distheneConfiguration, generalStore);
             carbonServer.run();
 
+/*
             indexStore.store(new Metric("test", "ai1_test_server_4.line_item.118971.rtb_advertiser_payout",
                     distheneConfiguration.getCarbon().getBaseRollup().getRollup(),
                     distheneConfiguration.getCarbon().getBaseRollup().getPeriod(),
@@ -99,6 +105,7 @@ public class Disthene {
                     DateTime.now().withSecondOfMinute(0)
             ));
 
+*/
         } catch (ParseException e) {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("Disthene", options);

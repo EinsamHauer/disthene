@@ -5,6 +5,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
@@ -21,13 +22,16 @@ public class SumAggregator implements Aggregator {
 
     private DistheneConfiguration distheneConfiguration;
     private AggregationConfiguration aggregationConfiguration;
-    private MetricStore metricStore;
+    private GeneralStore generalStore;
     private final TreeMap<DateTime, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
 
-    public SumAggregator(DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, MetricStore metricStore) {
+    public SumAggregator(DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration) {
         this.distheneConfiguration = distheneConfiguration;
         this.aggregationConfiguration = aggregationConfiguration;
-        this.metricStore = metricStore;
+    }
+
+    public void setGeneralStore(GeneralStore generalStore) {
+        this.generalStore = generalStore;
     }
 
     // todo: handle names other than <data>
@@ -60,7 +64,7 @@ public class SumAggregator implements Aggregator {
                     timestampMap.put(destinationKey, new Metric(metric.getTenant(), destinationPath, metric.getRollup(), metric.getPeriod(), metric.getValue(), metric.getTimestamp()));
                 }
 
-                logger.debug("Aggregating '" + metric.getPath() + "' to '" + rule.getDestination().replace("<data>", m.group("data")));
+//                logger.debug("Aggregating '" + metric.getPath() + "' to '" + rule.getDestination().replace("<data>", m.group("data")));
             }
         }
     }
@@ -84,9 +88,10 @@ public class SumAggregator implements Aggregator {
     }
 
     private void doFlush(Collection<Metric> metricsToFlush) {
-        logger.debug("Flushing metrics");
+        logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
         for(Metric metric : metricsToFlush) {
-            metricStore.store(metric);
+//            logger.debug("Flushing: " + metric);
+            generalStore.store(metric);
         }
 
     }

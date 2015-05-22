@@ -13,6 +13,7 @@ public class IndexConfiguration {
     private String type;
     private List<String> cluster = new ArrayList<>();
     private int port;
+    private IndexBulkConfiguration bulk;
 
     public String getName() {
         return name;
@@ -54,6 +55,14 @@ public class IndexConfiguration {
         this.type = type;
     }
 
+    public IndexBulkConfiguration getBulk() {
+        return bulk;
+    }
+
+    public void setBulk(IndexBulkConfiguration bulk) {
+        this.bulk = bulk;
+    }
+
     @Override
     public String toString() {
         return "IndexConfiguration{" +
@@ -62,6 +71,7 @@ public class IndexConfiguration {
                 ", type='" + type + '\'' +
                 ", cluster=" + cluster +
                 ", port=" + port +
+                ", bulk=" + bulk +
                 '}';
     }
 }
