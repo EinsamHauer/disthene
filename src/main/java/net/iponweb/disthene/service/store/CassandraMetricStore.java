@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.service.stats.Stats;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
@@ -29,9 +30,12 @@ public class CassandraMetricStore implements MetricStore {
 
     private Session session;
     private Executor executor;
+    private Stats stats;
 
     //todo: move all constants to config
-    public CassandraMetricStore(DistheneConfiguration distheneConfiguration) {
+    public CassandraMetricStore(DistheneConfiguration distheneConfiguration, Stats stats) {
+        this.stats = stats;
+
         executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
         SocketOptions socketOptions = new SocketOptions();
@@ -71,6 +75,8 @@ public class CassandraMetricStore implements MetricStore {
 
     @Override
     public void store(Metric metric) {
+        stats.incMetricsWritten(metric);
+
         ResultSetFuture future = session.executeAsync(QUERY,
                 metric.getRollup() * metric.getPeriod(),
                 Collections.singletonList(metric.getValue()),
@@ -85,11 +91,12 @@ public class CassandraMetricStore implements MetricStore {
                 new FutureCallback<ResultSet>() {
                     @Override
                     public void onSuccess(ResultSet result) {
-//                        logger.debug("Stored successfully: " + result.one());
+                        stats.incStoreSuccess();
                     }
 
                     @Override
                     public void onFailure(Throwable t) {
+                        stats.incStoreError();
                         logger.error(t);
                     }
                 },

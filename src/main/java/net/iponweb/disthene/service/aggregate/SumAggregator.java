@@ -36,7 +36,8 @@ public class SumAggregator implements Aggregator {
 
     // todo: handle names other than <data>
     @Override
-    public synchronized void aggregate(Metric metric) {
+    public void aggregate(Metric metric) {
+
         // Get aggregation rules
         List<AggregationRule> rules = aggregationConfiguration.getRules().get(metric.getTenant());
 
@@ -44,32 +45,34 @@ public class SumAggregator implements Aggregator {
             return;
         }
 
-        // create entry for timestamp if needed
-        if (!accumulator.containsKey(metric.getTimestamp())) {
-            accumulator.put(metric.getTimestamp(), new HashMap<MetricKey, Metric>());
-        }
-        Map<MetricKey, Metric> timestampMap = accumulator.get(metric.getTimestamp());
+        synchronized (accumulator) {
+            // create entry for timestamp if needed
+            if (!accumulator.containsKey(metric.getTimestamp())) {
+                accumulator.put(metric.getTimestamp(), new HashMap<MetricKey, Metric>());
+            }
+            Map<MetricKey, Metric> timestampMap = accumulator.get(metric.getTimestamp());
 
-        for(AggregationRule rule : rules) {
-            Matcher m = rule.getSource().matcher(metric.getPath());
-            if (m.matches()) {
-                // destination path
-                String destinationPath = rule.getDestination().replace("<data>", m.group("data"));
-                MetricKey destinationKey = new MetricKey(metric.getTenant(), destinationPath, metric.getRollup(), metric.getPeriod(), metric.getTimestamp());
-                if (timestampMap.containsKey(destinationKey)) {
-                    Metric destinationMetric = timestampMap.get(destinationKey);
-                    destinationMetric.setValue(destinationMetric.getValue() + metric.getValue());
-                    timestampMap.put(destinationKey, destinationMetric);
-                } else {
-                    timestampMap.put(destinationKey, new Metric(metric.getTenant(), destinationPath, metric.getRollup(), metric.getPeriod(), metric.getValue(), metric.getTimestamp()));
+            for(AggregationRule rule : rules) {
+                Matcher m = rule.getSource().matcher(metric.getPath());
+                if (m.matches()) {
+                    // destination path
+                    String destinationPath = rule.getDestination().replace("<data>", m.group("data"));
+                    MetricKey destinationKey = new MetricKey(metric.getTenant(), destinationPath, metric.getRollup(), metric.getPeriod(), metric.getTimestamp());
+                    if (timestampMap.containsKey(destinationKey)) {
+                        Metric destinationMetric = timestampMap.get(destinationKey);
+                        destinationMetric.setValue(destinationMetric.getValue() + metric.getValue());
+                        timestampMap.put(destinationKey, destinationMetric);
+                    } else {
+                        timestampMap.put(destinationKey, new Metric(metric.getTenant(), destinationPath, metric.getRollup(), metric.getPeriod(), metric.getValue(), metric.getTimestamp()));
+                    }
+
                 }
-
-//                logger.debug("Aggregating '" + metric.getPath() + "' to '" + rule.getDestination().replace("<data>", m.group("data")));
             }
         }
     }
 
     public void flush() {
+        Collection<Metric> metricsToFlush;
         synchronized (accumulator) {
             // check earliest timestamp map
             if (accumulator.size() == 0 || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay()))) {
@@ -78,19 +81,19 @@ public class SumAggregator implements Aggregator {
             }
 
             // Get the earliest map
-            Collection<Metric> metricsToFlush = accumulator.firstEntry().getValue().values();
+            metricsToFlush = accumulator.firstEntry().getValue().values();
             // Remove it from accumulator
             accumulator.remove(accumulator.firstKey());
 
             // call the flusher itself
-            doFlush(metricsToFlush);
         }
+
+        doFlush(metricsToFlush);
     }
 
-    private void doFlush(Collection<Metric> metricsToFlush) {
+    private synchronized void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
         for(Metric metric : metricsToFlush) {
-//            logger.debug("Flushing: " + metric);
             generalStore.store(metric);
         }
 

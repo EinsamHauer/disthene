@@ -42,9 +42,10 @@ public class CarbonConfiguration {
         return rollups;
     }
 
+    // todo: throw exception if list is empty
     public void setRollups(List<Rollup> rollups) {
-        this.rollups = rollups;
         baseRollup = rollups.get(0);
+        this.rollups = rollups.subList(1, rollups.size());
     }
 
     public Rollup getBaseRollup() {

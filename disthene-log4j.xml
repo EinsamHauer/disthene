@@ -10,12 +10,18 @@
         </layout>
     </appender>
 
-    <logger name="org.springframework">
-        <level value="error"/>
-    </logger>
+    <appender name="FILE" class="org.apache.log4j.RollingFileAppender">
+
+        <param name="file" value="/var/log/disthene/disthene.log"/>
+        <param name="maxFileSize" value="20MB"/>
+        <param name="maxBackupIndex" value="50"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%p %d{dd.MM.yyyy HH:mm:ss,SSS} [%t] %c %x - %m%n"/>
+        </layout>
+    </appender>
 
     <logger name="io.netty">
-        <level value="debug"/>
+        <level value="info"/>
     </logger>
 
     <logger name="net.iponweb.disthene">
@@ -28,8 +34,9 @@
 
     <!-- Root Logger -->
     <root>
-        <priority value="debug"/>
+        <priority value="info"/>
         <appender-ref ref="console"/>
+        <appender-ref ref="FILE"/>
     </root>
 
 </log4j:configuration>

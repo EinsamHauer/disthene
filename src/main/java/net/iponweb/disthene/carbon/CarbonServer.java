@@ -26,7 +26,7 @@ public class CarbonServer {
     private DistheneConfiguration configuration;
     private GeneralStore generalStore;
 
-    private EventLoopGroup bossGroup = new NioEventLoopGroup(100);
+    private EventLoopGroup bossGroup = new NioEventLoopGroup(1000);
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private ChannelFuture channelFuture;
 

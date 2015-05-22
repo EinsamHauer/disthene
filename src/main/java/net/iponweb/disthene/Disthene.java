@@ -7,11 +7,13 @@ import net.iponweb.disthene.config.BlackListConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.service.aggregate.AggregationFlusher;
 import net.iponweb.disthene.service.aggregate.Aggregator;
+import net.iponweb.disthene.service.aggregate.RollupAggregator;
 import net.iponweb.disthene.service.aggregate.SumAggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
 import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.index.ESIndexStore;
 import net.iponweb.disthene.service.index.IndexStore;
+import net.iponweb.disthene.service.stats.Stats;
 import net.iponweb.disthene.service.store.CassandraMetricStore;
 import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.commons.cli.*;
@@ -57,8 +59,11 @@ public class Disthene {
             in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
+            logger.info("Creating stats");
+            Stats stats = new Stats(distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
+
             logger.info("Creating Cassandra metric store");
-            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration);
+            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration, stats);
 
             logger.info("Creating ES index store");
             IndexStore indexStore = new ESIndexStore(distheneConfiguration);
@@ -77,35 +82,25 @@ public class Disthene {
             logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
             Aggregator aggregator = new SumAggregator(distheneConfiguration, aggregationConfiguration);
 
-            logger.info("Creating flusher thread");
-            AggregationFlusher aggregationFlusher = new AggregationFlusher(aggregator);
+            logger.info("Creating rollup aggregator");
+            Aggregator rollupAggregator = new RollupAggregator(distheneConfiguration, distheneConfiguration.getCarbon().getRollups(), metricStore);
+
+                    logger.info("Creating flusher thread");
+            AggregationFlusher aggregationFlusher = new AggregationFlusher(aggregator, rollupAggregator);
 
             logger.info("Creating general store");
-            GeneralStore generalStore = new GeneralStore(metricStore, indexStore, blackList, aggregator);
+            GeneralStore generalStore = new GeneralStore(metricStore, indexStore, blackList, aggregator, rollupAggregator, stats);
 
             logger.info("Setting store to aggregator");
             aggregator.setGeneralStore(generalStore);
 
+            logger.info("Setting store to stats");
+            stats.setGeneralStore(generalStore);
 
             logger.info("Starting carbon");
             CarbonServer carbonServer = new CarbonServer(distheneConfiguration, generalStore);
             carbonServer.run();
 
-/*
-            indexStore.store(new Metric("test", "ai1_test_server_4.line_item.118971.rtb_advertiser_payout",
-                    distheneConfiguration.getCarbon().getBaseRollup().getRollup(),
-                    distheneConfiguration.getCarbon().getBaseRollup().getPeriod(),
-                    1,
-                    DateTime.now().withSecondOfMinute(0)
-                            ));
-            indexStore.store(new Metric("test", "ai5_test_server_4.line_item.118971.rtb_advertiser_payout",
-                    distheneConfiguration.getCarbon().getBaseRollup().getRollup(),
-                    distheneConfiguration.getCarbon().getBaseRollup().getPeriod(),
-                    1,
-                    DateTime.now().withSecondOfMinute(0)
-            ));
-
-*/
         } catch (ParseException e) {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("Disthene", options);

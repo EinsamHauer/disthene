@@ -15,16 +15,23 @@ public class AggregationFlusher {
 
     private static final int RATE = 10;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService aggregatorScheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService rollupAggregatorScheduler = Executors.newScheduledThreadPool(1);
 
-    public AggregationFlusher(final Aggregator aggregator) {
+    public AggregationFlusher(final Aggregator aggregator, final Aggregator rollupAggregator) {
         // Start the execution
         // We will schedule every 10 seconds, but real work will probably be done every aggregatorDelay seconds
-        scheduler.scheduleAtFixedRate(new Runnable() {
+        aggregatorScheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-//                logger.debug("Invoke flusher");
                 aggregator.flush();
+            }
+        }, RATE, RATE, TimeUnit.SECONDS);
+
+        rollupAggregatorScheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                rollupAggregator.flush();
             }
         }, RATE, RATE, TimeUnit.SECONDS);
     }

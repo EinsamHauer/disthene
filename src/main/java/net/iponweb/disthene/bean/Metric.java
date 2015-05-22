@@ -23,6 +23,11 @@ public class Metric {
         this.value = value;
     }
 
+    public Metric(MetricKey key, double value) {
+        this.key = key;
+        this.value = value;
+    }
+
     public String getId() {
         return getTenant() + "_" + getPath();
     }

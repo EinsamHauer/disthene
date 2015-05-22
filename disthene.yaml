@@ -22,3 +22,8 @@ index:
     actions: 10000
     interval: 5
     size: 100
+stats:
+  interval: 60
+  tenant: "test"
+  hostname: "disthene-1a"
+  log: true

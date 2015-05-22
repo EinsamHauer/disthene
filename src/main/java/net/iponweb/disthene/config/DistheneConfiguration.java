@@ -8,6 +8,7 @@ public final class DistheneConfiguration {
     private CarbonConfiguration carbon;
     private StoreConfiguration store;
     private IndexConfiguration index;
+    private StatsConfiguration stats;
 
 
     public CarbonConfiguration getCarbon() {
@@ -34,12 +35,21 @@ public final class DistheneConfiguration {
         this.index = index;
     }
 
+    public StatsConfiguration getStats() {
+        return stats;
+    }
+
+    public void setStats(StatsConfiguration stats) {
+        this.stats = stats;
+    }
+
     @Override
     public String toString() {
         return "DistheneConfiguration{" +
                 "carbon=" + carbon +
                 ", store=" + store +
                 ", index=" + index +
+                ", stats=" + stats +
                 '}';
     }
 }
