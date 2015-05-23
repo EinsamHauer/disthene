@@ -1,9 +1,17 @@
 package net.iponweb.disthene.service.stats;
 
+import com.google.common.eventbus.AllowConcurrentEvents;
+import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.config.StatsConfiguration;
+import net.iponweb.disthene.service.events.MetricReceivedEvent;
+import net.iponweb.disthene.service.events.MetricStoreEvent;
+import net.iponweb.disthene.service.events.StoreErrorEvent;
+import net.iponweb.disthene.service.events.StoreSuccessEvent;
 import net.iponweb.disthene.service.general.GeneralStore;
+import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -12,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -19,25 +28,26 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Andrei Ivanov
  */
 public class Stats {
+    private static final String SCHEDULER_NAME = "distheneStatsFlusher";
+
     private Logger logger = Logger.getLogger(Stats.class);
 
     private StatsConfiguration statsConfiguration;
-    private GeneralStore generalStore;
-    private Rollup baseRollup;
+
+    private EventBus bus;
+    private Rollup rollup;
     private AtomicLong storeSuccess = new AtomicLong(0);
     private AtomicLong storeError = new AtomicLong(0);
     private final Map<String, StatsRecord> stats = new HashMap<>();
     private ScheduledExecutorService rollupAggregatorScheduler = Executors.newScheduledThreadPool(1);
 
-
-    public Stats(StatsConfiguration statsConfiguration, Rollup baseRollup) {
+    public Stats(EventBus bus, StatsConfiguration statsConfiguration, Rollup rollup) {
         this.statsConfiguration = statsConfiguration;
-        this.baseRollup = baseRollup;
-    }
+        this.bus = bus;
+        this.rollup = rollup;
+        bus.register(this);
 
-    public void setGeneralStore(GeneralStore generalStore) {
-        this.generalStore = generalStore;
-
+        ScheduledExecutorService rollupAggregatorScheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
         rollupAggregatorScheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -47,40 +57,44 @@ public class Stats {
 
     }
 
-    public synchronized void incMetricsReceived(Metric metric) {
-        StatsRecord statsRecord = stats.get(metric.getTenant());
-        if (statsRecord == null) {
-            statsRecord = new StatsRecord();
-            stats.put(metric.getTenant(), statsRecord);
+    @Subscribe
+    @AllowConcurrentEvents
+    public void handle(MetricReceivedEvent metricReceivedEvent) {
+        synchronized (stats) {
+            StatsRecord statsRecord = stats.get(metricReceivedEvent.getMetric().getTenant());
+            if (statsRecord == null) {
+                statsRecord = new StatsRecord();
+                stats.put(metricReceivedEvent.getMetric().getTenant(), statsRecord);
+            }
+
+            statsRecord.incMetricsReceived();
         }
-
-        statsRecord.incMetricsReceived();
     }
 
-    public void incStoreSuccess() {
-        storeSuccess.addAndGet(1);
-    }
+    @Subscribe
+    @AllowConcurrentEvents
+    public void handle(MetricStoreEvent metricStoreEvent) {
+        synchronized (stats) {
+            StatsRecord statsRecord = stats.get(metricStoreEvent.getMetric().getTenant());
+            if (statsRecord == null) {
+                statsRecord = new StatsRecord();
+                stats.put(metricStoreEvent.getMetric().getTenant(), statsRecord);
+            }
 
-    public void incStoreSuccess(int delta) {
-        storeSuccess.addAndGet(delta);
-    }
-
-    public void incStoreError() {
-        storeError.addAndGet(1);
-    }
-
-    public void incStoreError(int delta) {
-        storeError.addAndGet(delta);
-    }
-
-    public synchronized void incMetricsWritten(Metric metric) {
-        StatsRecord statsRecord = stats.get(metric.getTenant());
-        if (statsRecord == null) {
-            statsRecord = new StatsRecord();
-            stats.put(metric.getTenant(), statsRecord);
+            statsRecord.incMetricsWritten();
         }
+    }
 
-        statsRecord.incMetricsWritten();
+    @Subscribe
+    @AllowConcurrentEvents
+    public void handle(StoreSuccessEvent storeSuccessEvent) {
+        storeSuccess.addAndGet(storeSuccessEvent.getCount());
+    }
+
+    @Subscribe
+    @AllowConcurrentEvents
+    public void handle(StoreErrorEvent storeErrorEvent) {
+        storeError.addAndGet(storeErrorEvent.getCount());
     }
 
     public void flush() {
@@ -121,29 +135,30 @@ public class Stats {
             totalReceived += statsRecord.getMetricsReceived();
             totalWritten += statsRecord.getMetricsWritten();
 
-            generalStore.store(new Metric(
+            bus.post(new MetricStoreEvent(new Metric(
                     statsConfiguration.getTenant(),
                     statsConfiguration.getHostname() + ".disthene.tenants." + tenant + ".metrics_received",
-                    baseRollup.getRollup(),
-                    baseRollup.getPeriod(),
+                    rollup.getRollup(),
+                    rollup.getPeriod(),
                     statsRecord.getMetricsReceived(),
                     dt
-            ));
+            )));
 
-            generalStore.store(new Metric(
+            bus.post(new MetricStoreEvent(new Metric(
                     statsConfiguration.getTenant(),
                     statsConfiguration.getHostname() + ".disthene.tenants." + tenant + ".write_count",
-                    baseRollup.getRollup(),
-                    baseRollup.getPeriod(),
+                    rollup.getRollup(),
+                    rollup.getPeriod(),
                     statsRecord.getMetricsWritten(),
                     dt
-            ));
+            )));
 
             if (statsConfiguration.isLog()) {
                 logger.info("\t" + tenant + "\t" + statsRecord.metricsReceived + "\t" + statsRecord.getMetricsWritten());
             }
         }
 
+/*
         generalStore.store(new Metric(
                 statsConfiguration.getTenant(),
                 statsConfiguration.getHostname() + ".disthene.metrics_received",
@@ -179,6 +194,7 @@ public class Stats {
                 storeError,
                 dt
         ));
+*/
 
         if (statsConfiguration.isLog()) {
             logger.info("\t" + "total" + "\t" + totalReceived + "\t" + totalWritten);

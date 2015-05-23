@@ -1,14 +1,14 @@
 package net.iponweb.disthene.service.general;
 
+import com.google.common.eventbus.AllowConcurrentEvents;
+import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
 import net.iponweb.disthene.bean.Metric;
-import net.iponweb.disthene.service.aggregate.Aggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
-import net.iponweb.disthene.service.index.IndexStore;
-import net.iponweb.disthene.service.stats.Stats;
-import net.iponweb.disthene.service.store.MetricStore;
+import net.iponweb.disthene.service.events.MetricIndexEvent;
+import net.iponweb.disthene.service.events.MetricReceivedEvent;
+import net.iponweb.disthene.service.events.MetricStoreEvent;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
 
 /**
  * @author Andrei Ivanov
@@ -17,22 +17,27 @@ public class GeneralStore {
 
     private Logger logger = Logger.getLogger(GeneralStore.class);
 
-    private MetricStore metricStore;
-    private IndexStore indexStore;
+    private EventBus bus;
     private BlackList blackList;
-    private Aggregator aggregator;
-    private Aggregator rollupAggregator;
-    private Stats stats;
 
-    public GeneralStore(MetricStore metricStore, IndexStore indexStore, BlackList blackList, Aggregator aggregator, Aggregator rollupAggregator, Stats stats) {
-        this.metricStore = metricStore;
-        this.indexStore = indexStore;
+    public GeneralStore(EventBus bus, BlackList blackList) {
+        this.bus = bus;
         this.blackList = blackList;
-        this.aggregator = aggregator;
-        this.rollupAggregator = rollupAggregator;
-        this.stats = stats;
+        bus.register(this);
     }
 
+    @Subscribe
+    @AllowConcurrentEvents
+    public void handle(MetricReceivedEvent metricReceivedEvent) {
+        if (!blackList.isBlackListed(metricReceivedEvent.getMetric())) {
+            bus.post(new MetricStoreEvent(metricReceivedEvent.getMetric()));
+            bus.post(new MetricIndexEvent(metricReceivedEvent.getMetric()));
+        }
+
+    }
+
+
+/*
     public void store(Metric metric) {
         // aggregate
         try {
@@ -48,4 +53,5 @@ public class GeneralStore {
             logger.error(e);
         }
     }
+*/
 }

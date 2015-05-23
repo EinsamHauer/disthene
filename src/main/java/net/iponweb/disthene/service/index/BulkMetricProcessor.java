@@ -1,6 +1,8 @@
 package net.iponweb.disthene.service.index;
 
 import net.iponweb.disthene.bean.Metric;
+import net.iponweb.disthene.config.IndexConfiguration;
+import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -27,6 +29,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Andrei Ivanov
  */
 public class BulkMetricProcessor {
+    private static final String EXECUTOR_NAME = "distheneIndexProcessor";
+    private static final String SCHEDULER_NAME = "distheneIndexFlusher";
 
     private Logger logger = Logger.getLogger(BulkMetricProcessor.class);
 
@@ -38,26 +42,26 @@ public class BulkMetricProcessor {
     private Queue<Metric> metrics = new LinkedBlockingQueue<>();
     private int bulkActions = 1000;
 
-    private final Executor executor = Executors.newFixedThreadPool(1);
+    private final Executor executor;
     private BulkProcessor bulkProcessor;
 
     private AtomicLong writeCount = new AtomicLong(0);
 
-    public BulkMetricProcessor(TransportClient client, String index, String type, int bulkActions, TimeValue flushInterval, int size) {
+    public BulkMetricProcessor(TransportClient client, IndexConfiguration indexConfiguration) {
         this.client = client;
-        this.index = index;
-        this.type = type;
-        this.bulkActions = bulkActions;
+        this.index = indexConfiguration.getIndex();
+        this.type = indexConfiguration.getType();
+        this.bulkActions = indexConfiguration.getBulk().getActions();
 
-        if (flushInterval != null) {
-            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-            scheduler.scheduleAtFixedRate(new Runnable() {
-                @Override
-                public void run() {
-                    flush();
-                }
-            }, flushInterval.getMillis(), flushInterval.getMillis(), TimeUnit.MILLISECONDS);
-        }
+        executor = Executors.newFixedThreadPool(indexConfiguration.getBulk().getPool(), new NameThreadFactory(EXECUTOR_NAME));
+
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+        scheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                flush();
+            }
+        }, indexConfiguration.getBulk().getInterval(), indexConfiguration.getBulk().getInterval(), TimeUnit.SECONDS);
 
         bulkProcessor = BulkProcessor.builder(
                 client,
@@ -78,8 +82,8 @@ public class BulkMetricProcessor {
                     }
                 })
                 .setBulkActions(bulkActions)
-                .setBulkSize(new ByteSizeValue(size, ByteSizeUnit.MB))
-                .setFlushInterval(flushInterval)
+                .setBulkSize(new ByteSizeValue(indexConfiguration.getBulk().getSize(), ByteSizeUnit.MB))
+                .setFlushInterval(TimeValue.timeValueSeconds(indexConfiguration.getBulk().getInterval()))
                 .setConcurrentRequests(1)
                 .build();
     }

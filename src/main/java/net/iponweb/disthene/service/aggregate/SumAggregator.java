@@ -94,7 +94,7 @@ public class SumAggregator implements Aggregator {
     private synchronized void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
         for(Metric metric : metricsToFlush) {
-            generalStore.store(metric);
+//            generalStore.store(metric);
         }
 
     }

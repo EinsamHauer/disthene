@@ -1,5 +1,6 @@
 package net.iponweb.disthene.carbon;
 
+import com.google.common.eventbus.EventBus;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -7,6 +8,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
+import net.iponweb.disthene.config.CarbonConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.service.aggregate.Aggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
@@ -24,15 +26,15 @@ public class CarbonServer {
     private Logger logger = Logger.getLogger(CarbonServer.class);
 
     private DistheneConfiguration configuration;
-    private GeneralStore generalStore;
 
-    private EventLoopGroup bossGroup = new NioEventLoopGroup(1000);
+    private EventLoopGroup bossGroup = new NioEventLoopGroup(100);
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private ChannelFuture channelFuture;
+    private EventBus bus;
 
-    public CarbonServer(DistheneConfiguration configuration, GeneralStore generalStore) {
+    public CarbonServer(DistheneConfiguration configuration, EventBus bus) {
+        this.bus = bus;
         this.configuration = configuration;
-        this.generalStore = generalStore;
     }
 
     public void run() throws InterruptedException {
@@ -45,7 +47,13 @@ public class CarbonServer {
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, false, Delimiters.lineDelimiter()));
-                        p.addLast(new CarbonServerHandler(generalStore, configuration.getCarbon().getBaseRollup()));
+                        p.addLast(new CarbonServerHandler(bus, configuration.getCarbon().getBaseRollup()));
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        logger.error(cause);
+                        super.exceptionCaught(ctx, cause);
                     }
                 });
 

@@ -8,6 +8,7 @@ public class IndexBulkConfiguration {
     private int actions;
     private int interval;
     private int size;
+    private int pool;
 
     public int getActions() {
         return actions;
@@ -33,12 +34,21 @@ public class IndexBulkConfiguration {
         this.size = size;
     }
 
+    public int getPool() {
+        return pool;
+    }
+
+    public void setPool(int pool) {
+        this.pool = pool;
+    }
+
     @Override
     public String toString() {
         return "IndexBulkConfiguration{" +
                 "actions=" + actions +
                 ", interval=" + interval +
                 ", size=" + size +
+                ", pool=" + pool +
                 '}';
     }
 }

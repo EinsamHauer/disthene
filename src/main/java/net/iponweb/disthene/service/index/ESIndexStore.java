@@ -1,7 +1,13 @@
 package net.iponweb.disthene.service.index;
 
+import com.google.common.eventbus.AllowConcurrentEvents;
+import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.service.events.MetricIndexEvent;
+import net.iponweb.disthene.service.events.MetricReceivedEvent;
+import net.iponweb.disthene.service.events.MetricStoreEvent;
 import org.apache.log4j.Logger;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
@@ -19,7 +25,9 @@ public class ESIndexStore implements IndexStore {
 
     private BulkMetricProcessor processor;
 
-    public ESIndexStore(DistheneConfiguration distheneConfiguration) throws IOException {
+    public ESIndexStore(DistheneConfiguration distheneConfiguration, EventBus bus) {
+        bus.register(this);
+
         Settings settings = ImmutableSettings.settingsBuilder()
                 .put("cluster.name", distheneConfiguration.getIndex().getName())
                 .build();
@@ -28,17 +36,16 @@ public class ESIndexStore implements IndexStore {
             client.addTransportAddress(new InetSocketTransportAddress(node, distheneConfiguration.getIndex().getPort()));
         }
 
-        processor = new BulkMetricProcessor(client,
-                distheneConfiguration.getIndex().getIndex(),
-                distheneConfiguration.getIndex().getType(),
-                distheneConfiguration.getIndex().getBulk().getActions(),
-                TimeValue.timeValueSeconds(distheneConfiguration.getIndex().getBulk().getInterval()),
-                distheneConfiguration.getIndex().getBulk().getSize()
-        );
+        processor = new BulkMetricProcessor(client, distheneConfiguration.getIndex());
+    }
+
+    @Subscribe
+    @AllowConcurrentEvents
+    public void handle(MetricIndexEvent metricIndexEvent) {
+        processor.add(metricIndexEvent.getMetric());
     }
 
     @Override
     public void store(final Metric metric) {
-        processor.add(metric);
     }
 }

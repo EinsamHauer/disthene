@@ -71,6 +71,7 @@ public class BatchMetricProcessor {
     }
 
     private synchronized void execute(int minBatchSize) {
+/*
         while (metrics.size() >= minBatchSize) {
             int currentBatchSize = 0;
             final BatchStatement batch = new BatchStatement();
@@ -113,6 +114,7 @@ public class BatchMetricProcessor {
         }
 
         executing.set(false);
+*/
     }
 
 

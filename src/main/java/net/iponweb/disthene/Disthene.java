@@ -1,5 +1,7 @@
 package net.iponweb.disthene;
 
+import com.google.common.eventbus.AsyncEventBus;
+import com.google.common.eventbus.EventBus;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
@@ -15,6 +17,7 @@ import net.iponweb.disthene.service.index.ESIndexStore;
 import net.iponweb.disthene.service.index.IndexStore;
 import net.iponweb.disthene.service.stats.Stats;
 import net.iponweb.disthene.service.store.CassandraMetricStore;
+import net.iponweb.disthene.service.store.DebugMetricStore;
 import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
@@ -28,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 /**
  * @author Andrei Ivanov
@@ -59,6 +63,39 @@ public class Disthene {
             in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
+            //*********************************************************************************************************
+            // NEW
+            //*********************************************************************************************************
+            logger.info("Creating event bus");
+            EventBus bus = new AsyncEventBus(Executors.newCachedThreadPool());
+
+            logger.info("Loading blacklists");
+            in = Files.newInputStream(Paths.get(commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION)));
+            BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
+            in.close();
+            logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
+            BlackList blackList = new BlackList(blackListConfiguration);
+
+            logger.info("Creating stats");
+            Stats stats = new Stats(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
+
+            logger.info("Creating general store");
+            new GeneralStore(bus, blackList);
+
+            logger.info("Creating ES index store");
+            new ESIndexStore(distheneConfiguration, bus);
+
+            logger.info("Creating Cassandra metric store");
+            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), bus);
+
+
+            logger.info("Starting carbon");
+            CarbonServer carbonServer = new CarbonServer(distheneConfiguration, bus);
+            carbonServer.run();
+            //*********************************************************************************************************
+
+
+/*
             logger.info("Creating stats");
             Stats stats = new Stats(distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
 
@@ -100,6 +137,7 @@ public class Disthene {
             logger.info("Starting carbon");
             CarbonServer carbonServer = new CarbonServer(distheneConfiguration, generalStore);
             carbonServer.run();
+*/
 
         } catch (ParseException e) {
             HelpFormatter formatter = new HelpFormatter();

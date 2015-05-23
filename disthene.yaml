@@ -15,7 +15,7 @@ store:
   readTimeout: 10
   connectTimeout: 10
   maxRequests: 128
-  batch: true
+  batch: false
   batchSize: 500
   interval: 5
 index:
@@ -30,6 +30,7 @@ index:
     actions: 10000
     interval: 5
     size: 100
+    pool: 10
 stats:
   interval: 60
   tenant: "test"
