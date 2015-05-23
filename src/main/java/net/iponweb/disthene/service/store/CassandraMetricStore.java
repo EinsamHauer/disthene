@@ -12,6 +12,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
+import net.engio.mbassy.listener.Listener;
+import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.StoreConfiguration;
@@ -29,6 +31,7 @@ import java.util.concurrent.Executors;
  * @author Andrei Ivanov
  */
 
+@Listener(references= References.Strong)
 public class CassandraMetricStore implements MetricStore {
 
     private static final String QUERY = "UPDATE metric.metric USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";

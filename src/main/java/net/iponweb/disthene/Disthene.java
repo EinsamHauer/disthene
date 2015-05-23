@@ -82,13 +82,13 @@ public class Disthene {
             BlackList blackList = new BlackList(blackListConfiguration);
 
             logger.info("Creating general store");
-            GeneralStore generalStore = new GeneralStore(bus, blackList);
+            new GeneralStore(bus, blackList);
 
             logger.info("Creating stats");
-            Stats stats = new Stats(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
+            new Stats(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
 
             logger.info("Creating ES index store");
-            IndexStore indexStore = new ESIndexStore(distheneConfiguration, bus);
+            new ESIndexStore(distheneConfiguration, bus);
 
             logger.info("Creating Cassandra metric store");
             metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), bus);

@@ -5,6 +5,8 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
+import net.engio.mbassy.listener.Listener;
+import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.config.StatsConfiguration;
@@ -29,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * @author Andrei Ivanov
  */
+@Listener(references= References.Strong)
 public class Stats {
     private static final String SCHEDULER_NAME = "distheneStatsFlusher";
 
