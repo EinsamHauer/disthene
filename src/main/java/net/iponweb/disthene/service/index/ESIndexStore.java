@@ -43,7 +43,6 @@ public class ESIndexStore implements IndexStore {
 
     @Handler(rejectSubtypes = false)
     public void handle(MetricIndexEvent metricIndexEvent) {
-        logger.debug("Received event");
         processor.add(metricIndexEvent.getMetric());
     }
 

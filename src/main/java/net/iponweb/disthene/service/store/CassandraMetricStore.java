@@ -94,7 +94,6 @@ public class CassandraMetricStore implements MetricStore {
 
     @Handler(rejectSubtypes = false)
     public void handle(MetricStoreEvent metricStoreEvent) {
-        logger.debug("Received event");
         if (batchMode) {
             processor.add(metricStoreEvent.getMetric());
         } else {

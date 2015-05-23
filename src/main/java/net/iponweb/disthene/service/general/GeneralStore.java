@@ -30,7 +30,6 @@ public class GeneralStore {
 
     @Handler(rejectSubtypes = false)
     public void handle(MetricReceivedEvent metricReceivedEvent) {
-        logger.debug("Received event");
         if (!blackList.isBlackListed(metricReceivedEvent.getMetric())) {
             bus.post(new MetricStoreEvent(metricReceivedEvent.getMetric())).now();
             bus.post(new MetricIndexEvent(metricReceivedEvent.getMetric())).now();
