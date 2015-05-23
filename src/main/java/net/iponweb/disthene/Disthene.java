@@ -93,6 +93,14 @@ public class Disthene {
             logger.info("Creating Cassandra metric store");
             metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), bus);
 
+            logger.info("Loading aggregation rules");
+            in = Files.newInputStream(Paths.get(commandLine.getOptionValue("a", DEFAULT_AGGREGATION_CONFIG_LOCATION)));
+            AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
+            in.close();
+            logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
+            logger.info("Creating sum aggregator");
+            new SumAggregator(bus, distheneConfiguration, aggregationConfiguration);
+
 
             logger.info("Starting carbon");
             CarbonServer carbonServer = new CarbonServer(distheneConfiguration, bus);

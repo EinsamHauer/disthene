@@ -10,6 +10,5 @@ public interface Aggregator {
 
     void aggregate(Metric metric);
     void flush();
-    void setGeneralStore(GeneralStore generalStore);
 
 }

@@ -10,10 +10,7 @@ import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.config.StatsConfiguration;
-import net.iponweb.disthene.service.events.MetricReceivedEvent;
-import net.iponweb.disthene.service.events.MetricStoreEvent;
-import net.iponweb.disthene.service.events.StoreErrorEvent;
-import net.iponweb.disthene.service.events.StoreSuccessEvent;
+import net.iponweb.disthene.service.events.*;
 import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
@@ -44,7 +41,6 @@ public class Stats {
     private AtomicLong storeSuccess = new AtomicLong(0);
     private AtomicLong storeError = new AtomicLong(0);
     private final Map<String, StatsRecord> stats = new HashMap<>();
-    private ScheduledExecutorService rollupAggregatorScheduler = Executors.newScheduledThreadPool(1);
 
     public Stats(MBassador bus, StatsConfiguration statsConfiguration, Rollup rollup) {
         this.statsConfiguration = statsConfiguration;
@@ -52,8 +48,8 @@ public class Stats {
         this.rollup = rollup;
         bus.subscribe(this);
 
-        ScheduledExecutorService rollupAggregatorScheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
-        rollupAggregatorScheduler.scheduleAtFixedRate(new Runnable() {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+        scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 flush();
@@ -136,66 +132,76 @@ public class Stats {
             totalReceived += statsRecord.getMetricsReceived();
             totalWritten += statsRecord.getMetricsWritten();
 
-/*            bus.post(new MetricStoreEvent(new Metric(
+            Metric metric = new Metric(
                     statsConfiguration.getTenant(),
                     statsConfiguration.getHostname() + ".disthene.tenants." + tenant + ".metrics_received",
                     rollup.getRollup(),
                     rollup.getPeriod(),
                     statsRecord.getMetricsReceived(),
                     dt
-            )));
+            );
+            bus.post(new MetricStoreEvent(metric));
+            bus.post(new MetricIndexEvent(metric));
 
-            bus.post(new MetricStoreEvent(new Metric(
+            metric = new Metric(
                     statsConfiguration.getTenant(),
                     statsConfiguration.getHostname() + ".disthene.tenants." + tenant + ".write_count",
                     rollup.getRollup(),
                     rollup.getPeriod(),
                     statsRecord.getMetricsWritten(),
                     dt
-            )));*/
+            );
+            bus.post(new MetricStoreEvent(metric));
+            bus.post(new MetricIndexEvent(metric));
 
             if (statsConfiguration.isLog()) {
                 logger.info("\t" + tenant + "\t" + statsRecord.metricsReceived + "\t" + statsRecord.getMetricsWritten());
             }
         }
 
-/*
-        generalStore.store(new Metric(
+        Metric metric = new Metric(
                 statsConfiguration.getTenant(),
                 statsConfiguration.getHostname() + ".disthene.metrics_received",
-                baseRollup.getRollup(),
-                baseRollup.getPeriod(),
+                rollup.getRollup(),
+                rollup.getPeriod(),
                 totalReceived,
                 dt
-        ));
+        );
+        bus.post(new MetricStoreEvent(metric));
+        bus.post(new MetricIndexEvent(metric));
 
-        generalStore.store(new Metric(
+        metric = new Metric(
                 statsConfiguration.getTenant(),
                 statsConfiguration.getHostname() + ".disthene.write_count",
-                baseRollup.getRollup(),
-                baseRollup.getPeriod(),
+                rollup.getRollup(),
+                rollup.getPeriod(),
                 totalWritten,
                 dt
-        ));
+        );
+        bus.post(new MetricStoreEvent(metric));
+        bus.post(new MetricIndexEvent(metric));
 
-        generalStore.store(new Metric(
+        metric = new Metric(
                 statsConfiguration.getTenant(),
                 statsConfiguration.getHostname() + ".disthene.store.success",
-                baseRollup.getRollup(),
-                baseRollup.getPeriod(),
+                rollup.getRollup(),
+                rollup.getPeriod(),
                 storeSuccess,
                 dt
-        ));
+        );
+        bus.post(new MetricStoreEvent(metric));
+        bus.post(new MetricIndexEvent(metric));
 
-        generalStore.store(new Metric(
+        metric = new Metric(
                 statsConfiguration.getTenant(),
                 statsConfiguration.getHostname() + ".disthene.store.error",
-                baseRollup.getRollup(),
-                baseRollup.getPeriod(),
+                rollup.getRollup(),
+                rollup.getPeriod(),
                 storeError,
                 dt
-        ));
-*/
+        );
+        bus.post(new MetricStoreEvent(metric));
+        bus.post(new MetricIndexEvent(metric));
 
         if (statsConfiguration.isLog()) {
             logger.info("\t" + "total" + "\t" + totalReceived + "\t" + totalWritten);

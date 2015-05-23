@@ -1,43 +1,64 @@
 package net.iponweb.disthene.service.aggregate;
 
+import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.listener.Handler;
+import net.engio.mbassy.listener.Listener;
+import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.AggregationRule;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
-import net.iponweb.disthene.service.general.GeneralStore;
-import net.iponweb.disthene.service.store.MetricStore;
+import net.iponweb.disthene.service.events.MetricReceivedEvent;
+import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 
 /**
  * @author Andrei Ivanov
  */
-public class SumAggregator implements Aggregator {
+@Listener(references= References.Strong)
+// todo: handle names other than <data>
+public class SumAggregator {
+    private static final String SCHEDULER_NAME = "distheneSumAggregatorFlusher";
+    private static final int RATE = 1;
+
     private Logger logger = Logger.getLogger(SumAggregator.class);
 
-
+    private MBassador bus;
     private DistheneConfiguration distheneConfiguration;
     private AggregationConfiguration aggregationConfiguration;
-    private GeneralStore generalStore;
     private final TreeMap<DateTime, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
 
-    public SumAggregator(DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration) {
+    public SumAggregator(MBassador bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration) {
+        this.bus = bus;
         this.distheneConfiguration = distheneConfiguration;
         this.aggregationConfiguration = aggregationConfiguration;
+        bus.subscribe(this);
+
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+        scheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                flush();
+            }
+        }, RATE, RATE, TimeUnit.SECONDS);
+
     }
 
-    public void setGeneralStore(GeneralStore generalStore) {
-        this.generalStore = generalStore;
+    @Handler(rejectSubtypes = false)
+    public void handle(MetricReceivedEvent metricReceivedEvent) {
+        aggregate(metricReceivedEvent.getMetric());
     }
 
-    // todo: handle names other than <data>
-    @Override
+
     public void aggregate(Metric metric) {
-
         // Get aggregation rules
         List<AggregationRule> rules = aggregationConfiguration.getRules().get(metric.getTenant());
 
@@ -75,7 +96,10 @@ public class SumAggregator implements Aggregator {
         Collection<Metric> metricsToFlush;
         synchronized (accumulator) {
             // check earliest timestamp map
-            if (accumulator.size() == 0 || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay()))) {
+            if (accumulator.size() == 0
+                    || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay()))
+                    || accumulator.firstEntry().getValue().size() == 0
+                    ) {
                 // nothing to do, just return
                 return;
             }
@@ -94,7 +118,7 @@ public class SumAggregator implements Aggregator {
     private synchronized void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
         for(Metric metric : metricsToFlush) {
-//            generalStore.store(metric);
+            bus.post(new MetricReceivedEvent(metric)).asynchronously();
         }
 
     }

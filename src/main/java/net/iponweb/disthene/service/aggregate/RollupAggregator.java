@@ -95,11 +95,6 @@ public class RollupAggregator implements Aggregator {
 
     }
 
-    @Override
-    public void setGeneralStore(GeneralStore generalStore) {
-        // we don't need it here
-    }
-
     private static DateTime getRollupTimestamp(DateTime dt, Rollup rollup) {
         int minutes = (int) (Math.ceil(dt.getMinuteOfHour() / (double) (rollup.getRollup() / 60)) * 15);
         return dt.withMinuteOfHour(0).plusMinutes(minutes);

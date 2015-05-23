@@ -17,3 +17,4 @@
   "*.nginx.<data>": "sum.nginx.<data>"
 "test":
   "xxx_test_server*.<data>": "xxx_sum.<data>"
+  "yyy_test_server*.<data>": "yyy_sum.<data>"
