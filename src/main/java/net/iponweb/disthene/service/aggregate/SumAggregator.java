@@ -96,10 +96,7 @@ public class SumAggregator {
         Collection<Metric> metricsToFlush;
         synchronized (accumulator) {
             // check earliest timestamp map
-            if (accumulator.size() == 0
-                    || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay()))
-                    || accumulator.firstEntry().getValue().size() == 0
-                    ) {
+            if (accumulator.size() == 0 || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay()))) {
                 // nothing to do, just return
                 return;
             }
@@ -112,7 +109,9 @@ public class SumAggregator {
             // call the flusher itself
         }
 
-        doFlush(metricsToFlush);
+        if (metricsToFlush.size() > 0) {
+            doFlush(metricsToFlush);
+        }
     }
 
     private synchronized void doFlush(Collection<Metric> metricsToFlush) {
