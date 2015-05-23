@@ -99,7 +99,7 @@ public class Disthene {
             in.close();
             logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
             logger.info("Creating sum aggregator");
-            new SumAggregator(bus, distheneConfiguration, aggregationConfiguration);
+            new SumAggregator(bus, distheneConfiguration, aggregationConfiguration, blackList);
 
 
             logger.info("Starting carbon");

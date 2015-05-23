@@ -9,7 +9,10 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.service.blacklist.BlackList;
+import net.iponweb.disthene.service.events.MetricIndexEvent;
 import net.iponweb.disthene.service.events.MetricReceivedEvent;
+import net.iponweb.disthene.service.events.MetricStoreEvent;
 import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
@@ -34,12 +37,14 @@ public class SumAggregator {
     private MBassador bus;
     private DistheneConfiguration distheneConfiguration;
     private AggregationConfiguration aggregationConfiguration;
+    private BlackList blackList;
     private final TreeMap<DateTime, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
 
-    public SumAggregator(MBassador bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration) {
+    public SumAggregator(MBassador bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlackList blackList) {
         this.bus = bus;
         this.distheneConfiguration = distheneConfiguration;
         this.aggregationConfiguration = aggregationConfiguration;
+        this.blackList = blackList;
         bus.subscribe(this);
 
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
@@ -109,15 +114,16 @@ public class SumAggregator {
             // call the flusher itself
         }
 
-        if (metricsToFlush.size() > 0) {
-            doFlush(metricsToFlush);
-        }
+        doFlush(metricsToFlush);
     }
 
     private synchronized void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
         for(Metric metric : metricsToFlush) {
-            bus.post(new MetricReceivedEvent(metric)).asynchronously();
+            if (!blackList.isBlackListed(metric)) {
+                bus.post(new MetricStoreEvent(metric)).now();
+                bus.post(new MetricIndexEvent(metric)).now();
+            }
         }
 
     }
