@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import java.util.Collections;
 import java.util.Queue;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Andrei Ivanov
@@ -27,6 +28,7 @@ public class BatchMetricProcessor {
     private PreparedStatement statement;
     private int batchSize;
     private Queue<Metric> metrics = new LinkedBlockingQueue<>();
+    private AtomicBoolean executing = new AtomicBoolean(false);
 
     private final Executor executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
@@ -47,20 +49,24 @@ public class BatchMetricProcessor {
     }
 
 
-    public synchronized void add(Metric metric) {
+    public void add(Metric metric) {
         metrics.add(metric);
         executeIfNeeded();
     }
 
     private void executeIfNeeded() {
         if (batchSize != -1 && metrics.size() >= batchSize) {
-            execute(batchSize);
+            if (executing.compareAndSet(false, true)) {
+                execute(batchSize);
+            }
         }
     }
 
     private void flush() {
         if (metrics.size() > 0) {
-            execute(1);
+            if (executing.compareAndSet(false, true)) {
+                execute(batchSize);
+            }
         }
     }
 
@@ -105,6 +111,8 @@ public class BatchMetricProcessor {
                     executor
             );
         }
+
+        executing.set(false);
     }
 
 

@@ -11,7 +11,6 @@ store:
     - "cassandra-1b.graphite.devops.iponweb.net"
   port: 9042
   keyspace: 'metric'
-#new
   maxConnections: 2048
   readTimeout: 10
   connectTimeout: 10
