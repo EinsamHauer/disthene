@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.CharsetUtil;
+import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.service.events.MetricReceivedEvent;
@@ -16,10 +17,10 @@ import org.apache.log4j.Logger;
 public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     private Logger logger = Logger.getLogger(CarbonServerHandler.class);
 
-    private EventBus bus;
+    private MBassador bus;
     private Rollup rollup;
 
-    public CarbonServerHandler(EventBus bus, Rollup rollup) {
+    public CarbonServerHandler(MBassador bus, Rollup rollup) {
         this.bus = bus;
         this.rollup = rollup;
     }
@@ -30,6 +31,6 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
         Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
         in.release();
 
-        bus.post(new MetricReceivedEvent(metric));
+        bus.post(new MetricReceivedEvent(metric)).asynchronously();
     }
 }

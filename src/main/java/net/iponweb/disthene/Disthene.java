@@ -2,6 +2,8 @@ package net.iponweb.disthene;
 
 import com.google.common.eventbus.AsyncEventBus;
 import com.google.common.eventbus.EventBus;
+import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.bus.config.BusConfiguration;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
@@ -44,6 +46,8 @@ public class Disthene {
     private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
+    private static MetricStore metricStore;
+
     public static void main(String[] args) throws MalformedURLException {
         Options options = new Options();
         options.addOption("c", "config", true, "config location");
@@ -67,7 +71,8 @@ public class Disthene {
             // NEW
             //*********************************************************************************************************
             logger.info("Creating event bus");
-            EventBus bus = new AsyncEventBus(Executors.newCachedThreadPool());
+            MBassador bus = new MBassador();
+//            EventBus bus = new AsyncEventBus(Executors.newCachedThreadPool());
 
             logger.info("Loading blacklists");
             in = Files.newInputStream(Paths.get(commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION)));
@@ -76,17 +81,17 @@ public class Disthene {
             logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
             BlackList blackList = new BlackList(blackListConfiguration);
 
+            logger.info("Creating general store");
+            GeneralStore generalStore = new GeneralStore(bus, blackList);
+
             logger.info("Creating stats");
             Stats stats = new Stats(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
 
-            logger.info("Creating general store");
-            new GeneralStore(bus, blackList);
-
             logger.info("Creating ES index store");
-            new ESIndexStore(distheneConfiguration, bus);
+            IndexStore indexStore = new ESIndexStore(distheneConfiguration, bus);
 
             logger.info("Creating Cassandra metric store");
-            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), bus);
+            metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), bus);
 
 
             logger.info("Starting carbon");

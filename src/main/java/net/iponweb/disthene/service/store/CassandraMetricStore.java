@@ -10,6 +10,8 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
+import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.listener.Handler;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.StoreConfiguration;
@@ -33,7 +35,7 @@ public class CassandraMetricStore implements MetricStore {
 
     private Logger logger = Logger.getLogger(CassandraMetricStore.class);
 
-    private EventBus bus;
+    private MBassador bus;
 
     private Session session;
     private Executor executor;
@@ -42,55 +44,9 @@ public class CassandraMetricStore implements MetricStore {
 
     private BatchMetricProcessor processor;
 
-    public CassandraMetricStore(StoreConfiguration storeConfiguration, Stats stats) {
-        this.stats = stats;
-        this.batchMode = storeConfiguration.isBatch();
-
-        executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
-
-        SocketOptions socketOptions = new SocketOptions()
-                .setReceiveBufferSize(1024 * 1024)
-                .setSendBufferSize(1024 * 1024)
-                .setTcpNoDelay(false)
-                .setReadTimeoutMillis(storeConfiguration.getReadTimeout() * 1000)
-                .setConnectTimeoutMillis(storeConfiguration.getConnectTimeout() * 1000);
-
-        PoolingOptions poolingOptions = new PoolingOptions();
-        poolingOptions.setMaxConnectionsPerHost(HostDistance.LOCAL, storeConfiguration.getMaxConnections());
-        poolingOptions.setMaxConnectionsPerHost(HostDistance.REMOTE, storeConfiguration.getMaxConnections());
-        poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.REMOTE, storeConfiguration.getMaxRequests());
-        poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL, storeConfiguration.getMaxRequests());
-
-        Cluster.Builder builder = Cluster.builder()
-                .withSocketOptions(socketOptions)
-                .withCompression(ProtocolOptions.Compression.LZ4)
-                .withLoadBalancingPolicy(new TokenAwarePolicy(new DCAwareRoundRobinPolicy()))
-//                .withLoadBalancingPolicy(new WhiteListPolicy(new DCAwareRoundRobinPolicy(), Collections.singletonList(new InetSocketAddress("cassandra-1a.graphite.devops.iponweb.net", 9042))))
-                .withPoolingOptions(poolingOptions)
-                .withQueryOptions(new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE))
-                .withProtocolVersion(ProtocolVersion.V2)
-                .withPort(storeConfiguration.getPort());
-        for(String cp : storeConfiguration.getCluster()) {
-            builder.addContactPoint(cp);
-        }
-
-        Cluster cluster = builder.build();
-        Metadata metadata = cluster.getMetadata();
-        logger.debug("Connected to cluster: " + metadata.getClusterName());
-        for (Host host : metadata.getAllHosts()) {
-            logger.debug(String.format("Datacenter: %s; Host: %s; Rack: %s", host.getDatacenter(), host.getAddress(), host.getRack()));
-        }
-
-        session = cluster.connect();
-
-        if (batchMode) {
-            processor = new BatchMetricProcessor(session, storeConfiguration.getBatchSize(), storeConfiguration.getInterval(), stats);
-        }
-    }
-
-    public CassandraMetricStore(StoreConfiguration storeConfiguration, EventBus bus) {
+    public CassandraMetricStore(StoreConfiguration storeConfiguration, MBassador bus) {
         this.bus = bus;
-        bus.register(this);
+        bus.subscribe(this);
 
         this.batchMode = storeConfiguration.isBatch();
 
@@ -136,9 +92,9 @@ public class CassandraMetricStore implements MetricStore {
         }
     }
 
-    @Subscribe
-    @AllowConcurrentEvents
+    @Handler(rejectSubtypes = false)
     public void handle(MetricStoreEvent metricStoreEvent) {
+        logger.debug("Received event");
         if (batchMode) {
             processor.add(metricStoreEvent.getMetric());
         } else {
@@ -166,12 +122,12 @@ public class CassandraMetricStore implements MetricStore {
                 new FutureCallback<ResultSet>() {
                     @Override
                     public void onSuccess(ResultSet result) {
-                        bus.post(new StoreSuccessEvent(1));
+                        bus.post(new StoreSuccessEvent(1)).asynchronously();
                     }
 
                     @Override
                     public void onFailure(Throwable t) {
-                        bus.post(new StoreErrorEvent(1));
+                        bus.post(new StoreErrorEvent(1)).asynchronously();
                         logger.error(t);
                     }
                 },

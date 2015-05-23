@@ -3,6 +3,8 @@ package net.iponweb.disthene.service.stats;
 import com.google.common.eventbus.AllowConcurrentEvents;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.listener.Handler;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.config.StatsConfiguration;
@@ -34,18 +36,18 @@ public class Stats {
 
     private StatsConfiguration statsConfiguration;
 
-    private EventBus bus;
+    private MBassador bus;
     private Rollup rollup;
     private AtomicLong storeSuccess = new AtomicLong(0);
     private AtomicLong storeError = new AtomicLong(0);
     private final Map<String, StatsRecord> stats = new HashMap<>();
     private ScheduledExecutorService rollupAggregatorScheduler = Executors.newScheduledThreadPool(1);
 
-    public Stats(EventBus bus, StatsConfiguration statsConfiguration, Rollup rollup) {
+    public Stats(MBassador bus, StatsConfiguration statsConfiguration, Rollup rollup) {
         this.statsConfiguration = statsConfiguration;
         this.bus = bus;
         this.rollup = rollup;
-        bus.register(this);
+        bus.subscribe(this);
 
         ScheduledExecutorService rollupAggregatorScheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
         rollupAggregatorScheduler.scheduleAtFixedRate(new Runnable() {
@@ -57,8 +59,7 @@ public class Stats {
 
     }
 
-    @Subscribe
-    @AllowConcurrentEvents
+    @Handler(rejectSubtypes = false)
     public void handle(MetricReceivedEvent metricReceivedEvent) {
         synchronized (stats) {
             StatsRecord statsRecord = stats.get(metricReceivedEvent.getMetric().getTenant());
@@ -71,8 +72,7 @@ public class Stats {
         }
     }
 
-    @Subscribe
-    @AllowConcurrentEvents
+    @Handler(rejectSubtypes = false)
     public void handle(MetricStoreEvent metricStoreEvent) {
         synchronized (stats) {
             StatsRecord statsRecord = stats.get(metricStoreEvent.getMetric().getTenant());
@@ -85,14 +85,12 @@ public class Stats {
         }
     }
 
-    @Subscribe
-    @AllowConcurrentEvents
+    @Handler(rejectSubtypes = false)
     public void handle(StoreSuccessEvent storeSuccessEvent) {
         storeSuccess.addAndGet(storeSuccessEvent.getCount());
     }
 
-    @Subscribe
-    @AllowConcurrentEvents
+    @Handler(rejectSubtypes = false)
     public void handle(StoreErrorEvent storeErrorEvent) {
         storeError.addAndGet(storeErrorEvent.getCount());
     }
@@ -135,7 +133,7 @@ public class Stats {
             totalReceived += statsRecord.getMetricsReceived();
             totalWritten += statsRecord.getMetricsWritten();
 
-            bus.post(new MetricStoreEvent(new Metric(
+/*            bus.post(new MetricStoreEvent(new Metric(
                     statsConfiguration.getTenant(),
                     statsConfiguration.getHostname() + ".disthene.tenants." + tenant + ".metrics_received",
                     rollup.getRollup(),
@@ -151,7 +149,7 @@ public class Stats {
                     rollup.getPeriod(),
                     statsRecord.getMetricsWritten(),
                     dt
-            )));
+            )));*/
 
             if (statsConfiguration.isLog()) {
                 logger.info("\t" + tenant + "\t" + statsRecord.metricsReceived + "\t" + statsRecord.getMetricsWritten());

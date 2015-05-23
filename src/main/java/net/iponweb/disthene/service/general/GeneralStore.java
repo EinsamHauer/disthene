@@ -3,6 +3,8 @@ package net.iponweb.disthene.service.general;
 import com.google.common.eventbus.AllowConcurrentEvents;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.listener.Handler;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.service.blacklist.BlackList;
 import net.iponweb.disthene.service.events.MetricIndexEvent;
@@ -17,21 +19,21 @@ public class GeneralStore {
 
     private Logger logger = Logger.getLogger(GeneralStore.class);
 
-    private EventBus bus;
+    private MBassador bus;
     private BlackList blackList;
 
-    public GeneralStore(EventBus bus, BlackList blackList) {
+    public GeneralStore(MBassador bus, BlackList blackList) {
         this.bus = bus;
         this.blackList = blackList;
-        bus.register(this);
+        bus.subscribe(this);
     }
 
-    @Subscribe
-    @AllowConcurrentEvents
+    @Handler(rejectSubtypes = false)
     public void handle(MetricReceivedEvent metricReceivedEvent) {
+        logger.debug("Received event");
         if (!blackList.isBlackListed(metricReceivedEvent.getMetric())) {
-            bus.post(new MetricStoreEvent(metricReceivedEvent.getMetric()));
-            bus.post(new MetricIndexEvent(metricReceivedEvent.getMetric()));
+            bus.post(new MetricStoreEvent(metricReceivedEvent.getMetric())).now();
+            bus.post(new MetricIndexEvent(metricReceivedEvent.getMetric())).now();
         }
 
     }

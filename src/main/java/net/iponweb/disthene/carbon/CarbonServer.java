@@ -8,6 +8,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
+import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.config.CarbonConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.service.aggregate.Aggregator;
@@ -30,9 +31,9 @@ public class CarbonServer {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private ChannelFuture channelFuture;
-    private EventBus bus;
+    private MBassador bus;
 
-    public CarbonServer(DistheneConfiguration configuration, EventBus bus) {
+    public CarbonServer(DistheneConfiguration configuration, MBassador bus) {
         this.bus = bus;
         this.configuration = configuration;
 

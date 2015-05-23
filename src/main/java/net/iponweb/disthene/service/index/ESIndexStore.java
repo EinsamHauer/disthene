@@ -3,6 +3,8 @@ package net.iponweb.disthene.service.index;
 import com.google.common.eventbus.AllowConcurrentEvents;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.listener.Handler;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.service.events.MetricIndexEvent;
@@ -25,8 +27,8 @@ public class ESIndexStore implements IndexStore {
 
     private BulkMetricProcessor processor;
 
-    public ESIndexStore(DistheneConfiguration distheneConfiguration, EventBus bus) {
-        bus.register(this);
+    public ESIndexStore(DistheneConfiguration distheneConfiguration, MBassador bus) {
+        bus.subscribe(this);
 
         Settings settings = ImmutableSettings.settingsBuilder()
                 .put("cluster.name", distheneConfiguration.getIndex().getName())
@@ -39,9 +41,9 @@ public class ESIndexStore implements IndexStore {
         processor = new BulkMetricProcessor(client, distheneConfiguration.getIndex());
     }
 
-    @Subscribe
-    @AllowConcurrentEvents
+    @Handler(rejectSubtypes = false)
     public void handle(MetricIndexEvent metricIndexEvent) {
+        logger.debug("Received event");
         processor.add(metricIndexEvent.getMetric());
     }
 
