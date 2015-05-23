@@ -27,7 +27,7 @@ public class CarbonServer {
 
     private DistheneConfiguration configuration;
 
-    private EventLoopGroup bossGroup = new NioEventLoopGroup(100);
+    private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private ChannelFuture channelFuture;
     private EventBus bus;
@@ -35,6 +35,8 @@ public class CarbonServer {
     public CarbonServer(DistheneConfiguration configuration, EventBus bus) {
         this.bus = bus;
         this.configuration = configuration;
+
+        bossGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads());
     }
 
     public void run() throws InterruptedException {

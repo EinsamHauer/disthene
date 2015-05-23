@@ -1,6 +1,7 @@
 carbon:
   bind: "127.0.0.0"
   port: 2003
+  threads: 1000
   rollups:
     - 60s:5356800s
     - 900s:62208000s

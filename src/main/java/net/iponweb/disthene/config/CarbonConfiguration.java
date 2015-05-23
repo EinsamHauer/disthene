@@ -10,6 +10,7 @@ public class CarbonConfiguration {
 
     private String bind;
     private int port;
+    private int threads;
     private List<Rollup> rollups = new ArrayList<>();
     private Rollup baseRollup;
     private int aggregatorDelay;
@@ -52,11 +53,20 @@ public class CarbonConfiguration {
         return baseRollup;
     }
 
+    public int getThreads() {
+        return threads;
+    }
+
+    public void setThreads(int threads) {
+        this.threads = threads;
+    }
+
     @Override
     public String toString() {
         return "CarbonConfiguration{" +
                 "bind='" + bind + '\'' +
                 ", port=" + port +
+                ", threads=" + threads +
                 ", rollups=" + rollups +
                 ", baseRollup=" + baseRollup +
                 ", aggregatorDelay=" + aggregatorDelay +
