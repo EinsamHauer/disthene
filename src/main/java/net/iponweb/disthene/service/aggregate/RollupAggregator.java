@@ -65,8 +65,6 @@ public class RollupAggregator {
     public void handle(MetricStoreEvent metricStoreEvent) {
         if (rollups.size() > 0 && maxRollup.getRollup() > metricStoreEvent.getMetric().getRollup()) {
             aggregate(metricStoreEvent.getMetric());
-        } else {
-            logger.debug("Skipping rollup");
         }
     }
 
