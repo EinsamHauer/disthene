@@ -10,9 +10,7 @@ import org.joda.time.DateTimeZone;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -26,6 +24,10 @@ public class Stats {
     private Rollup baseRollup;
     private AtomicLong storeSuccess = new AtomicLong(0);
     private AtomicLong storeError = new AtomicLong(0);
+    private ConcurrentHashMap<String, AtomicLong> metricsReceived = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, AtomicLong> metricsWritten = new ConcurrentHashMap<>();
+
+
     private final Map<String, StatsRecord> stats = new HashMap<>();
     private ScheduledExecutorService rollupAggregatorScheduler = Executors.newScheduledThreadPool(1);
 
@@ -47,7 +49,18 @@ public class Stats {
 
     }
 
+    public synchronized void incMetricsReceived(String tenant) {
+        metricsReceived.putIfAbsent(tenant, new AtomicLong(0));
+        metricsReceived.get(tenant).incrementAndGet();
+    }
+
+    public synchronized void incMetricsWritten(String tenant) {
+        metricsWritten.putIfAbsent(tenant, new AtomicLong(0));
+        metricsWritten.get(tenant).incrementAndGet();
+    }
+
     public synchronized void incMetricsReceived(Metric metric) {
+/*
         StatsRecord statsRecord = stats.get(metric.getTenant());
         if (statsRecord == null) {
             statsRecord = new StatsRecord();
@@ -55,6 +68,7 @@ public class Stats {
         }
 
         statsRecord.incMetricsReceived();
+*/
     }
 
     public void incStoreSuccess() {
@@ -84,21 +98,45 @@ public class Stats {
     }
 
     public void flush() {
-        Map<String, StatsRecord> statsToFlush = new HashMap<>();
-        long storeSuccess;
-        long storeError;
+        long totalReceived = 0;
+        long totalWritten = 0;
 
-        synchronized (stats) {
-            for(Map.Entry<String, StatsRecord> entry : stats.entrySet()) {
-                statsToFlush.put(entry.getKey(), new StatsRecord(entry.getValue()));
-                entry.getValue().reset();
-            }
-
-            storeSuccess = this.storeSuccess.getAndSet(0);
-            storeError = this.storeError.getAndSet(0);
+        if (statsConfiguration.isLog()) {
+            logger.info("Disthene stats:");
+            logger.info("--------------------------------------------------------------------------------------");
+            logger.info("\tTenant\tmetrics_received");
+            logger.info("--------------------------------------------------------------------------------------");
         }
 
-        doFlush(statsToFlush, storeSuccess, storeError, DateTime.now(DateTimeZone.UTC).withSecondOfMinute(0));
+        for(ConcurrentMap.Entry<String, AtomicLong> entry : metricsReceived.entrySet()) {
+            long value = entry.getValue().getAndSet(0);
+            totalReceived += value;
+            if (statsConfiguration.isLog()) {
+                logger.info("\t" + entry.getKey() + "\t" + value);
+            }
+        }
+
+        if (statsConfiguration.isLog()) {
+            logger.info("--------------------------------------------------------------------------------------");
+            logger.info("\tTenant\tmetrics_written");
+            logger.info("--------------------------------------------------------------------------------------");
+        }
+
+        for(ConcurrentMap.Entry<String, AtomicLong> entry : metricsWritten.entrySet()) {
+            long value = entry.getValue().getAndSet(0);
+            totalWritten += value;
+            if (statsConfiguration.isLog()) {
+                logger.info("\t" + entry.getKey() + "\t" + entry.getValue().getAndSet(0));
+            }
+        }
+
+        if (statsConfiguration.isLog()) {
+            logger.info("\t" + "total" + "\t" + totalReceived + "\t" + totalWritten);
+            logger.info("--------------------------------------------------------------------------------------");
+            logger.info("\tstore.success:\t" + storeSuccess);
+            logger.info("\tstore.error:\t" + storeError);
+            logger.info("======================================================================================");
+        }
     }
 
     private synchronized void doFlush(Map<String, StatsRecord> stats, long storeSuccess, long storeError, DateTime dt) {

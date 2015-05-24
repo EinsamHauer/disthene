@@ -63,10 +63,12 @@ public class Disthene {
             Stats stats = new Stats(distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
 
             logger.info("Creating Cassandra metric store");
-            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), stats);
+//            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), stats);
+            MetricStore metricStore = null;
 
             logger.info("Creating ES index store");
-            IndexStore indexStore = new ESIndexStore(distheneConfiguration);
+//            IndexStore indexStore = new ESIndexStore(distheneConfiguration);
+            IndexStore indexStore = null;
 
             logger.info("Loading blacklists");
             in = Files.newInputStream(Paths.get(commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION)));
@@ -80,19 +82,23 @@ public class Disthene {
             AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
             in.close();
             logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
-            Aggregator aggregator = new SumAggregator(distheneConfiguration, aggregationConfiguration);
+            SumAggregator aggregator = new SumAggregator(distheneConfiguration, aggregationConfiguration);
 
             logger.info("Creating rollup aggregator");
-            Aggregator rollupAggregator = new RollupAggregator(distheneConfiguration, distheneConfiguration.getCarbon().getRollups(), metricStore);
+            RollupAggregator rollupAggregator = new RollupAggregator(distheneConfiguration, distheneConfiguration.getCarbon().getRollups(), metricStore);
 
+/*
                     logger.info("Creating flusher thread");
             AggregationFlusher aggregationFlusher = new AggregationFlusher(aggregator, rollupAggregator);
+*/
 
             logger.info("Creating general store");
             GeneralStore generalStore = new GeneralStore(metricStore, indexStore, blackList, aggregator, rollupAggregator, stats);
+/*
 
             logger.info("Setting store to aggregator");
             aggregator.setGeneralStore(generalStore);
+*/
 
             logger.info("Setting store to stats");
             stats.setGeneralStore(generalStore);

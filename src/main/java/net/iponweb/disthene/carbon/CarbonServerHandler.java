@@ -20,19 +20,25 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     private Logger logger = Logger.getLogger(CarbonServerHandler.class);
 
     private GeneralStore generalStore;
-    private Rollup baseRollup;
 
     public CarbonServerHandler(GeneralStore generalStore, Rollup baseRollup) {
         this.generalStore = generalStore;
-        this.baseRollup = baseRollup;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        ByteBuf in = (ByteBuf) msg;
-        Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), baseRollup);
-        in.release();
+        String received = ((ByteBuf) msg).toString(CharsetUtil.UTF_8).trim();
+        ((ByteBuf) msg).release();
 
-        generalStore.store(metric);
+        // parse it right away
+        try {
+            String[] splitInput = received.split("\\s");
+            generalStore.store(splitInput[3], splitInput[0], Long.parseLong(splitInput[2]), Double.parseDouble(splitInput[1]));
+
+        } catch (Exception e) {
+            //discard immediately
+            logger.error(e);
+            e.printStackTrace();
+        }
     }
 }

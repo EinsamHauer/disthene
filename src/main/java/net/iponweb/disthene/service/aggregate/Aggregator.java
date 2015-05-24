@@ -12,4 +12,5 @@ public interface Aggregator {
     void flush();
     void setGeneralStore(GeneralStore generalStore);
 
+    void aggregate(String tenant, String path, long time, double value);
 }

@@ -1,5 +1,6 @@
 package net.iponweb.disthene.service.aggregate;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.DistheneConfiguration;
@@ -11,26 +12,91 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * @author Andrei Ivanov
  */
-public class RollupAggregator implements Aggregator {
+// todo: aggregate to more than 1 rollup
+public class RollupAggregator {
 
     private Logger logger = Logger.getLogger(RollupAggregator.class);
     private DistheneConfiguration distheneConfiguration;
     private MetricStore metricStore;
     private List<Rollup> rollups;
+    private Rollup theRollup = null;
 
-    private final TreeMap<DateTime, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
+//    private final TreeMap<DateTime, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
+
+    // time->tenant->path->value
+    private ConcurrentSkipListMap<Long, ConcurrentMap<String, ConcurrentMap<String, AggregationEntry>>> acc = new ConcurrentSkipListMap<>();
 
     public RollupAggregator(DistheneConfiguration distheneConfiguration, List<Rollup> rollups, MetricStore metricStore) {
         this.distheneConfiguration = distheneConfiguration;
         this.rollups = rollups;
         this.metricStore = metricStore;
+        if (rollups.size() > 0) {
+            theRollup = rollups.get(0);
+        }
+
+        ScheduledExecutorService flushScheduler = Executors.newScheduledThreadPool(1);
+        flushScheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                flush();
+            }
+        }, 10, 10, TimeUnit.SECONDS);
     }
 
-    @Override
+    public void aggregate(String tenant, String path, long time, double value) {
+        long now = DateTime.now(DateTimeZone.UTC).getMillis() / 1000;
+        if(time < now - distheneConfiguration.getCarbon().getAggregatorDelay()) {
+            logger.debug("Discarding metric - too late (" + now + " vs " + time + ")");
+            return;
+        }
+
+        long rollupTime = getRollupTime(time, theRollup);
+
+        acc.putIfAbsent(rollupTime, new ConcurrentHashMap<String, ConcurrentMap<String, AggregationEntry>>());
+        acc.get(rollupTime).putIfAbsent(tenant, new ConcurrentHashMap<String, AggregationEntry>());
+        acc.get(rollupTime).get(tenant).putIfAbsent(path, new AggregationEntry());
+
+        acc.get(rollupTime).get(tenant).get(path).addValue(value);
+/*
+        synchronized (acc.get(rollupTime).get(tenant).get(path)) {
+            acc.get(rollupTime).get(tenant).get(path).addValue(value);
+        }
+*/
+
+    }
+
+    private void flush() {
+
+    }
+
+    private static long getRollupTime(long time, Rollup rollup) {
+        return ((int)Math.ceil(time / (double)rollup.getRollup())) * rollup.getRollup();
+    }
+
+    private class AggregationEntry {
+        private double value;
+        private int count = 0;
+
+        private AggregationEntry() {
+            value = 0;
+            count = 1;
+        }
+
+        public void addValue(double value) {
+            this.value =  (count * value + this.value) / (++count);
+        }
+
+        public double getValue() {
+            return value;
+        }
+    }
+
+/*
     public void aggregate(Metric metric) {
 
         synchronized (accumulator) {
@@ -61,7 +127,9 @@ public class RollupAggregator implements Aggregator {
             }
         }
     }
+*/
 
+/*
     @Override
     public void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
@@ -122,4 +190,6 @@ public class RollupAggregator implements Aggregator {
             return metric;
         }
     }
+*/
+
 }

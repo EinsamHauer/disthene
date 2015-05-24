@@ -1,5 +1,6 @@
 package net.iponweb.disthene.service.aggregate;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import net.iponweb.disthene.bean.AggregationRule;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
@@ -9,14 +10,16 @@ import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 
 /**
  * @author Andrei Ivanov
  */
-public class SumAggregator implements Aggregator {
+public class SumAggregator {
     private Logger logger = Logger.getLogger(SumAggregator.class);
 
 
@@ -25,46 +28,49 @@ public class SumAggregator implements Aggregator {
     private GeneralStore generalStore;
     private final TreeMap<DateTime, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
 
+    // time->tenant->path->value
+    private ConcurrentSkipListMap<Long, ConcurrentMap<String, ConcurrentMap<String, AtomicDouble>>> sums = new ConcurrentSkipListMap<>();
+
     public SumAggregator(DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration) {
         this.distheneConfiguration = distheneConfiguration;
         this.aggregationConfiguration = aggregationConfiguration;
-    }
 
-    public void setGeneralStore(GeneralStore generalStore) {
-        this.generalStore = generalStore;
+        ScheduledExecutorService flushScheduler = Executors.newScheduledThreadPool(1);
+        flushScheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                flush();
+            }
+        }, 10, 10, TimeUnit.SECONDS);
     }
 
     // todo: handle names other than <data>
-    @Override
-    public void aggregate(Metric metric) {
+    public synchronized void aggregate(String tenant, String path, long time, double value) {
+        long now = DateTime.now(DateTimeZone.UTC).getMillis() / 1000;
 
-        // Get aggregation rules
-        List<AggregationRule> rules = aggregationConfiguration.getRules().get(metric.getTenant());
-
-        if (rules == null) {
+        if(time < now - distheneConfiguration.getCarbon().getAggregatorDelay()) {
+            logger.debug("Discarding metric - too late");
             return;
         }
 
-        synchronized (accumulator) {
-            // create entry for timestamp if needed
-            if (!accumulator.containsKey(metric.getTimestamp())) {
-                accumulator.put(metric.getTimestamp(), new HashMap<MetricKey, Metric>());
-            }
-            Map<MetricKey, Metric> timestampMap = accumulator.get(metric.getTimestamp());
+        if (!aggregationConfiguration.getRules().containsKey(tenant)) {
+            return;
+        }
 
-            for(AggregationRule rule : rules) {
-                Matcher m = rule.getSource().matcher(metric.getPath());
-                if (m.matches()) {
-                    // destination path
-                    String destinationPath = rule.getDestination().replace("<data>", m.group("data"));
-                    MetricKey destinationKey = new MetricKey(metric.getTenant(), destinationPath, metric.getRollup(), metric.getPeriod(), metric.getTimestamp());
-                    if (timestampMap.containsKey(destinationKey)) {
-                        Metric destinationMetric = timestampMap.get(destinationKey);
-                        destinationMetric.setValue(destinationMetric.getValue() + metric.getValue());
-                        timestampMap.put(destinationKey, destinationMetric);
-                    } else {
-                        timestampMap.put(destinationKey, new Metric(metric.getTenant(), destinationPath, metric.getRollup(), metric.getPeriod(), metric.getValue(), metric.getTimestamp()));
-                    }
+        sums.putIfAbsent(time, new ConcurrentHashMap<String, ConcurrentMap<String, AtomicDouble>>());
+        sums.get(time).putIfAbsent(tenant, new ConcurrentHashMap<String, AtomicDouble>());
+
+        for(AggregationRule rule : aggregationConfiguration.getRules().get(tenant)) {
+            Matcher m = rule.getSource().matcher(path);
+            if (m.matches()) {
+                // destination path
+                String aggregationPath = rule.getDestination().replace("<data>", m.group("data"));
+                sums.get(time).get(tenant).putIfAbsent(aggregationPath, new AtomicDouble(0));
+                try {
+                    sums.get(time).get(tenant).get(aggregationPath).addAndGet(value);
+                } catch (Exception e){
+                    logger.error(e);
+                    logger.error(sums.get(time).get(tenant).get(aggregationPath));
 
                 }
             }
@@ -72,30 +78,22 @@ public class SumAggregator implements Aggregator {
     }
 
     public void flush() {
-        Collection<Metric> metricsToFlush;
-        synchronized (accumulator) {
-            // check earliest timestamp map
-            if (accumulator.size() == 0 || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay()))) {
-                // nothing to do, just return
-                return;
-            }
-
-            // Get the earliest map
-            metricsToFlush = accumulator.firstEntry().getValue().values();
-            // Remove it from accumulator
-            accumulator.remove(accumulator.firstKey());
-
-            // call the flusher itself
+        if (sums.size() == 0) {
+            return;
         }
 
-        doFlush(metricsToFlush);
-    }
-
-    private synchronized void doFlush(Collection<Metric> metricsToFlush) {
-        logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
-        for(Metric metric : metricsToFlush) {
-            generalStore.store(metric);
+        long now = DateTime.now(DateTimeZone.UTC).getMillis() / 1000;
+        if(sums.firstKey() > now - distheneConfiguration.getCarbon().getAggregatorDelay()) {
+            return;
         }
 
+        Map.Entry<Long, ConcurrentMap<String, ConcurrentMap<String, AtomicDouble>>> metricsToFlushEntry = sums.pollFirstEntry();
+        long time = metricsToFlushEntry.getKey();
+
+        // todo: write metrics
+        logger.debug("Flushing " + metricsToFlushEntry.getValue().get("test").size());
+
+
     }
+
 }
