@@ -30,7 +30,7 @@ import java.util.regex.Matcher;
 // todo: handle names other than <data>
 public class SumAggregator {
     private static final String SCHEDULER_NAME = "distheneSumAggregatorFlusher";
-    private static final int RATE = 1;
+    private static final int RATE = 60;
 
     private Logger logger = Logger.getLogger(SumAggregator.class);
 
