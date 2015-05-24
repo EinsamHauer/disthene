@@ -101,8 +101,10 @@ public class Disthene {
             logger.info("Creating sum aggregator");
             new SumAggregator(bus, distheneConfiguration, aggregationConfiguration, blackList);
 
+/*
             logger.info("Creating rollup aggregator");
             new RollupAggregator(bus, distheneConfiguration, distheneConfiguration.getCarbon().getRollups());
+*/
 
             logger.info("Starting carbon");
             CarbonServer carbonServer = new CarbonServer(distheneConfiguration, bus);
