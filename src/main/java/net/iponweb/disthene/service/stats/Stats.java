@@ -140,8 +140,8 @@ public class Stats {
                     statsRecord.getMetricsReceived(),
                     dt
             );
-            bus.post(new MetricStoreEvent(metric));
-            bus.post(new MetricIndexEvent(metric));
+            bus.post(new MetricStoreEvent(metric)).now();
+            bus.post(new MetricIndexEvent(metric)).now();
 
             metric = new Metric(
                     statsConfiguration.getTenant(),
@@ -151,8 +151,8 @@ public class Stats {
                     statsRecord.getMetricsWritten(),
                     dt
             );
-            bus.post(new MetricStoreEvent(metric));
-            bus.post(new MetricIndexEvent(metric));
+            bus.post(new MetricStoreEvent(metric)).now();
+            bus.post(new MetricIndexEvent(metric)).now();
 
             if (statsConfiguration.isLog()) {
                 logger.info("\t" + tenant + "\t" + statsRecord.metricsReceived + "\t" + statsRecord.getMetricsWritten());
@@ -167,8 +167,8 @@ public class Stats {
                 totalReceived,
                 dt
         );
-        bus.post(new MetricStoreEvent(metric));
-        bus.post(new MetricIndexEvent(metric));
+        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricIndexEvent(metric)).now();
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -178,8 +178,8 @@ public class Stats {
                 totalWritten,
                 dt
         );
-        bus.post(new MetricStoreEvent(metric));
-        bus.post(new MetricIndexEvent(metric));
+        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricIndexEvent(metric)).now();
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -189,8 +189,8 @@ public class Stats {
                 storeSuccess,
                 dt
         );
-        bus.post(new MetricStoreEvent(metric));
-        bus.post(new MetricIndexEvent(metric));
+        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricIndexEvent(metric)).now();
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -200,8 +200,8 @@ public class Stats {
                 storeError,
                 dt
         );
-        bus.post(new MetricStoreEvent(metric));
-        bus.post(new MetricIndexEvent(metric));
+        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricIndexEvent(metric)).now();
 
         if (statsConfiguration.isLog()) {
             logger.info("\t" + "total" + "\t" + totalReceived + "\t" + totalWritten);

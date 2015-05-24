@@ -1,36 +1,76 @@
 package net.iponweb.disthene.service.aggregate;
 
+import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.listener.Handler;
+import net.engio.mbassy.listener.Listener;
+import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.Rollup;
+import net.iponweb.disthene.service.events.MetricReceivedEvent;
+import net.iponweb.disthene.service.events.MetricStoreEvent;
 import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.store.MetricStore;
+import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Andrei Ivanov
  */
-public class RollupAggregator implements Aggregator {
+@Listener(references= References.Strong)
+public class RollupAggregator {
+    private static final String SCHEDULER_NAME = "distheneRollupAggregatorFlusher";
+    private static final int RATE = 1;
 
     private Logger logger = Logger.getLogger(RollupAggregator.class);
+
+
+    private MBassador bus;
     private DistheneConfiguration distheneConfiguration;
-    private MetricStore metricStore;
+    private Rollup maxRollup;
     private List<Rollup> rollups;
 
     private final TreeMap<DateTime, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
 
-    public RollupAggregator(DistheneConfiguration distheneConfiguration, List<Rollup> rollups, MetricStore metricStore) {
+    public RollupAggregator(MBassador bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
         this.distheneConfiguration = distheneConfiguration;
         this.rollups = rollups;
-        this.metricStore = metricStore;
+        this.bus = bus;
+        bus.subscribe(this);
+
+        for(Rollup rollup : rollups) {
+            if (maxRollup == null || maxRollup.getRollup() < rollup.getRollup()) {
+                maxRollup = rollup;
+            }
+        }
+
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+        scheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                flush();
+            }
+        }, RATE, RATE, TimeUnit.SECONDS);
     }
 
-    @Override
+    @Handler(rejectSubtypes = false)
+    public void handle(MetricStoreEvent metricStoreEvent) {
+        if (rollups.size() > 0 && maxRollup.getRollup() > metricStoreEvent.getMetric().getRollup()) {
+            aggregate(metricStoreEvent.getMetric());
+        } else {
+            logger.debug("Skipping rollup");
+        }
+    }
+
+
     public void aggregate(Metric metric) {
 
         synchronized (accumulator) {
@@ -62,7 +102,6 @@ public class RollupAggregator implements Aggregator {
         }
     }
 
-    @Override
     public void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
@@ -90,7 +129,7 @@ public class RollupAggregator implements Aggregator {
     private synchronized void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing rollup metrics (" + metricsToFlush.size() + ")");
         for(Metric metric : metricsToFlush) {
-            metricStore.store(metric);
+            bus.post(new MetricStoreEvent(metric)).now();
         }
 
     }
