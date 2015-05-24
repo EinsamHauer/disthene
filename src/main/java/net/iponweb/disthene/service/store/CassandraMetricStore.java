@@ -3,10 +3,6 @@ package net.iponweb.disthene.service.store;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.TokenAwarePolicy;
-import com.datastax.driver.core.policies.WhiteListPolicy;
-import com.google.common.eventbus.AllowConcurrentEvents;
-import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -15,15 +11,13 @@ import net.engio.mbassy.listener.Handler;
 import net.engio.mbassy.listener.Listener;
 import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
-import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.StoreConfiguration;
-import net.iponweb.disthene.service.events.*;
-import net.iponweb.disthene.service.stats.Stats;
+import net.iponweb.disthene.service.events.MetricStoreEvent;
+import net.iponweb.disthene.service.events.StoreErrorEvent;
+import net.iponweb.disthene.service.events.StoreSuccessEvent;
 import org.apache.log4j.Logger;
 
-import java.net.InetSocketAddress;
 import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -42,7 +36,6 @@ public class CassandraMetricStore implements MetricStore {
 
     private Session session;
     private Executor executor;
-    private Stats stats;
     private boolean batchMode;
 
     private BatchMetricProcessor processor;
@@ -91,7 +84,7 @@ public class CassandraMetricStore implements MetricStore {
         session = cluster.connect();
 
         if (batchMode) {
-            processor = new BatchMetricProcessor(session, storeConfiguration.getBatchSize(), storeConfiguration.getInterval(), stats);
+            processor = new BatchMetricProcessor(session, storeConfiguration.getBatchSize(), storeConfiguration.getInterval(), bus);
         }
     }
 

@@ -29,7 +29,7 @@ public class CarbonServer {
     private DistheneConfiguration configuration;
 
     private EventLoopGroup bossGroup;
-    private EventLoopGroup workerGroup = new NioEventLoopGroup();
+    private EventLoopGroup workerGroup = new NioEventLoopGroup(500);
     private ChannelFuture channelFuture;
     private MBassador bus;
 

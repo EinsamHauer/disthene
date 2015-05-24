@@ -6,7 +6,10 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
+import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
+import net.iponweb.disthene.service.events.StoreErrorEvent;
+import net.iponweb.disthene.service.events.StoreSuccessEvent;
 import net.iponweb.disthene.service.stats.Stats;
 import org.apache.log4j.Logger;
 
@@ -23,19 +26,19 @@ public class BatchMetricProcessor {
 
     private Logger logger = Logger.getLogger(BatchMetricProcessor.class);
 
-    private Stats stats;
     private Session session;
     private PreparedStatement statement;
     private int batchSize;
     private Queue<Metric> metrics = new LinkedBlockingQueue<>();
     private AtomicBoolean executing = new AtomicBoolean(false);
+    private MBassador bus;
 
     private final Executor executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
-    public BatchMetricProcessor(Session session, int batchSize, int flushInterval, Stats stats) {
+    public BatchMetricProcessor(Session session, int batchSize, int flushInterval, MBassador bus) {
         this.session = session;
         this.batchSize = batchSize;
-        this.stats = stats;
+        this.bus = bus;
 
         statement = session.prepare(QUERY);
 
@@ -71,14 +74,12 @@ public class BatchMetricProcessor {
     }
 
     private synchronized void execute(int minBatchSize) {
-/*
         while (metrics.size() >= minBatchSize) {
             int currentBatchSize = 0;
             final BatchStatement batch = new BatchStatement();
 
             while (currentBatchSize < batchSize && metrics.size() > 0) {
                 Metric metric = metrics.remove();
-                stats.incMetricsWritten(metric);
                 batch.add(
                     statement.bind(
                             metric.getRollup() * metric.getPeriod(),
@@ -100,12 +101,12 @@ public class BatchMetricProcessor {
                     new FutureCallback<ResultSet>() {
                         @Override
                         public void onSuccess(ResultSet result) {
-                            stats.incStoreSuccess(finalCurrentBatchSize);
+                            bus.post(new StoreSuccessEvent(finalCurrentBatchSize)).asynchronously();
                         }
 
                         @Override
                         public void onFailure(Throwable t) {
-                            stats.incStoreError(finalCurrentBatchSize);
+                            bus.post(new StoreErrorEvent(finalCurrentBatchSize)).asynchronously();
                             logger.error(t);
                         }
                     },
@@ -114,7 +115,6 @@ public class BatchMetricProcessor {
         }
 
         executing.set(false);
-*/
     }
 
 
