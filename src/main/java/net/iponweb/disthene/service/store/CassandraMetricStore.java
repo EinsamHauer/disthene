@@ -12,6 +12,7 @@ import net.engio.mbassy.listener.Listener;
 import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.StoreConfiguration;
+import net.iponweb.disthene.service.events.DistheneEvent;
 import net.iponweb.disthene.service.events.MetricStoreEvent;
 import net.iponweb.disthene.service.events.StoreErrorEvent;
 import net.iponweb.disthene.service.events.StoreSuccessEvent;
@@ -32,7 +33,7 @@ public class CassandraMetricStore {
 
     private Logger logger = Logger.getLogger(CassandraMetricStore.class);
 
-    private MBassador bus;
+    private MBassador<DistheneEvent> bus;
 
     private Session session;
     private Executor executor;
@@ -40,7 +41,7 @@ public class CassandraMetricStore {
 
     private BatchMetricProcessor processor;
 
-    public CassandraMetricStore(StoreConfiguration storeConfiguration, MBassador bus) {
+    public CassandraMetricStore(StoreConfiguration storeConfiguration, MBassador<DistheneEvent> bus) {
         this.bus = bus;
         bus.subscribe(this);
 
@@ -115,6 +116,7 @@ public class CassandraMetricStore {
                         bus.post(new StoreSuccessEvent(1)).asynchronously();
                     }
 
+                    @SuppressWarnings("NullableProblems")
                     @Override
                     public void onFailure(Throwable t) {
                         bus.post(new StoreErrorEvent(1)).asynchronously();

@@ -3,7 +3,7 @@ package net.iponweb.disthene.service.events;
 /**
  * @author Andrei Ivanov
  */
-public class StoreErrorEvent {
+public class StoreErrorEvent implements DistheneEvent {
 
     private int count;
 

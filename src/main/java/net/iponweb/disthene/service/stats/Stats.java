@@ -1,8 +1,5 @@
 package net.iponweb.disthene.service.stats;
 
-import com.google.common.eventbus.AllowConcurrentEvents;
-import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
 import net.engio.mbassy.listener.Listener;
@@ -11,7 +8,6 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.config.StatsConfiguration;
 import net.iponweb.disthene.service.events.*;
-import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
@@ -21,7 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -36,13 +31,13 @@ public class Stats {
 
     private StatsConfiguration statsConfiguration;
 
-    private MBassador bus;
+    private MBassador<DistheneEvent> bus;
     private Rollup rollup;
     private AtomicLong storeSuccess = new AtomicLong(0);
     private AtomicLong storeError = new AtomicLong(0);
     private final Map<String, StatsRecord> stats = new HashMap<>();
 
-    public Stats(MBassador bus, StatsConfiguration statsConfiguration, Rollup rollup) {
+    public Stats(MBassador<DistheneEvent> bus, StatsConfiguration statsConfiguration, Rollup rollup) {
         this.statsConfiguration = statsConfiguration;
         this.bus = bus;
         this.rollup = rollup;
@@ -141,7 +136,6 @@ public class Stats {
                     dt
             );
             bus.post(new MetricStoreEvent(metric)).now();
-            bus.post(new MetricIndexEvent(metric)).now();
 
             metric = new Metric(
                     statsConfiguration.getTenant(),
@@ -152,7 +146,6 @@ public class Stats {
                     dt
             );
             bus.post(new MetricStoreEvent(metric)).now();
-            bus.post(new MetricIndexEvent(metric)).now();
 
             if (statsConfiguration.isLog()) {
                 logger.info("\t" + tenant + "\t" + statsRecord.metricsReceived + "\t" + statsRecord.getMetricsWritten());
@@ -168,7 +161,6 @@ public class Stats {
                 dt
         );
         bus.post(new MetricStoreEvent(metric)).now();
-        bus.post(new MetricIndexEvent(metric)).now();
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -179,7 +171,6 @@ public class Stats {
                 dt
         );
         bus.post(new MetricStoreEvent(metric)).now();
-        bus.post(new MetricIndexEvent(metric)).now();
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -190,7 +181,6 @@ public class Stats {
                 dt
         );
         bus.post(new MetricStoreEvent(metric)).now();
-        bus.post(new MetricIndexEvent(metric)).now();
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -201,7 +191,6 @@ public class Stats {
                 dt
         );
         bus.post(new MetricStoreEvent(metric)).now();
-        bus.post(new MetricIndexEvent(metric)).now();
 
         if (statsConfiguration.isLog()) {
             logger.info("\t" + "total" + "\t" + totalReceived + "\t" + totalWritten);

@@ -14,6 +14,7 @@ public class NameThreadFactory implements ThreadFactory {
         this.baseName = baseName;
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public Thread newThread(Runnable r) {
         return new Thread(r, baseName + "-" + (counter++));

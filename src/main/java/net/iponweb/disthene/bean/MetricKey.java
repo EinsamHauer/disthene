@@ -47,13 +47,8 @@ public class MetricKey {
 
         MetricKey metricKey = (MetricKey) o;
 
-        if (period != metricKey.period) return false;
-        if (rollup != metricKey.rollup) return false;
-        if (!path.equals(metricKey.path)) return false;
-        if (!tenant.equals(metricKey.tenant)) return false;
-        if (!timestamp.equals(metricKey.timestamp)) return false;
+        return period == metricKey.period && rollup == metricKey.rollup && path.equals(metricKey.path) && tenant.equals(metricKey.tenant) && timestamp.equals(metricKey.timestamp);
 
-        return true;
     }
 
     @Override

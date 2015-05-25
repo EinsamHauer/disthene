@@ -8,6 +8,7 @@ import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.service.aggregate.RollupAggregator;
 import net.iponweb.disthene.service.aggregate.SumAggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
+import net.iponweb.disthene.service.events.DistheneEvent;
 import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.index.ESIndexStore;
 import net.iponweb.disthene.service.stats.Stats;
@@ -55,7 +56,7 @@ public class Disthene {
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
             logger.info("Creating event bus");
-            MBassador bus = new MBassador();
+            MBassador<DistheneEvent> bus = new MBassador<>();
 
             logger.info("Loading blacklists");
             in = Files.newInputStream(Paths.get(commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION)));

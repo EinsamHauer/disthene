@@ -10,7 +10,7 @@ import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.service.blacklist.BlackList;
-import net.iponweb.disthene.service.events.MetricIndexEvent;
+import net.iponweb.disthene.service.events.DistheneEvent;
 import net.iponweb.disthene.service.events.MetricReceivedEvent;
 import net.iponweb.disthene.service.events.MetricStoreEvent;
 import net.iponweb.disthene.service.util.NameThreadFactory;
@@ -34,13 +34,13 @@ public class SumAggregator {
 
     private Logger logger = Logger.getLogger(SumAggregator.class);
 
-    private MBassador bus;
+    private MBassador<DistheneEvent> bus;
     private DistheneConfiguration distheneConfiguration;
     private AggregationConfiguration aggregationConfiguration;
     private BlackList blackList;
     private final TreeMap<DateTime, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
 
-    public SumAggregator(MBassador bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlackList blackList) {
+    public SumAggregator(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlackList blackList) {
         this.bus = bus;
         this.distheneConfiguration = distheneConfiguration;
         this.aggregationConfiguration = aggregationConfiguration;
@@ -122,7 +122,6 @@ public class SumAggregator {
         for(Metric metric : metricsToFlush) {
             if (!blackList.isBlackListed(metric)) {
                 bus.post(new MetricStoreEvent(metric)).now();
-                bus.post(new MetricIndexEvent(metric)).now();
             }
         }
 

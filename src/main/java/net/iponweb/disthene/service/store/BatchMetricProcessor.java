@@ -1,16 +1,14 @@
 package net.iponweb.disthene.service.store;
 
 import com.datastax.driver.core.*;
-import com.datastax.driver.core.querybuilder.Batch;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
+import net.iponweb.disthene.service.events.DistheneEvent;
 import net.iponweb.disthene.service.events.StoreErrorEvent;
 import net.iponweb.disthene.service.events.StoreSuccessEvent;
-import net.iponweb.disthene.service.stats.Stats;
 import org.apache.log4j.Logger;
 
 import java.util.Collections;
@@ -31,11 +29,11 @@ public class BatchMetricProcessor {
     private int batchSize;
     private Queue<Metric> metrics = new LinkedBlockingQueue<>();
     private AtomicBoolean executing = new AtomicBoolean(false);
-    private MBassador bus;
+    private MBassador<DistheneEvent> bus;
 
     private final Executor executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
-    public BatchMetricProcessor(Session session, int batchSize, int flushInterval, MBassador bus) {
+    public BatchMetricProcessor(Session session, int batchSize, int flushInterval, MBassador<DistheneEvent> bus) {
         this.session = session;
         this.batchSize = batchSize;
         this.bus = bus;

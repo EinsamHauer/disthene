@@ -3,7 +3,6 @@ package net.iponweb.disthene.service.blacklist;
 import com.google.common.base.Joiner;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.BlackListConfiguration;
-import sun.misc.Regexp;
 
 import java.util.HashMap;
 import java.util.List;

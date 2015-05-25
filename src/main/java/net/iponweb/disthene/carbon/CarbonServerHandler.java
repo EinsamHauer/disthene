@@ -1,6 +1,5 @@
 package net.iponweb.disthene.carbon;
 
-import com.google.common.eventbus.EventBus;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -8,6 +7,7 @@ import io.netty.util.CharsetUtil;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
+import net.iponweb.disthene.service.events.DistheneEvent;
 import net.iponweb.disthene.service.events.MetricReceivedEvent;
 import org.apache.log4j.Logger;
 
@@ -17,10 +17,10 @@ import org.apache.log4j.Logger;
 public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     private Logger logger = Logger.getLogger(CarbonServerHandler.class);
 
-    private MBassador bus;
+    private MBassador<DistheneEvent> bus;
     private Rollup rollup;
 
-    public CarbonServerHandler(MBassador bus, Rollup rollup) {
+    public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup) {
         this.bus = bus;
         this.rollup = rollup;
     }

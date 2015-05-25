@@ -8,6 +8,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.Rollup;
+import net.iponweb.disthene.service.events.DistheneEvent;
 import net.iponweb.disthene.service.events.MetricStoreEvent;
 import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
@@ -29,14 +30,14 @@ public class RollupAggregator {
     private Logger logger = Logger.getLogger(RollupAggregator.class);
 
 
-    private MBassador bus;
+    private MBassador<DistheneEvent> bus;
     private DistheneConfiguration distheneConfiguration;
     private Rollup maxRollup;
     private List<Rollup> rollups;
 
     private final TreeMap<DateTime, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
 
-    public RollupAggregator(MBassador bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
+    public RollupAggregator(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
         this.distheneConfiguration = distheneConfiguration;
         this.rollups = rollups;
         this.bus = bus;
