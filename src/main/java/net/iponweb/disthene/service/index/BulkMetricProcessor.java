@@ -47,6 +47,8 @@ public class BulkMetricProcessor {
 
     private AtomicLong writeCount = new AtomicLong(0);
 
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+
     public BulkMetricProcessor(TransportClient client, IndexConfiguration indexConfiguration) {
         this.client = client;
         this.index = indexConfiguration.getIndex();
@@ -55,7 +57,6 @@ public class BulkMetricProcessor {
 
         executor = Executors.newFixedThreadPool(indexConfiguration.getBulk().getPool(), new NameThreadFactory(EXECUTOR_NAME));
 
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -123,6 +124,15 @@ public class BulkMetricProcessor {
 
         }
     }
+
+    public void shutdown() {
+        scheduler.shutdown();
+
+        execute(1);
+
+        bulkProcessor.close();
+    }
+
 
     private class MetricMultiGetRequestBuilder extends MultiGetRequestBuilder {
 

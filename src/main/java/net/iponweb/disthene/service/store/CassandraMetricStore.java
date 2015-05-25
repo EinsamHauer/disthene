@@ -3,6 +3,7 @@ package net.iponweb.disthene.service.store;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.TokenAwarePolicy;
+import com.datastax.driver.core.policies.WhiteListPolicy;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -18,6 +19,7 @@ import net.iponweb.disthene.service.events.StoreErrorEvent;
 import net.iponweb.disthene.service.events.StoreSuccessEvent;
 import org.apache.log4j.Logger;
 
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -28,13 +30,13 @@ import java.util.concurrent.Executors;
 
 @Listener(references= References.Strong)
 public class CassandraMetricStore {
-
     private static final String QUERY = "UPDATE metric.metric USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
 
     private Logger logger = Logger.getLogger(CassandraMetricStore.class);
 
     private MBassador<DistheneEvent> bus;
 
+    private Cluster cluster;
     private Session session;
     private Executor executor;
     private boolean batchMode;
@@ -65,8 +67,8 @@ public class CassandraMetricStore {
         Cluster.Builder builder = Cluster.builder()
                 .withSocketOptions(socketOptions)
                 .withCompression(ProtocolOptions.Compression.LZ4)
-                .withLoadBalancingPolicy(new TokenAwarePolicy(new DCAwareRoundRobinPolicy()))
-//                .withLoadBalancingPolicy(new WhiteListPolicy(new DCAwareRoundRobinPolicy(), Collections.singletonList(new InetSocketAddress("cassandra-1a.graphite.devops.iponweb.net", 9042))))
+//                .withLoadBalancingPolicy(new TokenAwarePolicy(new DCAwareRoundRobinPolicy()))
+                .withLoadBalancingPolicy(new WhiteListPolicy(new DCAwareRoundRobinPolicy(), Collections.singletonList(new InetSocketAddress("cassandra-1a.graphite.devops.iponweb.net", 9042))))
                 .withPoolingOptions(poolingOptions)
                 .withQueryOptions(new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE))
                 .withProtocolVersion(ProtocolVersion.V2)
@@ -75,7 +77,7 @@ public class CassandraMetricStore {
             builder.addContactPoint(cp);
         }
 
-        Cluster cluster = builder.build();
+        cluster = builder.build();
         Metadata metadata = cluster.getMetadata();
         logger.debug("Connected to cluster: " + metadata.getClusterName());
         for (Host host : metadata.getAllHosts()) {
@@ -125,6 +127,15 @@ public class CassandraMetricStore {
                 },
                 executor
         );
+    }
+
+    public void shutdown() {
+        if (batchMode) {
+            processor.shutdown();
+        }
+
+        session.close();
+        cluster.close();
     }
 }
 

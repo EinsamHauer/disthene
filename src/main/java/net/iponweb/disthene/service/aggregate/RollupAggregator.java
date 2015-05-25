@@ -35,6 +35,8 @@ public class RollupAggregator {
     private Rollup maxRollup;
     private List<Rollup> rollups;
 
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+
     private final TreeMap<DateTime, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
 
     public RollupAggregator(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
@@ -49,7 +51,6 @@ public class RollupAggregator {
             }
         }
 
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -128,6 +129,20 @@ public class RollupAggregator {
         }
 
     }
+
+    public void shutdown() {
+        scheduler.shutdown();
+
+        Collection<Metric> metricsToFlush = new ArrayList<>();
+        for(Map.Entry<DateTime, Map<MetricKey, AggregationEntry>> entry : accumulator.entrySet()) {
+            for(AggregationEntry aggregationEntry : entry.getValue().values()) {
+                metricsToFlush.add(aggregationEntry.getMetric());
+            }
+        }
+        doFlush(metricsToFlush);
+    }
+
+
 
     private static DateTime getRollupTimestamp(DateTime dt, Rollup rollup) {
         int minutes = (int) (Math.ceil(dt.getMinuteOfHour() / (double) (rollup.getRollup() / 60)) * 15);

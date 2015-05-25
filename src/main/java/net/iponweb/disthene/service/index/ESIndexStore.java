@@ -41,4 +41,7 @@ public class ESIndexStore {
         processor.add(metricStoreEvent.getMetric());
     }
 
+    public void shutdown() {
+        processor.shutdown();
+    }
 }

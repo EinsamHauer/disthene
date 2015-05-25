@@ -40,6 +40,8 @@ public class SumAggregator {
     private BlackList blackList;
     private final TreeMap<DateTime, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
 
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+
     public SumAggregator(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlackList blackList) {
         this.bus = bus;
         this.distheneConfiguration = distheneConfiguration;
@@ -47,7 +49,7 @@ public class SumAggregator {
         this.blackList = blackList;
         bus.subscribe(this);
 
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -125,5 +127,19 @@ public class SumAggregator {
             }
         }
 
+    }
+
+    public void shutdown() {
+        scheduler.shutdown();
+
+        Collection<Metric> metricsToFlush = new ArrayList<>();
+        for(Map.Entry<DateTime, Map<MetricKey, Metric>> entry : accumulator.entrySet()) {
+            metricsToFlush.addAll(entry.getValue().values());
+        }
+        doFlush(metricsToFlush);
+    }
+
+    public void setAggregationConfiguration(AggregationConfiguration aggregationConfiguration) {
+        this.aggregationConfiguration = aggregationConfiguration;
     }
 }

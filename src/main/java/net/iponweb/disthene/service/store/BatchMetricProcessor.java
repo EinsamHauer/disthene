@@ -9,6 +9,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.service.events.DistheneEvent;
 import net.iponweb.disthene.service.events.StoreErrorEvent;
 import net.iponweb.disthene.service.events.StoreSuccessEvent;
+import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 
 import java.util.Collections;
@@ -20,6 +21,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author Andrei Ivanov
  */
 public class BatchMetricProcessor {
+    private static final String SCHEDULER_NAME = "distheneCassandraProcessor";
+
+
     private static final String QUERY = "UPDATE metric.metric USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
 
     private Logger logger = Logger.getLogger(BatchMetricProcessor.class);
@@ -32,6 +36,8 @@ public class BatchMetricProcessor {
     private MBassador<DistheneEvent> bus;
 
     private final Executor executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+
 
     public BatchMetricProcessor(Session session, int batchSize, int flushInterval, MBassador<DistheneEvent> bus) {
         this.session = session;
@@ -40,7 +46,6 @@ public class BatchMetricProcessor {
 
         statement = session.prepare(QUERY);
 
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -116,4 +121,7 @@ public class BatchMetricProcessor {
     }
 
 
+    public void shutdown() {
+        scheduler.shutdown();
+    }
 }

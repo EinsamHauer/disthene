@@ -24,11 +24,22 @@ public class BlackList {
     }
 
     public boolean isBlackListed(Metric metric) {
-        if (rules.get(metric.getTenant()) != null) {
-            Matcher matcher = rules.get(metric.getTenant()).matcher(metric.getPath());
+        Pattern pattern = rules.get(metric.getTenant());
+        if (pattern != null) {
+            Matcher matcher = pattern.matcher(metric.getPath());
             return matcher.matches();
         } else {
             return false;
         }
+    }
+
+    public void setRules(BlackListConfiguration blackListConfiguration) {
+        Map<String, Pattern> rules = new HashMap<>();
+
+        for(Map.Entry<String, List<String>> entry : blackListConfiguration.getRules().entrySet()) {
+            rules.put(entry.getKey(), Pattern.compile(Joiner.on("|").skipNulls().join(entry.getValue())));
+        }
+
+        this.rules = rules;
     }
 }

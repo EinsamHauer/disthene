@@ -7,6 +7,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
+import io.netty.util.concurrent.Future;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.service.events.DistheneEvent;
@@ -60,8 +61,15 @@ public class CarbonServer {
 
     public void shutdown() {
         ChannelFuture f = channelFuture.channel().close();
-        f.awaitUninterruptibly();
-        bossGroup.shutdownGracefully();
-        workerGroup.shutdownGracefully();
+        logger.info("Closing channel");
+        f.awaitUninterruptibly(60000);
+
+        Future bossGroupShutdownFuture = bossGroup.shutdownGracefully();
+        logger.info("Shutting down boss group");
+        bossGroupShutdownFuture.awaitUninterruptibly(60000);
+
+        Future workerGroupShutdownFuture = workerGroup.shutdownGracefully();
+        logger.info("Shutting down worker group");
+        workerGroupShutdownFuture.awaitUninterruptibly(60000);
     }
 }
