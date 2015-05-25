@@ -25,7 +25,7 @@ import java.io.IOException;
  * @author Andrei Ivanov
  */
 @Listener(references= References.Strong)
-public class ESIndexStore implements IndexStore {
+public class ESIndexStore {
     private Logger logger = Logger.getLogger(ESIndexStore.class);
 
     private BulkMetricProcessor processor;
@@ -49,7 +49,4 @@ public class ESIndexStore implements IndexStore {
         processor.add(metricIndexEvent.getMetric());
     }
 
-    @Override
-    public void store(final Metric metric) {
-    }
 }

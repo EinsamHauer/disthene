@@ -1,29 +1,19 @@
 package net.iponweb.disthene;
 
-import com.google.common.eventbus.AsyncEventBus;
-import com.google.common.eventbus.EventBus;
 import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.bus.config.BusConfiguration;
-import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
-import net.iponweb.disthene.service.aggregate.AggregationFlusher;
-import net.iponweb.disthene.service.aggregate.Aggregator;
 import net.iponweb.disthene.service.aggregate.RollupAggregator;
 import net.iponweb.disthene.service.aggregate.SumAggregator;
 import net.iponweb.disthene.service.blacklist.BlackList;
 import net.iponweb.disthene.service.general.GeneralStore;
 import net.iponweb.disthene.service.index.ESIndexStore;
-import net.iponweb.disthene.service.index.IndexStore;
 import net.iponweb.disthene.service.stats.Stats;
 import net.iponweb.disthene.service.store.CassandraMetricStore;
-import net.iponweb.disthene.service.store.DebugMetricStore;
-import net.iponweb.disthene.service.store.MetricStore;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
-import org.joda.time.DateTime;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
@@ -33,7 +23,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 
 /**
  * @author Andrei Ivanov
@@ -45,8 +34,6 @@ public class Disthene {
     private static final String DEFAULT_BLACKLIST_LOCATION = "/etc/disthene/blacklist.yaml";
     private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
-
-    private static MetricStore metricStore;
 
     public static void main(String[] args) throws MalformedURLException {
         Options options = new Options();
@@ -91,7 +78,7 @@ public class Disthene {
             new ESIndexStore(distheneConfiguration, bus);
 
             logger.info("Creating Cassandra metric store");
-            metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), bus);
+            new CassandraMetricStore(distheneConfiguration.getStore(), bus);
 
             logger.info("Loading aggregation rules");
             in = Files.newInputStream(Paths.get(commandLine.getOptionValue("a", DEFAULT_AGGREGATION_CONFIG_LOCATION)));

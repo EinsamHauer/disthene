@@ -8,14 +8,10 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.Rollup;
-import net.iponweb.disthene.service.events.MetricReceivedEvent;
 import net.iponweb.disthene.service.events.MetricStoreEvent;
-import net.iponweb.disthene.service.general.GeneralStore;
-import net.iponweb.disthene.service.store.MetricStore;
 import net.iponweb.disthene.service.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 
 import java.util.*;
 import java.util.concurrent.Executors;

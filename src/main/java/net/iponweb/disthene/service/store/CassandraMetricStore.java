@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
  */
 
 @Listener(references= References.Strong)
-public class CassandraMetricStore implements MetricStore {
+public class CassandraMetricStore {
 
     private static final String QUERY = "UPDATE metric.metric USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
 
@@ -95,11 +95,6 @@ public class CassandraMetricStore implements MetricStore {
         } else {
             storeInternal(metricStoreEvent.getMetric());
         }
-    }
-
-
-    @Override
-    public void store(Metric metric) {
     }
 
     private void storeInternal(Metric metric) {
