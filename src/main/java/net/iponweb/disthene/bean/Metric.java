@@ -14,7 +14,7 @@ public class Metric {
 
     public Metric(String input, Rollup rollup) {
         String[] splitInput = input.split("\\s");
-        this.key = new MetricKey(splitInput[3], splitInput[0], rollup.getRollup(), rollup.getPeriod(), new DateTime(Long.valueOf(splitInput[2]) * 1000L, DateTimeZone.UTC));
+        this.key = new MetricKey(splitInput[3].intern(), splitInput[0], rollup.getRollup(), rollup.getPeriod(), new DateTime(Long.valueOf(splitInput[2]) * 1000L, DateTimeZone.UTC));
         this.value = Double.valueOf(splitInput[1]);
     }
 
