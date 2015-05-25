@@ -54,12 +54,8 @@ public class Disthene {
             in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
-            //*********************************************************************************************************
-            // NEW
-            //*********************************************************************************************************
             logger.info("Creating event bus");
             MBassador bus = new MBassador();
-//            EventBus bus = new AsyncEventBus(Executors.newCachedThreadPool());
 
             logger.info("Loading blacklists");
             in = Files.newInputStream(Paths.get(commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION)));
@@ -94,53 +90,6 @@ public class Disthene {
             logger.info("Starting carbon");
             CarbonServer carbonServer = new CarbonServer(distheneConfiguration, bus);
             carbonServer.run();
-            //*********************************************************************************************************
-
-
-/*
-            logger.info("Creating stats");
-            Stats stats = new Stats(distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
-
-            logger.info("Creating Cassandra metric store");
-            MetricStore metricStore = new CassandraMetricStore(distheneConfiguration.getStore(), stats);
-
-            logger.info("Creating ES index store");
-            IndexStore indexStore = new ESIndexStore(distheneConfiguration);
-
-            logger.info("Loading blacklists");
-            in = Files.newInputStream(Paths.get(commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION)));
-            BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
-            in.close();
-            logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
-            BlackList blackList = new BlackList(blackListConfiguration);
-
-            logger.info("Loading aggregation rules");
-            in = Files.newInputStream(Paths.get(commandLine.getOptionValue("a", DEFAULT_AGGREGATION_CONFIG_LOCATION)));
-            AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
-            in.close();
-            logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
-            Aggregator aggregator = new SumAggregator(distheneConfiguration, aggregationConfiguration);
-
-            logger.info("Creating rollup aggregator");
-            Aggregator rollupAggregator = new RollupAggregator(distheneConfiguration, distheneConfiguration.getCarbon().getRollups(), metricStore);
-
-                    logger.info("Creating flusher thread");
-            AggregationFlusher aggregationFlusher = new AggregationFlusher(aggregator, rollupAggregator);
-
-            logger.info("Creating general store");
-            GeneralStore generalStore = new GeneralStore(metricStore, indexStore, blackList, aggregator, rollupAggregator, stats);
-
-            logger.info("Setting store to aggregator");
-            aggregator.setGeneralStore(generalStore);
-
-            logger.info("Setting store to stats");
-            stats.setGeneralStore(generalStore);
-
-            logger.info("Starting carbon");
-            CarbonServer carbonServer = new CarbonServer(distheneConfiguration, generalStore);
-            carbonServer.run();
-*/
-
         } catch (ParseException e) {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("Disthene", options);

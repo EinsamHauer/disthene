@@ -40,22 +40,4 @@ public class GeneralStore {
 
     }
 
-
-/*
-    public void store(Metric metric) {
-        // aggregate
-        try {
-            stats.incMetricsReceived(metric);
-            aggregator.aggregate(metric);
-
-            if (!blackList.isBlackListed(metric)) {
-                indexStore.store(metric);
-                metricStore.store(metric);
-                rollupAggregator.aggregate(metric);
-            }
-        } catch (Exception e) {
-            logger.error(e);
-        }
-    }
-*/
 }
