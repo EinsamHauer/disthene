@@ -196,10 +196,10 @@ public class Disthene {
             logger.info("Shutting down rollup aggregator");
             rollupAggregator.shutdown();
 
-            logger.info("Shutting down rollup ES index service");
+            logger.info("Shutting down ES service");
             esIndexStore.shutdown();
 
-            logger.info("Shutting down rollup C* index service");
+            logger.info("Shutting down C* service");
             cassandraMetricStore.shutdown();
 
             logger.info("Shutdown complete");
