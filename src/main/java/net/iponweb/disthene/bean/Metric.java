@@ -14,7 +14,8 @@ public class Metric {
 
     public Metric(String input, Rollup rollup) {
         String[] splitInput = input.split("\\s");
-        this.key = new MetricKey(splitInput[3].intern(), splitInput[0], rollup.getRollup(), rollup.getPeriod(), new DateTime(Long.valueOf(splitInput[2]) * 1000L, DateTimeZone.UTC));
+        // We are interning tenant and path here - we are going to store them all (or almost so) constantly anyhow in multiple places
+        this.key = new MetricKey(splitInput[3].intern(), splitInput[0].intern(), rollup.getRollup(), rollup.getPeriod(), new DateTime(Long.valueOf(splitInput[2]) * 1000L, DateTimeZone.UTC));
         this.value = Double.valueOf(splitInput[1]);
     }
 

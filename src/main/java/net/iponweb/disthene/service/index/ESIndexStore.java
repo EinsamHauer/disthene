@@ -13,6 +13,9 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 /**
  * @author Andrei Ivanov
  */
@@ -21,6 +24,8 @@ public class ESIndexStore {
     private Logger logger = Logger.getLogger(ESIndexStore.class);
 
     private BulkMetricProcessor processor;
+    // tenant -> path -> dummy
+    private ConcurrentMap<String, ConcurrentMap<String, Boolean>> cache = new ConcurrentHashMap<>();
 
     public ESIndexStore(DistheneConfiguration distheneConfiguration, MBassador<DistheneEvent> bus) {
         bus.subscribe(this);
@@ -38,7 +43,19 @@ public class ESIndexStore {
 
     @Handler(rejectSubtypes = false)
     public void handle(MetricStoreEvent metricStoreEvent) {
-        processor.add(metricStoreEvent.getMetric());
+        ConcurrentMap<String, Boolean> tenantPaths = cache.get(metricStoreEvent.getMetric().getTenant());
+        if (tenantPaths == null) {
+            ConcurrentMap<String, Boolean> newTenantPaths = new ConcurrentHashMap<>();
+            tenantPaths = cache.putIfAbsent(metricStoreEvent.getMetric().getTenant(), newTenantPaths);
+            if (tenantPaths == null) {
+                tenantPaths = newTenantPaths;
+            }
+        }
+
+        if (tenantPaths.putIfAbsent(metricStoreEvent.getMetric().getPath(), true) == null) {
+            processor.add(metricStoreEvent.getMetric());
+        }
+
     }
 
     public void shutdown() {
