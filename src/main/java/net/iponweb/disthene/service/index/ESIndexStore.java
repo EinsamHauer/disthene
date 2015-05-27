@@ -43,7 +43,6 @@ public class ESIndexStore {
 
     @Handler(rejectSubtypes = false)
     public void handle(MetricStoreEvent metricStoreEvent) {
-/*
         ConcurrentMap<String, Boolean> tenantPaths = cache.get(metricStoreEvent.getMetric().getTenant());
         if (tenantPaths == null) {
             ConcurrentMap<String, Boolean> newTenantPaths = new ConcurrentHashMap<>();
@@ -56,8 +55,7 @@ public class ESIndexStore {
         if (tenantPaths.putIfAbsent(metricStoreEvent.getMetric().getPath(), true) == null) {
             processor.add(metricStoreEvent.getMetric());
         }
-*/
-        processor.add(metricStoreEvent.getMetric());
+
     }
 
     public void shutdown() {
