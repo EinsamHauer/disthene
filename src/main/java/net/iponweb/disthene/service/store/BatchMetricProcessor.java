@@ -4,6 +4,7 @@ import com.datastax.driver.core.*;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.RateLimiter;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.service.events.DistheneEvent;
@@ -34,6 +35,7 @@ public class BatchMetricProcessor {
     private Queue<Metric> metrics = new LinkedBlockingQueue<>();
     private AtomicBoolean executing = new AtomicBoolean(false);
     private MBassador<DistheneEvent> bus;
+    private RateLimiter rateLimiter;
 
     private final Executor executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
@@ -45,6 +47,8 @@ public class BatchMetricProcessor {
         this.bus = bus;
 
         statement = session.prepare(QUERY);
+
+        rateLimiter = RateLimiter.create(600);
 
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
@@ -97,6 +101,7 @@ public class BatchMetricProcessor {
                 currentBatchSize++;
             }
 
+            rateLimiter.acquire(1);
             ResultSetFuture future = session.executeAsync(batch);
 
             final int finalCurrentBatchSize = currentBatchSize;
