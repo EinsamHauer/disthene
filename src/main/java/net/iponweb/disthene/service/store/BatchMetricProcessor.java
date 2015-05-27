@@ -116,6 +116,9 @@ public class BatchMetricProcessor {
                         public void onFailure(Throwable t) {
                             bus.post(new StoreErrorEvent(finalCurrentBatchSize)).asynchronously();
                             logger.error(t);
+                            // let's also penalize an error by additionally throttling C* writes
+                            // effectively let's suspend it for like 10 seconds hoping C* will recover after that
+                            rateLimiter.acquire(8000);
                         }
                     },
                     executor
