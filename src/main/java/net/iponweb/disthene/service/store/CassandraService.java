@@ -58,6 +58,8 @@ public class CassandraService {
                 .setConnectTimeoutMillis(storeConfiguration.getConnectTimeout() * 1000);
 
         PoolingOptions poolingOptions = new PoolingOptions();
+        poolingOptions.setCoreConnectionsPerHost(HostDistance.REMOTE, 128);
+        poolingOptions.setCoreConnectionsPerHost(HostDistance.LOCAL, 128);
         poolingOptions.setMaxConnectionsPerHost(HostDistance.LOCAL, storeConfiguration.getMaxConnections());
         poolingOptions.setMaxConnectionsPerHost(HostDistance.REMOTE, storeConfiguration.getMaxConnections());
         poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.REMOTE, storeConfiguration.getMaxRequests());
