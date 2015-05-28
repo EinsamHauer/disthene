@@ -41,14 +41,14 @@ public class BatchMetricProcessor {
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
 
 
-    public BatchMetricProcessor(Session session, int batchSize, int flushInterval, MBassador<DistheneEvent> bus) {
+    public BatchMetricProcessor(Session session, int batchSize, int flushInterval, int maxThroughput, MBassador<DistheneEvent> bus) {
         this.session = session;
         this.batchSize = batchSize;
         this.bus = bus;
 
         statement = session.prepare(QUERY);
 
-        rateLimiter = RateLimiter.create(600);
+        rateLimiter = RateLimiter.create(maxThroughput / (60 * batchSize));
 
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
@@ -118,7 +118,7 @@ public class BatchMetricProcessor {
                             logger.error(t);
                             // let's also penalize an error by additionally throttling C* writes
                             // effectively let's suspend it for like 10 seconds hoping C* will recover after that
-                            rateLimiter.acquire(8000);
+                            rateLimiter.acquire((int) (10 * rateLimiter.getRate()));
                         }
                     },
                     executor

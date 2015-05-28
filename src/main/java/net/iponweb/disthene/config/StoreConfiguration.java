@@ -17,6 +17,7 @@ public class StoreConfiguration {
     private boolean batch;
     private int batchSize;
     private int interval;
+    private int maxThroughput;
 
     public List<String> getCluster() {
         return cluster;
@@ -98,6 +99,14 @@ public class StoreConfiguration {
         this.interval = interval;
     }
 
+    public int getMaxThroughput() {
+        return maxThroughput;
+    }
+
+    public void setMaxThroughput(int maxThroughput) {
+        this.maxThroughput = maxThroughput;
+    }
+
     @Override
     public String toString() {
         return "StoreConfiguration{" +
@@ -111,6 +120,7 @@ public class StoreConfiguration {
                 ", batch=" + batch +
                 ", batchSize=" + batchSize +
                 ", interval=" + interval +
+                ", maxThroughput=" + maxThroughput +
                 '}';
     }
 }

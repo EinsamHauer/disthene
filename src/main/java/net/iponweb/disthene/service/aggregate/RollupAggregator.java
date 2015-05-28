@@ -103,7 +103,8 @@ public class RollupAggregator {
 
         synchronized (accumulator) {
             // check earliest timestamp map
-            if (accumulator.size() == 0 || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay()))) {
+            // We have to wait for sum metrics and stats longer - thus * 2
+            if (accumulator.size() == 0 || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay() * 2))) {
                 // nothing to do, just return
                 return;
             }
