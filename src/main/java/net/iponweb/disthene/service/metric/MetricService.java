@@ -27,7 +27,7 @@ public class MetricService {
     @Handler(rejectSubtypes = false)
     public void handle(MetricReceivedEvent metricReceivedEvent) {
         if (!blacklistService.isBlackListed(metricReceivedEvent.getMetric())) {
-            bus.post(new MetricStoreEvent(metricReceivedEvent.getMetric())).now();
+            bus.post(new MetricStoreEvent(metricReceivedEvent.getMetric())).asynchronously();
         }
 
     }
