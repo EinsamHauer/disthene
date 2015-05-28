@@ -3,8 +3,6 @@ package net.iponweb.disthene.service.store;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.TokenAwarePolicy;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
@@ -14,41 +12,32 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.StoreConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
-import net.iponweb.disthene.events.StoreErrorEvent;
-import net.iponweb.disthene.events.StoreSuccessEvent;
 import org.apache.log4j.Logger;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
  * @author Andrei Ivanov
  */
-
 @Listener(references= References.Strong)
 public class CassandraService {
     private static final String QUERY = "UPDATE metric.metric USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
 
     private Logger logger = Logger.getLogger(CassandraService.class);
 
-    private MBassador<DistheneEvent> bus;
-
     private Cluster cluster;
     private Session session;
-    private Executor executor;
-    private boolean batchMode;
-    private PreparedStatement statement;
 
-    private BatchMetricProcessor processor;
+    private Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
+    private List<WriterThread> writerThreads = new ArrayList<>();
 
     public CassandraService(StoreConfiguration storeConfiguration, MBassador<DistheneEvent> bus) {
-        this.bus = bus;
         bus.subscribe(this);
-
-        this.batchMode = storeConfiguration.isBatch();
-
-        executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
 
         SocketOptions socketOptions = new SocketOptions()
                 .setReceiveBufferSize(1024 * 1024)
@@ -67,7 +56,6 @@ public class CassandraService {
                 .withSocketOptions(socketOptions)
                 .withCompression(ProtocolOptions.Compression.LZ4)
                 .withLoadBalancingPolicy(new TokenAwarePolicy(new DCAwareRoundRobinPolicy()))
-//                .withLoadBalancingPolicy(new WhiteListPolicy(new DCAwareRoundRobinPolicy(), Collections.singletonList(new InetSocketAddress("cassandra-1a.graphite.devops.iponweb.net", 9042))))
                 .withPoolingOptions(poolingOptions)
                 .withQueryOptions(new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE))
                 .withProtocolVersion(ProtocolVersion.V2)
@@ -84,54 +72,48 @@ public class CassandraService {
         }
 
         session = cluster.connect();
-        statement = session.prepare(QUERY);
+        PreparedStatement statement = session.prepare(QUERY);
 
-        if (batchMode) {
-            processor = new BatchMetricProcessor(session, storeConfiguration.getBatchSize(), storeConfiguration.getInterval(), storeConfiguration.getMaxThroughput(), bus);
+        // Creating writers
+
+        if (storeConfiguration.isBatch()) {
+            for(int i = 0; i < storeConfiguration.getPool(); i++) {
+                writerThreads.add(
+                        new BatchWriterThread(
+                                "distheneCassandraBatchWriter" + i,
+                                bus,
+                                session,
+                                statement,
+                                metrics,
+                                MoreExecutors.listeningDecorator(Executors.newCachedThreadPool()),
+                                storeConfiguration.getBatchSize()
+                        )
+                );
+            }
+        } else {
+            for(int i = 0; i < storeConfiguration.getPool(); i++) {
+                writerThreads.add(
+                        new SingleWriterThread(
+                                "distheneCassandraSingleWriter" + i,
+                                bus,
+                                session,
+                                statement,
+                                metrics,
+                                MoreExecutors.listeningDecorator(Executors.newCachedThreadPool())
+                        )
+                );
+            }
         }
     }
 
     @Handler(rejectSubtypes = false)
     public void handle(MetricStoreEvent metricStoreEvent) {
-        if (batchMode) {
-            processor.add(metricStoreEvent.getMetric());
-        } else {
-            storeInternal(metricStoreEvent.getMetric());
-        }
-    }
-
-    private void storeInternal(Metric metric) {
-        ResultSetFuture future = session.executeAsync(statement.bind(
-                metric.getRollup() * metric.getPeriod(),
-                Collections.singletonList(metric.getValue()),
-                metric.getTenant(),
-                metric.getRollup(),
-                metric.getPeriod(),
-                metric.getPath(),
-                metric.getUnixTimestamp()
-        ));
-
-        Futures.addCallback(future,
-                new FutureCallback<ResultSet>() {
-                    @Override
-                    public void onSuccess(ResultSet result) {
-                        bus.post(new StoreSuccessEvent(1)).asynchronously();
-                    }
-
-                    @SuppressWarnings("NullableProblems")
-                    @Override
-                    public void onFailure(Throwable t) {
-                        bus.post(new StoreErrorEvent(1)).asynchronously();
-                        logger.error(t);
-                    }
-                },
-                executor
-        );
+        metrics.offer(metricStoreEvent.getMetric());
     }
 
     public void shutdown() {
-        if (batchMode) {
-            processor.shutdown();
+        for (WriterThread writerThread : writerThreads) {
+            writerThread.shutdown();
         }
 
         session.close();
