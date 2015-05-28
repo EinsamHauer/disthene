@@ -18,7 +18,7 @@ import org.apache.log4j.Logger;
  */
 
 public class CarbonServer {
-    public static final int MAX_FRAME_LENGTH = 1024;
+    public static final int MAX_FRAME_LENGTH = 102400;
     private Logger logger = Logger.getLogger(CarbonServer.class);
 
     private DistheneConfiguration configuration;
