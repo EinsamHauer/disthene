@@ -58,6 +58,7 @@ public class BatchMetricProcessor {
             public void run() {
                 logger.debug("****Threads in the pool: " + tpExecutor.getPoolSize());
                 logger.debug("****Bus has pending messages: " + Disthene.dispatch.getPendingMessages().size());
+                logger.debug("****Metrics in queu: " + metrics.size());
                 flush();
             }
         }, flushInterval, flushInterval, TimeUnit.SECONDS);
@@ -119,12 +120,12 @@ public class BatchMetricProcessor {
                     new FutureCallback<ResultSet>() {
                         @Override
                         public void onSuccess(ResultSet result) {
-                            bus.post(new StoreSuccessEvent(finalCurrentBatchSize)).asynchronously();
+//                            bus.post(new StoreSuccessEvent(finalCurrentBatchSize)).asynchronously();
                         }
 
                         @Override
                         public void onFailure(Throwable t) {
-                            bus.post(new StoreErrorEvent(finalCurrentBatchSize)).asynchronously();
+//                            bus.post(new StoreErrorEvent(finalCurrentBatchSize)).asynchronously();
                             logger.error(t);
                             // let's also penalize an error by additionally throttling C* writes
                             // effectively let's suspend it for like 10 seconds hoping C* will recover after that
