@@ -38,6 +38,7 @@ public class CassandraService {
     private Session session;
     private Executor executor;
     private boolean batchMode;
+    private PreparedStatement statement;
 
     private BatchMetricProcessor processor;
 
@@ -83,6 +84,7 @@ public class CassandraService {
         }
 
         session = cluster.connect();
+        statement = session.prepare(QUERY);
 
         if (batchMode) {
             processor = new BatchMetricProcessor(session, storeConfiguration.getBatchSize(), storeConfiguration.getInterval(), storeConfiguration.getMaxThroughput(), bus);
@@ -99,7 +101,7 @@ public class CassandraService {
     }
 
     private void storeInternal(Metric metric) {
-        ResultSetFuture future = session.executeAsync(QUERY,
+        ResultSetFuture future = session.executeAsync(statement.bind(
                 metric.getRollup() * metric.getPeriod(),
                 Collections.singletonList(metric.getValue()),
                 metric.getTenant(),
@@ -107,7 +109,7 @@ public class CassandraService {
                 metric.getPeriod(),
                 metric.getPath(),
                 metric.getUnixTimestamp()
-        );
+        ));
 
         Futures.addCallback(future,
                 new FutureCallback<ResultSet>() {
