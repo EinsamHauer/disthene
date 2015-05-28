@@ -70,6 +70,6 @@ public class CarbonServer {
 
         Future workerGroupShutdownFuture = workerGroup.shutdownGracefully();
         logger.info("Shutting down worker group");
-        workerGroupShutdownFuture.awaitUninterruptibly(60000);
+        workerGroupShutdownFuture.awaitUninterruptibly(180000);
     }
 }
