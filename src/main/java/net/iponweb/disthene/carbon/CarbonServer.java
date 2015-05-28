@@ -33,7 +33,7 @@ public class CarbonServer {
         this.configuration = configuration;
 
         bossGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads());
-        workerGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads());
+        workerGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads() * 5);
     }
 
     public void run() throws InterruptedException {

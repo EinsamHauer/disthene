@@ -53,7 +53,7 @@ public class CassandraService {
         SocketOptions socketOptions = new SocketOptions()
                 .setReceiveBufferSize(1024 * 1024)
                 .setSendBufferSize(1024 * 1024)
-                .setTcpNoDelay(true)
+                .setTcpNoDelay(false)
                 .setReadTimeoutMillis(storeConfiguration.getReadTimeout() * 1000)
                 .setConnectTimeoutMillis(storeConfiguration.getConnectTimeout() * 1000);
 
@@ -62,8 +62,6 @@ public class CassandraService {
         poolingOptions.setMaxConnectionsPerHost(HostDistance.REMOTE, storeConfiguration.getMaxConnections());
         poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.REMOTE, storeConfiguration.getMaxRequests());
         poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL, storeConfiguration.getMaxRequests());
-        poolingOptions.setCoreConnectionsPerHost(HostDistance.REMOTE, 128);
-        poolingOptions.setCoreConnectionsPerHost(HostDistance.LOCAL, 128);
 
         Cluster.Builder builder = Cluster.builder()
                 .withSocketOptions(socketOptions)

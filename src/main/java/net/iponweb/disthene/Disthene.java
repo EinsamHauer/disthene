@@ -1,18 +1,16 @@
 package net.iponweb.disthene;
 
 import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.bus.config.BusConfiguration;
-import net.engio.mbassy.bus.config.Feature;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.service.aggregate.RollupService;
 import net.iponweb.disthene.service.aggregate.SumService;
 import net.iponweb.disthene.service.blacklist.BlacklistService;
-import net.iponweb.disthene.events.DistheneEvent;
-import net.iponweb.disthene.service.metric.MetricService;
 import net.iponweb.disthene.service.index.IndexService;
+import net.iponweb.disthene.service.metric.MetricService;
 import net.iponweb.disthene.service.stats.StatsService;
 import net.iponweb.disthene.service.store.CassandraService;
 import org.apache.commons.cli.*;
@@ -69,11 +67,7 @@ public class Disthene {
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
             logger.info("Creating dispatcher");
-            bus = new MBassador<>(new BusConfiguration()
-                    .addFeature(Feature.AsynchronousHandlerInvocation.Default())
-                    .addFeature(Feature.SyncPubSub.Default())
-                    .addFeature(Feature.AsynchronousMessageDispatch.Default().setNumberOfMessageDispatchers(32))
-            );
+            bus = new MBassador<>();
 
             logger.info("Loading blacklists");
             in = Files.newInputStream(Paths.get(blacklistLocation));
