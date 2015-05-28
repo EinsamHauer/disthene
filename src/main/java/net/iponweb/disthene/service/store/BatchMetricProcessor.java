@@ -37,11 +37,12 @@ public class BatchMetricProcessor {
     private MBassador<DistheneEvent> bus;
     private RateLimiter rateLimiter;
 
-    private final Executor executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+    private final ThreadPoolExecutor tpExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+    private final Executor executor = MoreExecutors.listeningDecorator(tpExecutor);
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
 
 
-    public BatchMetricProcessor(Session session, int batchSize, int flushInterval, int maxThroughput, MBassador<DistheneEvent> bus) {
+    public BatchMetricProcessor(Session session, int batchSize, int flushInterval, int maxThroughput, final MBassador<DistheneEvent> bus) {
         this.session = session;
         this.batchSize = batchSize;
         this.bus = bus;
@@ -50,9 +51,12 @@ public class BatchMetricProcessor {
 
         rateLimiter = RateLimiter.create(maxThroughput / (60 * batchSize));
 
+        //todo: remove debug
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                logger.debug("****Threads in the pool: " + tpExecutor.getPoolSize());
+                logger.debug("****Bus has pending messages: " + bus.hasPendingMessages());
                 flush();
             }
         }, flushInterval, flushInterval, TimeUnit.SECONDS);
