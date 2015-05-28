@@ -1,20 +1,3 @@
-"bidswitch":
-  "(userverlua|staging)*.<data>": "sum.<data>"
-  "(userverlua|staging)-eu-gce-*.<data>": "sum-eu-gce.<data>"
-  "(userverlua|staging)-us-east-*.<data>": "sum-us-east.<data>"
-  "(userverlua|staging)-us-west-*.<data>": "sum-us-west.<data>"
-  "(userverlua|staging)-as-jp-*.<data>": "sum-as-jp.<data>"
-"udsp":
-  "userverlua*.<data>": "sum.<data>"
-"udsp2":
-  "userverlua*.<data>": "sum.<data>"
-"tokyo":
-  "userverlua*.<data>": "sum.<data>"
-"adnetik":
-  "userverlua*.<data>": "sum.<data>"
-  "*rtb-california*.userver.mongo.find_queries": "sum.userver.mongo.california.find_queries"
-  "*rtb-california*.userver.mongo.failed_requests.timeout": "sum.userver.mongo.california.timeout"
-  "*.nginx.<data>": "sum.nginx.<data>"
 "test":
   "xxx_test_server*.<data>": "xxx_sum.<data>"
   "yyy_test_server*.<data>": "yyy_sum.<data>"

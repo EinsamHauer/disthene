@@ -8,8 +8,8 @@ carbon:
   aggregatorDelay: 90
 store:
   cluster:
-    - "cassandra-1a.graphite.devops.iponweb.net"
-    - "cassandra-1b.graphite.devops.iponweb.net"
+    - "cassandra-1"
+    - "cassandra-2"
   port: 9042
   keyspace: 'metric'
   maxConnections: 2048
@@ -21,12 +21,12 @@ store:
   interval: 5
   maxThroughput: 7000000
 index:
-  name: "cyanite"
+  name: "disthene"
   cluster:
-    - "es-1a.graphite.devops.iponweb.net"
-    - "es-1b.graphite.devops.iponweb.net"
+    - "es-1"
+    - "es-2"
   port: 9300
-  index: "cyanite_paths"
+  index: "disthene"
   type: "path"
   bulk:
     actions: 10000
