@@ -52,7 +52,7 @@ public class CassandraService {
         SocketOptions socketOptions = new SocketOptions()
                 .setReceiveBufferSize(1024 * 1024)
                 .setSendBufferSize(1024 * 1024)
-                .setTcpNoDelay(false)
+                .setTcpNoDelay(true)
                 .setReadTimeoutMillis(storeConfiguration.getReadTimeout() * 1000)
                 .setConnectTimeoutMillis(storeConfiguration.getConnectTimeout() * 1000);
 
