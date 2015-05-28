@@ -44,7 +44,7 @@ public class BatchMetricProcessor {
     private ScheduledExecutorService statsScheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
 
 
-    public BatchMetricProcessor(Session session, int batchSize, int flushInterval, int maxThroughput, final MBassador<DistheneEvent> bus) {
+    public BatchMetricProcessor(final Session session, final int batchSize, int flushInterval, int maxThroughput, final MBassador<DistheneEvent> bus) {
         this.session = session;
         this.batchSize = batchSize;
         this.bus = bus;
@@ -63,12 +63,67 @@ public class BatchMetricProcessor {
             }
         }, 0, 30, TimeUnit.SECONDS);
 
+/*
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 flush();
             }
         }, 100, 100, TimeUnit.MILLISECONDS);
+*/
+
+        ThreadFactory flusherFactory =  new NameThreadFactory("distheneCassandraWriters");
+        for (int i = 0; i < 10; i++) {
+            Thread flusher = flusherFactory.newThread(new Runnable() {
+                @Override
+                public void run() {
+                    int currentBatchSize = 0;
+                    BatchStatement batch = new BatchStatement();
+
+                    while (true) {
+                        Metric metric = metrics.poll();
+
+                        if (metric != null) {
+                            batch.add(
+                                    statement.bind(
+                                            metric.getRollup() * metric.getPeriod(),
+                                            Collections.singletonList(metric.getValue()),
+                                            metric.getTenant(),
+                                            metric.getRollup(),
+                                            metric.getPeriod(),
+                                            metric.getPath(),
+                                            metric.getUnixTimestamp()
+                                    )
+                            );
+                            currentBatchSize++;
+
+                            if (currentBatchSize == batchSize) {
+                                ResultSetFuture future = session.executeAsync(batch);
+
+                                Futures.addCallback(future,
+                                        new FutureCallback<ResultSet>() {
+                                            @Override
+                                            public void onSuccess(ResultSet result) {
+                                            }
+
+                                            @Override
+                                            public void onFailure(Throwable t) {
+                                                logger.error(t);
+                                            }
+                                        },
+                                        executor
+                                );
+
+                                currentBatchSize = 0;
+                                batch = new BatchStatement();
+                            }
+                        }
+                    }
+                }
+            });
+
+            flusher.start();
+        }
     }
 
 
@@ -144,8 +199,8 @@ public class BatchMetricProcessor {
         executing.set(false);
     }
 
-
     public void shutdown() {
         scheduler.shutdown();
     }
+
 }
