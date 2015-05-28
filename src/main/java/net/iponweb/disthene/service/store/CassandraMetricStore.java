@@ -3,7 +3,6 @@ package net.iponweb.disthene.service.store;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.TokenAwarePolicy;
-import com.datastax.driver.core.policies.WhiteListPolicy;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -19,7 +18,6 @@ import net.iponweb.disthene.service.events.StoreErrorEvent;
 import net.iponweb.disthene.service.events.StoreSuccessEvent;
 import org.apache.log4j.Logger;
 
-import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -87,7 +85,7 @@ public class CassandraMetricStore {
         session = cluster.connect();
 
         if (batchMode) {
-            processor = new BatchMetricProcessor(session, storeConfiguration.getBatchSize(), storeConfiguration.getInterval(), bus);
+            processor = new BatchMetricProcessor(session, storeConfiguration.getBatchSize(), storeConfiguration.getInterval(), storeConfiguration.getMaxThroughput(), bus);
         }
     }
 
