@@ -85,6 +85,9 @@ public class BatchMetricProcessor {
     }
 
     private synchronized void execute(int minBatchSize) {
+        logger.debug("****==Threads in the pool: " + tpExecutor.getPoolSize());
+        logger.debug("****==Bus has pending messages: " + bus.hasPendingMessages());
+
         while (metrics.size() >= minBatchSize) {
             int currentBatchSize = 0;
             final BatchStatement batch = new BatchStatement();
