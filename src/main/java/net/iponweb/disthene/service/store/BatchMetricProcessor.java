@@ -64,6 +64,8 @@ public class BatchMetricProcessor {
 
 
     public void add(Metric metric) {
+        logger.debug("****==Threads in the pool: " + tpExecutor.getPoolSize());
+        logger.debug("****==Bus has pending messages: " + bus.hasPendingMessages());
         metrics.add(metric);
         executeIfNeeded();
     }
