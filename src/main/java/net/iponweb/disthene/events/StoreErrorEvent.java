@@ -1,4 +1,4 @@
-package net.iponweb.disthene.service.events;
+package net.iponweb.disthene.events;
 
 /**
  * @author Andrei Ivanov

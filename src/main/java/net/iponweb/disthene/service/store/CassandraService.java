@@ -12,10 +12,10 @@ import net.engio.mbassy.listener.Listener;
 import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.StoreConfiguration;
-import net.iponweb.disthene.service.events.DistheneEvent;
-import net.iponweb.disthene.service.events.MetricStoreEvent;
-import net.iponweb.disthene.service.events.StoreErrorEvent;
-import net.iponweb.disthene.service.events.StoreSuccessEvent;
+import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.events.MetricStoreEvent;
+import net.iponweb.disthene.events.StoreErrorEvent;
+import net.iponweb.disthene.events.StoreSuccessEvent;
 import org.apache.log4j.Logger;
 
 import java.util.Collections;
@@ -27,10 +27,10 @@ import java.util.concurrent.Executors;
  */
 
 @Listener(references= References.Strong)
-public class CassandraMetricStore {
+public class CassandraService {
     private static final String QUERY = "UPDATE metric.metric USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
 
-    private Logger logger = Logger.getLogger(CassandraMetricStore.class);
+    private Logger logger = Logger.getLogger(CassandraService.class);
 
     private MBassador<DistheneEvent> bus;
 
@@ -41,7 +41,7 @@ public class CassandraMetricStore {
 
     private BatchMetricProcessor processor;
 
-    public CassandraMetricStore(StoreConfiguration storeConfiguration, MBassador<DistheneEvent> bus) {
+    public CassandraService(StoreConfiguration storeConfiguration, MBassador<DistheneEvent> bus) {
         this.bus = bus;
         bus.subscribe(this);
 

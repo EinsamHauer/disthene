@@ -9,11 +9,11 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
-import net.iponweb.disthene.service.blacklist.BlackList;
-import net.iponweb.disthene.service.events.DistheneEvent;
-import net.iponweb.disthene.service.events.MetricReceivedEvent;
-import net.iponweb.disthene.service.events.MetricStoreEvent;
-import net.iponweb.disthene.service.util.NameThreadFactory;
+import net.iponweb.disthene.service.blacklist.BlacklistService;
+import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.events.MetricReceivedEvent;
+import net.iponweb.disthene.events.MetricStoreEvent;
+import net.iponweb.disthene.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 
@@ -28,25 +28,25 @@ import java.util.regex.Matcher;
  */
 @Listener(references= References.Strong)
 // todo: handle names other than <data>
-public class SumAggregator {
+public class SumService {
     private static final String SCHEDULER_NAME = "distheneSumAggregatorFlusher";
     private static final int RATE = 60;
 
-    private Logger logger = Logger.getLogger(SumAggregator.class);
+    private Logger logger = Logger.getLogger(SumService.class);
 
     private MBassador<DistheneEvent> bus;
     private DistheneConfiguration distheneConfiguration;
     private AggregationConfiguration aggregationConfiguration;
-    private BlackList blackList;
+    private BlacklistService blacklistService;
     private final TreeMap<DateTime, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
 
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
 
-    public SumAggregator(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlackList blackList) {
+    public SumService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlacklistService blacklistService) {
         this.bus = bus;
         this.distheneConfiguration = distheneConfiguration;
         this.aggregationConfiguration = aggregationConfiguration;
-        this.blackList = blackList;
+        this.blacklistService = blacklistService;
         bus.subscribe(this);
 
 
@@ -122,7 +122,7 @@ public class SumAggregator {
     private synchronized void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
         for(Metric metric : metricsToFlush) {
-            if (!blackList.isBlackListed(metric)) {
+            if (!blacklistService.isBlackListed(metric)) {
                 bus.post(new MetricStoreEvent(metric)).now();
             }
         }

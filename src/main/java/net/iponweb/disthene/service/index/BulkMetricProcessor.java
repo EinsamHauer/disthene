@@ -2,7 +2,7 @@ package net.iponweb.disthene.service.index;
 
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.IndexConfiguration;
-import net.iponweb.disthene.service.util.NameThreadFactory;
+import net.iponweb.disthene.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequest;

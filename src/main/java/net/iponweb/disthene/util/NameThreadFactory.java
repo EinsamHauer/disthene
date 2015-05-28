@@ -1,4 +1,4 @@
-package net.iponweb.disthene.service.util;
+package net.iponweb.disthene.util;
 
 import java.util.concurrent.ThreadFactory;
 

@@ -5,8 +5,8 @@ import net.engio.mbassy.listener.Handler;
 import net.engio.mbassy.listener.Listener;
 import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.config.DistheneConfiguration;
-import net.iponweb.disthene.service.events.DistheneEvent;
-import net.iponweb.disthene.service.events.MetricStoreEvent;
+import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.events.MetricStoreEvent;
 import org.apache.log4j.Logger;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
@@ -20,14 +20,14 @@ import java.util.concurrent.ConcurrentMap;
  * @author Andrei Ivanov
  */
 @Listener(references= References.Strong)
-public class ESIndexStore {
-    private Logger logger = Logger.getLogger(ESIndexStore.class);
+public class IndexService {
+    private Logger logger = Logger.getLogger(IndexService.class);
 
     private BulkMetricProcessor processor;
     // tenant -> path -> dummy
     private ConcurrentMap<String, ConcurrentMap<String, Boolean>> cache = new ConcurrentHashMap<>();
 
-    public ESIndexStore(DistheneConfiguration distheneConfiguration, MBassador<DistheneEvent> bus) {
+    public IndexService(DistheneConfiguration distheneConfiguration, MBassador<DistheneEvent> bus) {
         bus.subscribe(this);
 
         Settings settings = ImmutableSettings.settingsBuilder()

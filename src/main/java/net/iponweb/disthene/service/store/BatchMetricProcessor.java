@@ -7,10 +7,10 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.RateLimiter;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
-import net.iponweb.disthene.service.events.DistheneEvent;
-import net.iponweb.disthene.service.events.StoreErrorEvent;
-import net.iponweb.disthene.service.events.StoreSuccessEvent;
-import net.iponweb.disthene.service.util.NameThreadFactory;
+import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.events.StoreErrorEvent;
+import net.iponweb.disthene.events.StoreSuccessEvent;
+import net.iponweb.disthene.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 
 import java.util.Collections;

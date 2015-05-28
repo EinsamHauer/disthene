@@ -7,8 +7,8 @@ import io.netty.util.CharsetUtil;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
-import net.iponweb.disthene.service.events.DistheneEvent;
-import net.iponweb.disthene.service.events.MetricReceivedEvent;
+import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.events.MetricReceivedEvent;
 import org.apache.log4j.Logger;
 
 /**

@@ -10,7 +10,7 @@ import io.netty.handler.codec.Delimiters;
 import io.netty.util.concurrent.Future;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.config.DistheneConfiguration;
-import net.iponweb.disthene.service.events.DistheneEvent;
+import net.iponweb.disthene.events.DistheneEvent;
 import org.apache.log4j.Logger;
 
 /**

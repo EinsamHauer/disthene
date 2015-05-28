@@ -1,4 +1,4 @@
-package net.iponweb.disthene.service.events;
+package net.iponweb.disthene.events;
 
 import net.iponweb.disthene.bean.Metric;
 

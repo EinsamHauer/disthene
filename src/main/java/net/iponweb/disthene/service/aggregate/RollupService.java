@@ -8,9 +8,9 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.Rollup;
-import net.iponweb.disthene.service.events.DistheneEvent;
-import net.iponweb.disthene.service.events.MetricStoreEvent;
-import net.iponweb.disthene.service.util.NameThreadFactory;
+import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.events.MetricStoreEvent;
+import net.iponweb.disthene.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 
@@ -23,11 +23,11 @@ import java.util.concurrent.TimeUnit;
  * @author Andrei Ivanov
  */
 @Listener(references= References.Strong)
-public class RollupAggregator {
+public class RollupService {
     private static final String SCHEDULER_NAME = "distheneRollupAggregatorFlusher";
     private static final int RATE = 1;
 
-    private Logger logger = Logger.getLogger(RollupAggregator.class);
+    private Logger logger = Logger.getLogger(RollupService.class);
 
 
     private MBassador<DistheneEvent> bus;
@@ -39,7 +39,7 @@ public class RollupAggregator {
 
     private final TreeMap<DateTime, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
 
-    public RollupAggregator(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
+    public RollupService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
         this.distheneConfiguration = distheneConfiguration;
         this.rollups = rollups;
         this.bus = bus;
@@ -125,6 +125,12 @@ public class RollupAggregator {
 
     private synchronized void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing rollup metrics (" + metricsToFlush.size() + ")");
+        //todo: remove this in final version
+        if (metricsToFlush.size() < 10) {
+            for(Metric metric : metricsToFlush) {
+                logger.debug(metric);
+            }
+        }
         for(Metric metric : metricsToFlush) {
             bus.post(new MetricStoreEvent(metric)).now();
         }

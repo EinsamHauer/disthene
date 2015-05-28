@@ -5,14 +5,14 @@ import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
-import net.iponweb.disthene.service.aggregate.RollupAggregator;
-import net.iponweb.disthene.service.aggregate.SumAggregator;
-import net.iponweb.disthene.service.blacklist.BlackList;
-import net.iponweb.disthene.service.events.DistheneEvent;
-import net.iponweb.disthene.service.general.GeneralStore;
-import net.iponweb.disthene.service.index.ESIndexStore;
-import net.iponweb.disthene.service.stats.Stats;
-import net.iponweb.disthene.service.store.CassandraMetricStore;
+import net.iponweb.disthene.service.aggregate.RollupService;
+import net.iponweb.disthene.service.aggregate.SumService;
+import net.iponweb.disthene.service.blacklist.BlacklistService;
+import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.service.metric.MetricService;
+import net.iponweb.disthene.service.index.IndexService;
+import net.iponweb.disthene.service.stats.StatsService;
+import net.iponweb.disthene.service.store.CassandraService;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
@@ -43,13 +43,13 @@ public class Disthene {
     private String aggregationConfigLocation;
 
     private MBassador<DistheneEvent> bus;
-    private BlackList blackList;
-    private GeneralStore generalStore;
-    private Stats stats;
-    private ESIndexStore esIndexStore;
-    private CassandraMetricStore cassandraMetricStore;
-    private SumAggregator sumAggregator;
-    private RollupAggregator rollupAggregator;
+    private BlacklistService blacklistService;
+    private MetricService metricService;
+    private StatsService statsService;
+    private IndexService indexService;
+    private CassandraService cassandraService;
+    private SumService sumService;
+    private RollupService rollupService;
     private CarbonServer carbonServer;
 
     public Disthene(String configLocation, String blacklistLocation, String aggregationConfigLocation) {
@@ -74,19 +74,19 @@ public class Disthene {
             BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
             in.close();
             logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
-            blackList = new BlackList(blackListConfiguration);
+            blacklistService = new BlacklistService(blackListConfiguration);
 
-            logger.info("Creating general store");
-            generalStore = new GeneralStore(bus, blackList);
+            logger.info("Creating metric service");
+            metricService = new MetricService(bus, blacklistService);
 
             logger.info("Creating stats");
-            stats = new Stats(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
+            statsService = new StatsService(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
 
-            logger.info("Creating ES index store");
-            esIndexStore = new ESIndexStore(distheneConfiguration, bus);
+            logger.info("Creating ES index service");
+            indexService = new IndexService(distheneConfiguration, bus);
 
-            logger.info("Creating C* metric store");
-            cassandraMetricStore = new CassandraMetricStore(distheneConfiguration.getStore(), bus);
+            logger.info("Creating C* service");
+            cassandraService = new CassandraService(distheneConfiguration.getStore(), bus);
 
             logger.info("Loading aggregation rules");
             in = Files.newInputStream(Paths.get(aggregationConfigLocation));
@@ -94,10 +94,10 @@ public class Disthene {
             in.close();
             logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
             logger.info("Creating sum aggregator");
-            sumAggregator = new SumAggregator(bus, distheneConfiguration, aggregationConfiguration, blackList);
+            sumService = new SumService(bus, distheneConfiguration, aggregationConfiguration, blacklistService);
 
             logger.info("Creating rollup aggregator");
-            rollupAggregator = new RollupAggregator(bus, distheneConfiguration, distheneConfiguration.getCarbon().getRollups());
+            rollupService = new RollupService(bus, distheneConfiguration, distheneConfiguration.getCarbon().getRollups());
 
             logger.info("Starting carbon");
             carbonServer = new CarbonServer(distheneConfiguration, bus);
@@ -156,7 +156,7 @@ public class Disthene {
                 BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
                 in.close();
 
-                blackList.setRules(blackListConfiguration);
+                blacklistService.setRules(blackListConfiguration);
 
                 logger.debug("Reloaded blacklist: " + blackListConfiguration.toString());
             } catch (Exception e) {
@@ -171,7 +171,7 @@ public class Disthene {
                 AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
                 in.close();
 
-                sumAggregator.setAggregationConfiguration(aggregationConfiguration);
+                sumService.setAggregationConfiguration(aggregationConfiguration);
                 logger.debug("Reloaded aggregation rules: " + aggregationConfiguration.toString());
             } catch (Exception e) {
                 logger.error("Reloading aggregation rules failed");
@@ -191,16 +191,16 @@ public class Disthene {
             bus.shutdown();
 
             logger.info("Shutting down sum aggregator");
-            sumAggregator.shutdown();
+            sumService.shutdown();
 
             logger.info("Shutting down rollup aggregator");
-            rollupAggregator.shutdown();
+            rollupService.shutdown();
 
             logger.info("Shutting down ES service");
-            esIndexStore.shutdown();
+            indexService.shutdown();
 
             logger.info("Shutting down C* service");
-            cassandraMetricStore.shutdown();
+            cassandraService.shutdown();
 
             logger.info("Shutdown complete");
             System.exit(0);

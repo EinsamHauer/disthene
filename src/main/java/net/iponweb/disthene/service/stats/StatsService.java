@@ -7,8 +7,8 @@ import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.config.StatsConfiguration;
-import net.iponweb.disthene.service.events.*;
-import net.iponweb.disthene.service.util.NameThreadFactory;
+import net.iponweb.disthene.events.*;
+import net.iponweb.disthene.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -24,10 +24,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Andrei Ivanov
  */
 @Listener(references= References.Strong)
-public class Stats {
+public class StatsService {
     private static final String SCHEDULER_NAME = "distheneStatsFlusher";
 
-    private Logger logger = Logger.getLogger(Stats.class);
+    private Logger logger = Logger.getLogger(StatsService.class);
 
     private StatsConfiguration statsConfiguration;
 
@@ -37,7 +37,7 @@ public class Stats {
     private AtomicLong storeError = new AtomicLong(0);
     private final Map<String, StatsRecord> stats = new HashMap<>();
 
-    public Stats(MBassador<DistheneEvent> bus, StatsConfiguration statsConfiguration, Rollup rollup) {
+    public StatsService(MBassador<DistheneEvent> bus, StatsConfiguration statsConfiguration, Rollup rollup) {
         this.statsConfiguration = statsConfiguration;
         this.bus = bus;
         this.rollup = rollup;

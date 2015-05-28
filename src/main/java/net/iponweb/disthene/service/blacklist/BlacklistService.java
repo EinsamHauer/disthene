@@ -13,11 +13,11 @@ import java.util.regex.Pattern;
 /**
  * @author Andrei Ivanov
  */
-public class BlackList {
+public class BlacklistService {
 
     private Map<String, Pattern> rules = new HashMap<>();
 
-    public BlackList(BlackListConfiguration blackListConfiguration) {
+    public BlacklistService(BlackListConfiguration blackListConfiguration) {
         for(Map.Entry<String, List<String>> entry : blackListConfiguration.getRules().entrySet()) {
             rules.put(entry.getKey(), Pattern.compile(Joiner.on("|").skipNulls().join(entry.getValue())));
         }
