@@ -101,7 +101,11 @@ public class BatchMetricProcessor {
                 currentBatchSize++;
             }
 
-            rateLimiter.acquire(1);
+            // todo: probably change to warning or remove
+            double wt = rateLimiter.acquire(1);
+            if (wt > 0.1) {
+                logger.debug("C* was throttled for " + wt);
+            }
             ResultSetFuture future = session.executeAsync(batch);
 
             final int finalCurrentBatchSize = currentBatchSize;
