@@ -40,7 +40,8 @@ public class BatchMetricProcessor {
 
     private final ThreadPoolExecutor tpExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
     private final Executor executor = MoreExecutors.listeningDecorator(tpExecutor);
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+    private ScheduledExecutorService statsScheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
 
 
     public BatchMetricProcessor(Session session, int batchSize, int flushInterval, int maxThroughput, final MBassador<DistheneEvent> bus) {
@@ -53,15 +54,21 @@ public class BatchMetricProcessor {
         rateLimiter = RateLimiter.create(maxThroughput / (60 * batchSize));
 
         //todo: remove debug
-        scheduler.scheduleAtFixedRate(new Runnable() {
+        statsScheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 logger.debug("****Threads in the pool: " + tpExecutor.getPoolSize());
                 logger.debug("****Bus has pending messages: " + Disthene.dispatch.getPendingMessages().size());
-                logger.debug("****Metrics in queu: " + metrics.size());
+                logger.debug("****Metrics in queue: " + metrics.size());
+            }
+        }, 0, 30, TimeUnit.SECONDS);
+
+        scheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
                 flush();
             }
-        }, flushInterval, flushInterval, TimeUnit.SECONDS);
+        }, 100, 100, TimeUnit.MILLISECONDS);
     }
 
 
@@ -80,9 +87,7 @@ public class BatchMetricProcessor {
 
     private void flush() {
         if (metrics.size() > 0) {
-            if (executing.compareAndSet(false, true)) {
                 execute(batchSize);
-            }
         }
     }
 
