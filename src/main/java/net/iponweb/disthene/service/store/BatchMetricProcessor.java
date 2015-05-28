@@ -73,8 +73,8 @@ public class BatchMetricProcessor {
 
 
     public void add(Metric metric) {
-        metrics.add(metric);
-        executeIfNeeded();
+        metrics.offer(metric);
+//        executeIfNeeded();
     }
 
     private void executeIfNeeded() {
@@ -98,7 +98,7 @@ public class BatchMetricProcessor {
             final BatchStatement batch = new BatchStatement();
 
             while (currentBatchSize < batchSize && metrics.size() > 0) {
-                Metric metric = metrics.remove();
+                Metric metric = metrics.poll();
                 batch.add(
                     statement.bind(
                             metric.getRollup() * metric.getPeriod(),
