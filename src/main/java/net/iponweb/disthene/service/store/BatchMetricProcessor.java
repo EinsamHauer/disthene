@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.RateLimiter;
 import net.engio.mbassy.bus.MBassador;
+import net.iponweb.disthene.Disthene;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.StoreErrorEvent;
@@ -56,7 +57,7 @@ public class BatchMetricProcessor {
             @Override
             public void run() {
                 logger.debug("****Threads in the pool: " + tpExecutor.getPoolSize());
-                logger.debug("****Bus has pending messages: " + bus.hasPendingMessages());
+                logger.debug("****Bus has pending messages: " + Disthene.dispatch.getPendingMessages().size());
                 flush();
             }
         }, flushInterval, flushInterval, TimeUnit.SECONDS);

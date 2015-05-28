@@ -1,6 +1,8 @@
 package net.iponweb.disthene;
 
 import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.bus.config.BusConfiguration;
+import net.engio.mbassy.bus.config.Feature;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
@@ -32,6 +34,8 @@ import java.util.Map;
  */
 public class Disthene {
     private static Logger logger;
+
+    public static Feature.AsynchronousMessageDispatch dispatch;
 
     private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yaml";
     private static final String DEFAULT_BLACKLIST_LOCATION = "/etc/disthene/blacklist.yaml";
@@ -66,8 +70,12 @@ public class Disthene {
             in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
+            dispatch = Feature.AsynchronousMessageDispatch.Default();
             logger.info("Creating dispatcher");
-            bus = new MBassador<>();
+            bus = new MBassador<>(new BusConfiguration()
+                    .addFeature(Feature.SyncPubSub.Default())
+                    .addFeature(Feature.AsynchronousHandlerInvocation.Default())
+                    .addFeature(dispatch));
 
             logger.info("Loading blacklists");
             in = Files.newInputStream(Paths.get(blacklistLocation));
