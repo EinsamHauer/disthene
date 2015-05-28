@@ -72,7 +72,7 @@ public class Disthene {
             bus = new MBassador<>(new BusConfiguration()
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
                     .addFeature(Feature.SyncPubSub.Default())
-                    .addFeature(Feature.AsynchronousMessageDispatch.Default())
+                    .addFeature(Feature.AsynchronousMessageDispatch.Default().setNumberOfMessageDispatchers(32))
             );
 
             logger.info("Loading blacklists");
