@@ -33,7 +33,7 @@ public class BatchMetricProcessor {
     private Session session;
     private PreparedStatement statement;
     private int batchSize;
-    private Queue<Metric> metrics = new LinkedBlockingQueue<>();
+    private Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
     private AtomicBoolean executing = new AtomicBoolean(false);
     private MBassador<DistheneEvent> bus;
     private RateLimiter rateLimiter;
