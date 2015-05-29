@@ -173,6 +173,17 @@
                                 </data>
 
                                 <data>
+                                    <src>${basedir}/pkg/deb/disthene-default</src>
+                                    <type>file</type>
+                                    <mapper>
+                                        <type>perm</type>
+                                        <prefix>/etc/default</prefix>
+                                        <user>disthene</user>
+                                        <group>disthene</group>
+                                    </mapper>
+                                </data>
+
+                                <data>
                                     <src>${basedir}/pkg/deb/disthene</src>
                                     <type>file</type>
                                     <mapper>
