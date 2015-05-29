@@ -169,6 +169,7 @@
                                         <prefix>/etc/init.d</prefix>
                                         <user>disthene</user>
                                         <group>disthene</group>
+                                        <filemode>755</filemode>
                                     </mapper>
                                 </data>
 
