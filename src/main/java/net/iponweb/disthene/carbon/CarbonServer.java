@@ -2,6 +2,8 @@ package net.iponweb.disthene.carbon;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -11,6 +13,7 @@ import io.netty.util.concurrent.Future;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.log4j.Logger;
 
 /**
@@ -25,6 +28,8 @@ public class CarbonServer {
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
+    private Class channelClass;
+
     private ChannelFuture channelFuture;
     private MBassador<DistheneEvent> bus;
 
@@ -32,14 +37,21 @@ public class CarbonServer {
         this.bus = bus;
         this.configuration = configuration;
 
-        bossGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads());
-        workerGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads() * 5);
+        if (SystemUtils.IS_OS_LINUX) {
+            bossGroup = new EpollEventLoopGroup();
+            workerGroup = new EpollEventLoopGroup();
+            channelClass = EpollServerSocketChannel.class;
+        } else {
+            bossGroup = new NioEventLoopGroup();
+            workerGroup = new NioEventLoopGroup();
+            channelClass = NioServerSocketChannel.class;
+        }
     }
 
     public void run() throws InterruptedException {
         ServerBootstrap b = new ServerBootstrap();
         b.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
+                .channel(channelClass)
                 .option(ChannelOption.SO_BACKLOG, 100)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
