@@ -1,13 +1,10 @@
 package net.iponweb.disthene;
 
-import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.bus.config.BusConfiguration;
-import net.engio.mbassy.bus.config.Feature;
+import net.iponweb.disthene.bus.DistheneBus;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
-import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.service.aggregate.RollupService;
 import net.iponweb.disthene.service.aggregate.SumService;
 import net.iponweb.disthene.service.blacklist.BlacklistService;
@@ -35,8 +32,6 @@ import java.util.Map;
 public class Disthene {
     private static Logger logger;
 
-    public static Feature.AsynchronousMessageDispatch dispatch;
-
     private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yaml";
     private static final String DEFAULT_BLACKLIST_LOCATION = "/etc/disthene/blacklist.yaml";
     private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
@@ -46,7 +41,7 @@ public class Disthene {
     private String blacklistLocation;
     private String aggregationConfigLocation;
 
-    private MBassador<DistheneEvent> bus;
+    private DistheneBus bus;
     private BlacklistService blacklistService;
     private MetricService metricService;
     private StatsService statsService;
@@ -70,12 +65,8 @@ public class Disthene {
             in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
-            dispatch = Feature.AsynchronousMessageDispatch.Default();
             logger.info("Creating dispatcher");
-            bus = new MBassador<>(new BusConfiguration()
-                    .addFeature(Feature.SyncPubSub.Default())
-                    .addFeature(Feature.AsynchronousHandlerInvocation.Default())
-                    .addFeature(dispatch));
+            bus = new DistheneBus();
 
             logger.info("Loading blacklists");
             in = Files.newInputStream(Paths.get(blacklistLocation));

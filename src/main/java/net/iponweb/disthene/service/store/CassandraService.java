@@ -4,11 +4,9 @@ import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.google.common.util.concurrent.MoreExecutors;
-import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.listener.Handler;
-import net.engio.mbassy.listener.Listener;
-import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
+import net.iponweb.disthene.bus.DistheneBus;
+import net.iponweb.disthene.bus.DistheneEventListener;
 import net.iponweb.disthene.config.StoreConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
@@ -18,14 +16,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
  * @author Andrei Ivanov
  */
-@Listener(references = References.Strong)
-public class CassandraService {
+public class CassandraService implements DistheneEventListener {
     private static final String QUERY = "UPDATE metric.metric USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
 
     private Logger logger = Logger.getLogger(CassandraService.class);
@@ -36,8 +32,8 @@ public class CassandraService {
     private Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
     private List<WriterThread> writerThreads = new ArrayList<>();
 
-    public CassandraService(StoreConfiguration storeConfiguration, MBassador<DistheneEvent> bus) {
-        bus.subscribe(this);
+    public CassandraService(StoreConfiguration storeConfiguration, DistheneBus bus) {
+        bus.subscribe(MetricStoreEvent.class, this);
 
         SocketOptions socketOptions = new SocketOptions()
                 .setReceiveBufferSize(1024 * 1024)
@@ -108,11 +104,6 @@ public class CassandraService {
         }
     }
 
-    @Handler(rejectSubtypes = false)
-    public void handle(MetricStoreEvent metricStoreEvent) {
-        metrics.offer(metricStoreEvent.getMetric());
-    }
-
     public void shutdown() {
         for (WriterThread writerThread : writerThreads) {
             writerThread.shutdown();
@@ -120,6 +111,14 @@ public class CassandraService {
 
         session.close();
         cluster.close();
+    }
+
+    @Override
+    public void handle(DistheneEvent event) {
+        if (event instanceof MetricStoreEvent) {
+            metrics.offer(((MetricStoreEvent) event).getMetric());
+        }
+
     }
 }
 

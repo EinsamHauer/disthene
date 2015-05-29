@@ -3,9 +3,8 @@ package net.iponweb.disthene.service.store;
 import com.datastax.driver.core.*;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
-import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.bus.DistheneBus;
 import net.iponweb.disthene.events.StoreErrorEvent;
 import net.iponweb.disthene.events.StoreSuccessEvent;
 import org.apache.log4j.Logger;
@@ -23,7 +22,7 @@ public class BatchWriterThread extends WriterThread {
     private int batchSize;
     private BatchStatement batch = new BatchStatement();
 
-    public BatchWriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor, int batchSize) {
+    public BatchWriterThread(String name, DistheneBus bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor, int batchSize) {
         super(name, bus, session, statement, metrics, executor);
         this.batchSize = batchSize;
     }
@@ -66,12 +65,12 @@ public class BatchWriterThread extends WriterThread {
                 new FutureCallback<ResultSet>() {
                     @Override
                     public void onSuccess(ResultSet result) {
-                        bus.post(new StoreSuccessEvent(batchSize)).now();
+                        bus.post(new StoreSuccessEvent(batchSize));
                     }
 
                     @Override
                     public void onFailure(Throwable t) {
-                        bus.post(new StoreErrorEvent(batchSize)).now();
+                        bus.post(new StoreErrorEvent(batchSize));
                         logger.error(t);
                     }
                 },

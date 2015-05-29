@@ -1,9 +1,7 @@
 package net.iponweb.disthene.service.index;
 
-import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.listener.Handler;
-import net.engio.mbassy.listener.Listener;
-import net.engio.mbassy.listener.References;
+import net.iponweb.disthene.bus.DistheneBus;
+import net.iponweb.disthene.bus.DistheneEventListener;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
@@ -19,16 +17,15 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * @author Andrei Ivanov
  */
-@Listener(references= References.Strong)
-public class IndexService {
+public class IndexService implements DistheneEventListener {
     private Logger logger = Logger.getLogger(IndexService.class);
 
     private BulkMetricProcessor processor;
     // tenant -> path -> dummy
     private ConcurrentMap<String, ConcurrentMap<String, Boolean>> cache = new ConcurrentHashMap<>();
 
-    public IndexService(DistheneConfiguration distheneConfiguration, MBassador<DistheneEvent> bus) {
-        bus.subscribe(this);
+    public IndexService(DistheneConfiguration distheneConfiguration, DistheneBus bus) {
+        bus.subscribe(MetricStoreEvent.class, this);
 
         Settings settings = ImmutableSettings.settingsBuilder()
                 .put("cluster.name", distheneConfiguration.getIndex().getName())
@@ -41,24 +38,26 @@ public class IndexService {
         processor = new BulkMetricProcessor(client, distheneConfiguration.getIndex());
     }
 
-    @Handler(rejectSubtypes = false)
-    public void handle(MetricStoreEvent metricStoreEvent) {
-        ConcurrentMap<String, Boolean> tenantPaths = cache.get(metricStoreEvent.getMetric().getTenant());
-        if (tenantPaths == null) {
-            ConcurrentMap<String, Boolean> newTenantPaths = new ConcurrentHashMap<>();
-            tenantPaths = cache.putIfAbsent(metricStoreEvent.getMetric().getTenant(), newTenantPaths);
+    @Override
+    public void handle(DistheneEvent event) {
+        if (event instanceof MetricStoreEvent) {
+            ConcurrentMap<String, Boolean> tenantPaths = cache.get(((MetricStoreEvent) event).getMetric().getTenant());
             if (tenantPaths == null) {
-                tenantPaths = newTenantPaths;
+                ConcurrentMap<String, Boolean> newTenantPaths = new ConcurrentHashMap<>();
+                tenantPaths = cache.putIfAbsent(((MetricStoreEvent) event).getMetric().getTenant(), newTenantPaths);
+                if (tenantPaths == null) {
+                    tenantPaths = newTenantPaths;
+                }
+            }
+
+            if (tenantPaths.putIfAbsent(((MetricStoreEvent) event).getMetric().getPath(), true) == null) {
+                processor.add(((MetricStoreEvent) event).getMetric());
             }
         }
-
-        if (tenantPaths.putIfAbsent(metricStoreEvent.getMetric().getPath(), true) == null) {
-            processor.add(metricStoreEvent.getMetric());
-        }
-
     }
 
     public void shutdown() {
         processor.shutdown();
     }
+
 }

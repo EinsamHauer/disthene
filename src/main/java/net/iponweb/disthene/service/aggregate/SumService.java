@@ -1,18 +1,16 @@
 package net.iponweb.disthene.service.aggregate;
 
-import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.listener.Handler;
-import net.engio.mbassy.listener.Listener;
-import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.AggregationRule;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
+import net.iponweb.disthene.bus.DistheneBus;
+import net.iponweb.disthene.bus.DistheneEventListener;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
-import net.iponweb.disthene.service.blacklist.BlacklistService;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricReceivedEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
+import net.iponweb.disthene.service.blacklist.BlacklistService;
 import net.iponweb.disthene.util.NameThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
@@ -26,15 +24,14 @@ import java.util.regex.Matcher;
 /**
  * @author Andrei Ivanov
  */
-@Listener(references= References.Strong)
 // todo: handle names other than <data>
-public class SumService {
+public class SumService implements DistheneEventListener {
     private static final String SCHEDULER_NAME = "distheneSumAggregatorFlusher";
     private static final int RATE = 60;
 
     private Logger logger = Logger.getLogger(SumService.class);
 
-    private MBassador<DistheneEvent> bus;
+    private DistheneBus bus;
     private DistheneConfiguration distheneConfiguration;
     private AggregationConfiguration aggregationConfiguration;
     private BlacklistService blacklistService;
@@ -42,12 +39,12 @@ public class SumService {
 
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
 
-    public SumService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlacklistService blacklistService) {
+    public SumService(DistheneBus bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlacklistService blacklistService) {
         this.bus = bus;
         this.distheneConfiguration = distheneConfiguration;
         this.aggregationConfiguration = aggregationConfiguration;
         this.blacklistService = blacklistService;
-        bus.subscribe(this);
+        bus.subscribe(MetricReceivedEvent.class, this);
 
 
         scheduler.scheduleAtFixedRate(new Runnable() {
@@ -59,11 +56,13 @@ public class SumService {
 
     }
 
-    @Handler(rejectSubtypes = false)
-    public void handle(MetricReceivedEvent metricReceivedEvent) {
-        aggregate(metricReceivedEvent.getMetric());
-    }
+    @Override
+    public void handle(DistheneEvent event) {
+        if (event instanceof MetricReceivedEvent) {
+            aggregate(((MetricReceivedEvent) event).getMetric());
+        }
 
+    }
 
     public void aggregate(Metric metric) {
         // Get aggregation rules
@@ -123,7 +122,7 @@ public class SumService {
         logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
         for(Metric metric : metricsToFlush) {
             if (!blacklistService.isBlackListed(metric)) {
-                bus.post(new MetricStoreEvent(metric)).now();
+                bus.post(new MetricStoreEvent(metric));
             }
         }
 
@@ -142,4 +141,5 @@ public class SumService {
     public void setAggregationConfiguration(AggregationConfiguration aggregationConfiguration) {
         this.aggregationConfiguration = aggregationConfiguration;
     }
+
 }

@@ -1,10 +1,8 @@
 package net.iponweb.disthene.service.stats;
 
-import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.listener.Handler;
-import net.engio.mbassy.listener.Listener;
-import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
+import net.iponweb.disthene.bus.DistheneBus;
+import net.iponweb.disthene.bus.DistheneEventListener;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.config.StatsConfiguration;
 import net.iponweb.disthene.events.*;
@@ -23,25 +21,27 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * @author Andrei Ivanov
  */
-@Listener(references= References.Strong)
-public class StatsService {
+public class StatsService implements DistheneEventListener{
     private static final String SCHEDULER_NAME = "distheneStatsFlusher";
 
     private Logger logger = Logger.getLogger(StatsService.class);
 
     private StatsConfiguration statsConfiguration;
 
-    private MBassador<DistheneEvent> bus;
+    private DistheneBus bus;
     private Rollup rollup;
     private AtomicLong storeSuccess = new AtomicLong(0);
     private AtomicLong storeError = new AtomicLong(0);
     private final Map<String, StatsRecord> stats = new HashMap<>();
 
-    public StatsService(MBassador<DistheneEvent> bus, StatsConfiguration statsConfiguration, Rollup rollup) {
+    public StatsService(DistheneBus bus, StatsConfiguration statsConfiguration, Rollup rollup) {
         this.statsConfiguration = statsConfiguration;
         this.bus = bus;
         this.rollup = rollup;
-        bus.subscribe(this);
+        bus.subscribe(MetricReceivedEvent.class, this);
+        bus.subscribe(MetricStoreEvent.class, this);
+        bus.subscribe(StoreSuccessEvent.class, this);
+        bus.subscribe(StoreErrorEvent.class, this);
 
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
         scheduler.scheduleAtFixedRate(new Runnable() {
@@ -53,40 +53,33 @@ public class StatsService {
 
     }
 
-    @Handler(rejectSubtypes = false)
-    public void handle(MetricReceivedEvent metricReceivedEvent) {
-        synchronized (stats) {
-            StatsRecord statsRecord = stats.get(metricReceivedEvent.getMetric().getTenant());
-            if (statsRecord == null) {
-                statsRecord = new StatsRecord();
-                stats.put(metricReceivedEvent.getMetric().getTenant(), statsRecord);
+    @Override
+    public void handle(DistheneEvent event) {
+        if (event instanceof MetricReceivedEvent) {
+            synchronized (stats) {
+                StatsRecord statsRecord = stats.get(((MetricReceivedEvent) event).getMetric().getTenant());
+                if (statsRecord == null) {
+                    statsRecord = new StatsRecord();
+                    stats.put(((MetricReceivedEvent) event).getMetric().getTenant(), statsRecord);
+                }
+
+                statsRecord.incMetricsReceived();
             }
+        } else if (event instanceof MetricStoreEvent) {
+            synchronized (stats) {
+                StatsRecord statsRecord = stats.get(((MetricStoreEvent) event).getMetric().getTenant());
+                if (statsRecord == null) {
+                    statsRecord = new StatsRecord();
+                    stats.put(((MetricStoreEvent) event).getMetric().getTenant(), statsRecord);
+                }
 
-            statsRecord.incMetricsReceived();
-        }
-    }
-
-    @Handler(rejectSubtypes = false)
-    public void handle(MetricStoreEvent metricStoreEvent) {
-        synchronized (stats) {
-            StatsRecord statsRecord = stats.get(metricStoreEvent.getMetric().getTenant());
-            if (statsRecord == null) {
-                statsRecord = new StatsRecord();
-                stats.put(metricStoreEvent.getMetric().getTenant(), statsRecord);
+                statsRecord.incMetricsWritten();
             }
-
-            statsRecord.incMetricsWritten();
+        } else if (event instanceof StoreSuccessEvent) {
+            storeSuccess.addAndGet(((StoreSuccessEvent) event).getCount());
+        } else if (event instanceof StoreErrorEvent) {
+            storeError.addAndGet(((StoreErrorEvent) event).getCount());
         }
-    }
-
-    @Handler(rejectSubtypes = false)
-    public void handle(StoreSuccessEvent storeSuccessEvent) {
-        storeSuccess.addAndGet(storeSuccessEvent.getCount());
-    }
-
-    @Handler(rejectSubtypes = false)
-    public void handle(StoreErrorEvent storeErrorEvent) {
-        storeError.addAndGet(storeErrorEvent.getCount());
     }
 
     public void flush() {
@@ -135,7 +128,7 @@ public class StatsService {
                     statsRecord.getMetricsReceived(),
                     dt
             );
-            bus.post(new MetricStoreEvent(metric)).now();
+            bus.post(new MetricStoreEvent(metric));
 
             metric = new Metric(
                     statsConfiguration.getTenant(),
@@ -145,7 +138,7 @@ public class StatsService {
                     statsRecord.getMetricsWritten(),
                     dt
             );
-            bus.post(new MetricStoreEvent(metric)).now();
+            bus.post(new MetricStoreEvent(metric));
 
             if (statsConfiguration.isLog()) {
                 logger.info("\t" + tenant + "\t" + statsRecord.metricsReceived + "\t" + statsRecord.getMetricsWritten());
@@ -160,7 +153,7 @@ public class StatsService {
                 totalReceived,
                 dt
         );
-        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricStoreEvent(metric));
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -170,7 +163,7 @@ public class StatsService {
                 totalWritten,
                 dt
         );
-        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricStoreEvent(metric));
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -180,7 +173,7 @@ public class StatsService {
                 storeSuccess,
                 dt
         );
-        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricStoreEvent(metric));
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -190,7 +183,7 @@ public class StatsService {
                 storeError,
                 dt
         );
-        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricStoreEvent(metric));
 
         if (statsConfiguration.isLog()) {
             logger.info("\t" + "total" + "\t" + totalReceived + "\t" + totalWritten);

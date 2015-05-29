@@ -6,9 +6,8 @@ import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
-import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.bus.DistheneBus;
 import net.iponweb.disthene.events.StoreErrorEvent;
 import net.iponweb.disthene.events.StoreSuccessEvent;
 import org.apache.log4j.Logger;
@@ -23,7 +22,7 @@ import java.util.concurrent.Executor;
 public class SingleWriterThread extends WriterThread {
     private Logger logger = Logger.getLogger(SingleWriterThread.class);
 
-    public SingleWriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor) {
+    public SingleWriterThread(String name, DistheneBus bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor) {
         super(name, bus, session, statement, metrics, executor);
     }
 
@@ -52,13 +51,13 @@ public class SingleWriterThread extends WriterThread {
                 new FutureCallback<ResultSet>() {
                     @Override
                     public void onSuccess(ResultSet result) {
-                        bus.post(new StoreSuccessEvent(1)).now();
+                        bus.post(new StoreSuccessEvent(1));
                     }
 
                     @SuppressWarnings("NullableProblems")
                     @Override
                     public void onFailure(Throwable t) {
-                        bus.post(new StoreErrorEvent(1)).now();
+                        bus.post(new StoreErrorEvent(1));
                         logger.error(t);
                     }
                 },

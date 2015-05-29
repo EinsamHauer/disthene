@@ -1,11 +1,9 @@
 package net.iponweb.disthene.service.aggregate;
 
-import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.listener.Handler;
-import net.engio.mbassy.listener.Listener;
-import net.engio.mbassy.listener.References;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
+import net.iponweb.disthene.bus.DistheneBus;
+import net.iponweb.disthene.bus.DistheneEventListener;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
@@ -22,15 +20,14 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Andrei Ivanov
  */
-@Listener(references= References.Strong)
-public class RollupService {
+public class RollupService implements DistheneEventListener {
     private static final String SCHEDULER_NAME = "distheneRollupAggregatorFlusher";
     private static final int RATE = 1;
 
     private Logger logger = Logger.getLogger(RollupService.class);
 
 
-    private MBassador<DistheneEvent> bus;
+    private DistheneBus bus;
     private DistheneConfiguration distheneConfiguration;
     private Rollup maxRollup;
     private List<Rollup> rollups;
@@ -39,11 +36,11 @@ public class RollupService {
 
     private final TreeMap<DateTime, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
 
-    public RollupService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
+    public RollupService(DistheneBus bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
         this.distheneConfiguration = distheneConfiguration;
         this.rollups = rollups;
         this.bus = bus;
-        bus.subscribe(this);
+        bus.subscribe(MetricStoreEvent.class, this);
 
         for(Rollup rollup : rollups) {
             if (maxRollup == null || maxRollup.getRollup() < rollup.getRollup()) {
@@ -59,13 +56,14 @@ public class RollupService {
         }, RATE, RATE, TimeUnit.SECONDS);
     }
 
-    @Handler(rejectSubtypes = false)
-    public void handle(MetricStoreEvent metricStoreEvent) {
-        if (rollups.size() > 0 && maxRollup.getRollup() > metricStoreEvent.getMetric().getRollup()) {
-            aggregate(metricStoreEvent.getMetric());
+    @Override
+    public void handle(DistheneEvent event) {
+        if (event instanceof MetricStoreEvent) {
+            if (rollups.size() > 0 && maxRollup.getRollup() > ((MetricStoreEvent) event).getMetric().getRollup()) {
+                aggregate(((MetricStoreEvent) event).getMetric());
+            }
         }
     }
-
 
     public void aggregate(Metric metric) {
 
@@ -132,7 +130,7 @@ public class RollupService {
             }
         }
         for(Metric metric : metricsToFlush) {
-            bus.post(new MetricStoreEvent(metric)).now();
+            bus.post(new MetricStoreEvent(metric));
         }
 
     }

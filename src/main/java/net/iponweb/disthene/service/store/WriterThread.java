@@ -2,10 +2,8 @@ package net.iponweb.disthene.service.store;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.google.common.util.concurrent.RateLimiter;
-import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
-import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.bus.DistheneBus;
 
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -17,7 +15,7 @@ public abstract class WriterThread extends Thread {
 
     protected volatile boolean shutdown = false;
 
-    protected MBassador<DistheneEvent> bus;
+    protected DistheneBus bus;
     protected Session session;
     protected PreparedStatement statement;
 
@@ -25,7 +23,7 @@ public abstract class WriterThread extends Thread {
 
     protected Executor executor;
 
-    public WriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor) {
+    public WriterThread(String name, DistheneBus bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor) {
         super(name);
         this.bus = bus;
         this.session = session;

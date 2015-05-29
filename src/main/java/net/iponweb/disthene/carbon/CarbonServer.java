@@ -8,9 +8,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
 import io.netty.util.concurrent.Future;
-import net.engio.mbassy.bus.MBassador;
+import net.iponweb.disthene.bus.DistheneBus;
 import net.iponweb.disthene.config.DistheneConfiguration;
-import net.iponweb.disthene.events.DistheneEvent;
 import org.apache.log4j.Logger;
 
 /**
@@ -26,9 +25,9 @@ public class CarbonServer {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private ChannelFuture channelFuture;
-    private MBassador<DistheneEvent> bus;
+    private DistheneBus bus;
 
-    public CarbonServer(DistheneConfiguration configuration, MBassador<DistheneEvent> bus) {
+    public CarbonServer(DistheneConfiguration configuration, DistheneBus bus) {
         this.bus = bus;
         this.configuration = configuration;
 
