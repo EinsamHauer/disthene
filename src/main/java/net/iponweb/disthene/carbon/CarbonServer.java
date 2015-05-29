@@ -21,7 +21,7 @@ import org.apache.log4j.Logger;
  */
 
 public class CarbonServer {
-    public static final int MAX_FRAME_LENGTH = 1024;
+    public static final int MAX_FRAME_LENGTH = 8192 ;
     private Logger logger = Logger.getLogger(CarbonServer.class);
 
     private DistheneConfiguration configuration;
@@ -37,15 +37,17 @@ public class CarbonServer {
         this.bus = bus;
         this.configuration = configuration;
 
+/*
         if (SystemUtils.IS_OS_LINUX) {
             bossGroup = new EpollEventLoopGroup();
             workerGroup = new EpollEventLoopGroup(configuration.getCarbon().getThreads());
             channelClass = EpollServerSocketChannel.class;
         } else {
+*/
             bossGroup = new NioEventLoopGroup();
-            workerGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads());
+            workerGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads() * 2);
             channelClass = NioServerSocketChannel.class;
-        }
+//        }
     }
 
     public void run() throws InterruptedException {
