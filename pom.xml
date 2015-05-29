@@ -162,6 +162,7 @@
 
                                 <data>
                                     <src>${basedir}/pkg/deb/init.sh</src>
+                                    <dst>disthene</dst>
                                     <type>file</type>
                                     <mapper>
                                         <type>perm</type>
