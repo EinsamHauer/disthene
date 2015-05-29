@@ -24,7 +24,7 @@ import java.util.concurrent.Executors;
 /**
  * @author Andrei Ivanov
  */
-@Listener(references= References.Strong)
+@Listener(references = References.Strong)
 public class CassandraService {
     private static final String QUERY = "UPDATE metric.metric USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
 
@@ -60,7 +60,7 @@ public class CassandraService {
                 .withQueryOptions(new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE))
                 .withProtocolVersion(ProtocolVersion.V2)
                 .withPort(storeConfiguration.getPort());
-        for(String cp : storeConfiguration.getCluster()) {
+        for (String cp : storeConfiguration.getCluster()) {
             builder.addContactPoint(cp);
         }
 
@@ -77,31 +77,33 @@ public class CassandraService {
         // Creating writers
 
         if (storeConfiguration.isBatch()) {
-            for(int i = 0; i < storeConfiguration.getPool(); i++) {
-                writerThreads.add(
-                        new BatchWriterThread(
-                                "distheneCassandraBatchWriter" + i,
-                                bus,
-                                session,
-                                statement,
-                                metrics,
-                                MoreExecutors.listeningDecorator(Executors.newCachedThreadPool()),
-                                storeConfiguration.getBatchSize()
-                        )
+            for (int i = 0; i < storeConfiguration.getPool(); i++) {
+                WriterThread writerThread = new BatchWriterThread(
+                        "distheneCassandraBatchWriter" + i,
+                        bus,
+                        session,
+                        statement,
+                        metrics,
+                        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool()),
+                        storeConfiguration.getBatchSize()
                 );
+
+                writerThreads.add(writerThread);
+                writerThread.start();
             }
         } else {
-            for(int i = 0; i < storeConfiguration.getPool(); i++) {
-                writerThreads.add(
-                        new SingleWriterThread(
-                                "distheneCassandraSingleWriter" + i,
-                                bus,
-                                session,
-                                statement,
-                                metrics,
-                                MoreExecutors.listeningDecorator(Executors.newCachedThreadPool())
-                        )
+            for (int i = 0; i < storeConfiguration.getPool(); i++) {
+                WriterThread writerThread = new SingleWriterThread(
+                        "distheneCassandraSingleWriter" + i,
+                        bus,
+                        session,
+                        statement,
+                        metrics,
+                        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool())
                 );
+
+                writerThreads.add(writerThread);
+                writerThread.start();
             }
         }
     }
