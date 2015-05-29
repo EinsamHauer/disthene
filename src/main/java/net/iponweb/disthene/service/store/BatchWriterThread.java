@@ -66,12 +66,12 @@ public class BatchWriterThread extends WriterThread {
                 new FutureCallback<ResultSet>() {
                     @Override
                     public void onSuccess(ResultSet result) {
-                        bus.post(new StoreSuccessEvent(batchSize)).asynchronously();
+                        bus.post(new StoreSuccessEvent(batchSize)).now();
                     }
 
                     @Override
                     public void onFailure(Throwable t) {
-                        bus.post(new StoreErrorEvent(batchSize)).asynchronously();
+                        bus.post(new StoreErrorEvent(batchSize)).now();
                         logger.error(t);
                     }
                 },
