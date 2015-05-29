@@ -39,11 +39,11 @@ public class CarbonServer {
 
         if (SystemUtils.IS_OS_LINUX) {
             bossGroup = new EpollEventLoopGroup();
-            workerGroup = new EpollEventLoopGroup();
+            workerGroup = new EpollEventLoopGroup(configuration.getCarbon().getThreads());
             channelClass = EpollServerSocketChannel.class;
         } else {
             bossGroup = new NioEventLoopGroup();
-            workerGroup = new NioEventLoopGroup();
+            workerGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads());
             channelClass = NioServerSocketChannel.class;
         }
     }
