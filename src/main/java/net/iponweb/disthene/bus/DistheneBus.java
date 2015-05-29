@@ -17,7 +17,7 @@ public class DistheneBus {
 
     public DistheneBus() {
 
-        for (int i = 0; i < 32; i++) {
+        for (int i = 0; i < 8; i++) {
             DispatcherThread thread = new DispatcherThread(
                     "distheneEventDispatcher" + i,
                     eventQueue,
