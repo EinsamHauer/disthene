@@ -16,7 +16,7 @@
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/bin
 DESC="Disthene"
-NAME=riemann
+NAME=disthene
 DAEMON=/usr/bin/disthene
 DAEMON_USER=disthene
 PIDFILE=/var/run/$NAME.pid
