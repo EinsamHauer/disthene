@@ -61,9 +61,14 @@ public class CarbonServer {
     }
 
     public void shutdown() {
-        ChannelFuture f = channelFuture.channel().close();
-        logger.info("Closing channel");
-        f.awaitUninterruptibly(60000);
+        try {
+            ChannelFuture f = channelFuture.channel().close();
+            logger.info("Closing channel");
+            f.awaitUninterruptibly(60000);
+        } catch (Exception e) {
+            logger.error("We failed to close channel. It may still be OK though");
+            logger.error(e);
+        }
 
         Future bossGroupShutdownFuture = bossGroup.shutdownGracefully();
         logger.info("Shutting down boss group");

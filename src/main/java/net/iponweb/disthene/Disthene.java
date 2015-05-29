@@ -193,12 +193,7 @@ public class Disthene {
         @Override
         public void handle(Signal signal) {
             logger.info("Shutting down carbon server");
-            try {
-                carbonServer.shutdown();
-            } catch (Exception e) {
-                logger.error("We failed to shutdown carbon server. It may still be OK though");
-                logger.error(e);
-            }
+            carbonServer.shutdown();
 
             logger.info("Shutting down dispatcher");
             bus.shutdown();
