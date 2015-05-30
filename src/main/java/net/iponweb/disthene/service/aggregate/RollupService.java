@@ -110,7 +110,7 @@ public class RollupService {
                 return;
             }
 
-            logger.debug("Adding rollup flush for time: " + accumulator.firstKey() + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
+            logger.debug("Adding rollup flush for time: " + (new DateTime(accumulator.firstKey() * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
 
             // Get the earliest map
             for(AggregationEntry entry : accumulator.firstEntry().getValue().values()) {
