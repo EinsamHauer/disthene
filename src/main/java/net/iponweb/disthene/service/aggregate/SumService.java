@@ -13,7 +13,7 @@ import net.iponweb.disthene.service.blacklist.BlacklistService;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricReceivedEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
-import net.iponweb.disthene.util.NameThreadFactory;
+import net.iponweb.disthene.util.NamedThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 
@@ -40,7 +40,7 @@ public class SumService {
     private BlacklistService blacklistService;
     private final TreeMap<DateTime, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
 
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
     public SumService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlacklistService blacklistService) {
         this.bus = bus;

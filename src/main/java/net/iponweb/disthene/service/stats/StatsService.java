@@ -8,7 +8,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.config.StatsConfiguration;
 import net.iponweb.disthene.events.*;
-import net.iponweb.disthene.util.NameThreadFactory;
+import net.iponweb.disthene.util.NamedThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -43,7 +43,7 @@ public class StatsService {
         this.rollup = rollup;
         bus.subscribe(this);
 
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {

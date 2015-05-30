@@ -5,12 +5,12 @@ import java.util.concurrent.ThreadFactory;
 /**
  * @author Andrei Ivanov
  */
-public class NameThreadFactory implements ThreadFactory {
+public class NamedThreadFactory implements ThreadFactory {
 
     private int counter = 0;
     private String baseName;
 
-    public NameThreadFactory(String baseName) {
+    public NamedThreadFactory(String baseName) {
         this.baseName = baseName;
     }
 

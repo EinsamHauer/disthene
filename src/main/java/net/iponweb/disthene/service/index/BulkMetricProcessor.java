@@ -2,7 +2,7 @@ package net.iponweb.disthene.service.index;
 
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.IndexConfiguration;
-import net.iponweb.disthene.util.NameThreadFactory;
+import net.iponweb.disthene.util.NamedThreadFactory;
 import org.apache.log4j.Logger;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -47,7 +47,7 @@ public class BulkMetricProcessor {
 
     private AtomicLong writeCount = new AtomicLong(0);
 
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
     public BulkMetricProcessor(TransportClient client, IndexConfiguration indexConfiguration) {
         this.client = client;
@@ -55,7 +55,7 @@ public class BulkMetricProcessor {
         this.type = indexConfiguration.getType();
         this.bulkActions = indexConfiguration.getBulk().getActions();
 
-        executor = Executors.newFixedThreadPool(indexConfiguration.getBulk().getPool(), new NameThreadFactory(EXECUTOR_NAME));
+        executor = Executors.newFixedThreadPool(indexConfiguration.getBulk().getPool(), new NamedThreadFactory(EXECUTOR_NAME));
 
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override

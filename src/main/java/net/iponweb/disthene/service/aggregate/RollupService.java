@@ -10,7 +10,7 @@ import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
-import net.iponweb.disthene.util.NameThreadFactory;
+import net.iponweb.disthene.util.NamedThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 
@@ -35,7 +35,7 @@ public class RollupService {
     private Rollup maxRollup;
     private List<Rollup> rollups;
 
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NameThreadFactory(SCHEDULER_NAME));
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
     private final TreeMap<DateTime, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
 
@@ -108,6 +108,8 @@ public class RollupService {
                 // nothing to do, just return
                 return;
             }
+
+            logger.debug("Adding rollup flush for time: " + accumulator.firstKey() + " (current time is " + DateTime.now() + ")");
 
             // Get the earliest map
             for(AggregationEntry entry : accumulator.firstEntry().getValue().values()) {

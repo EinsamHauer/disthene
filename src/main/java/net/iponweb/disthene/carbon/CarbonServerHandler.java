@@ -9,7 +9,11 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricReceivedEvent;
+import net.iponweb.disthene.util.NamedThreadFactory;
 import org.apache.log4j.Logger;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * @author Andrei Ivanov
@@ -19,6 +23,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
     private MBassador<DistheneEvent> bus;
     private Rollup rollup;
+    private Executor executor = Executors.newCachedThreadPool(new NamedThreadFactory("distheneHandler"));
 
     public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup) {
         this.bus = bus;
@@ -30,8 +35,13 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
         ByteBuf in = (ByteBuf) msg;
 
         try {
-            Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
-            bus.post(new MetricReceivedEvent(metric)).asynchronously();
+            final Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    bus.post(new MetricReceivedEvent(metric)).now();
+                }
+            });
         } catch (Exception e) {
             logger.trace(e);
         }
