@@ -33,7 +33,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
             Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
             bus.post(new MetricReceivedEvent(metric)).asynchronously();
         } catch (Exception e) {
-            logger.debug(e);
+            logger.trace(e);
         }
 
         in.release();
