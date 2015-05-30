@@ -1,5 +1,6 @@
 package net.iponweb.disthene.service.aggregate;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
 import net.engio.mbassy.listener.Listener;
@@ -16,9 +17,8 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Andrei Ivanov
@@ -38,7 +38,7 @@ public class RollupService {
 
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
-    private final TreeMap<Long, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
+    private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AggregationEntry>> accumulator = new ConcurrentSkipListMap<>();
 
     public RollupService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
         this.distheneConfiguration = distheneConfiguration;
@@ -67,62 +67,59 @@ public class RollupService {
         }
     }
 
+    private ConcurrentMap<MetricKey, AggregationEntry> getTimestampMap(long timestamp) {
+        ConcurrentMap<MetricKey, AggregationEntry> timestampMap = accumulator.get(timestamp);
+        if (timestampMap == null) {
+            ConcurrentMap<MetricKey, AggregationEntry> newTimestampMap = new ConcurrentHashMap<>();
+            timestampMap = accumulator.putIfAbsent(timestamp, newTimestampMap);
+            if (timestampMap == null) {
+                timestampMap = newTimestampMap;
+            }
+        }
+
+        return timestampMap;
+    }
+
+    private AggregationEntry getAggregationEntry(ConcurrentMap<MetricKey, AggregationEntry> map, MetricKey metricKey) {
+        AggregationEntry aggregationEntry = map.get(metricKey);
+        if (aggregationEntry == null) {
+            AggregationEntry newAggregationEntry = new AggregationEntry();
+            aggregationEntry = map.putIfAbsent(metricKey, newAggregationEntry);
+            if (aggregationEntry == null) {
+                aggregationEntry = newAggregationEntry;
+            }
+        }
+
+        return aggregationEntry;
+    }
 
     public void aggregate(Metric metric) {
-
-        synchronized (accumulator) {
-            // Get next rollup for the one defined in metric
-            for(Rollup rollup : rollups) {
-                // Create aggregation entry (assuming average aggregator function)
-                // determine timestamp for this metric/rollup
-                long timestamp = getRollupTimestamp(metric.getTimestamp(), rollup);
-
-                if (!accumulator.containsKey(timestamp)) {
-                    accumulator.put(timestamp, new HashMap<MetricKey, AggregationEntry>());
-                }
-                Map<MetricKey, AggregationEntry> timestampMap = accumulator.get(timestamp);
-
-
-                MetricKey destinationMetricKey = new MetricKey(
-                        metric.getTenant(), metric.getPath(),
-                        rollup.getRollup(), rollup.getPeriod(),
-                        timestamp);
-
-                if (timestampMap.containsKey(destinationMetricKey)) {
-                    AggregationEntry destinationMetric = timestampMap.get(destinationMetricKey);
-                    destinationMetric.addValue(metric.getValue());
-                    timestampMap.put(destinationMetricKey, destinationMetric);
-                } else {
-                    timestampMap.put(destinationMetricKey, new AggregationEntry(destinationMetricKey, metric.getValue()));
-                }
-            }
+        for(Rollup rollup : rollups) {
+            long timestamp = getRollupTimestamp(metric.getTimestamp(), rollup);
+            ConcurrentMap<MetricKey, AggregationEntry> timestampMap = getTimestampMap(timestamp);
+            MetricKey destinationMetricKey = new MetricKey(
+                    metric.getTenant(), metric.getPath(),
+                    rollup.getRollup(), rollup.getPeriod(),
+                    timestamp);
+            AggregationEntry aggregationEntry = getAggregationEntry(timestampMap, destinationMetricKey);
+            aggregationEntry.addValue(metric.getValue());
         }
     }
 
     public void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
-        synchronized (accumulator) {
-            // check earliest timestamp map
-            // We have to wait for sum metrics and stats longer - thus * 2
-            if (accumulator.size() == 0 || (accumulator.firstKey() > DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
-                // nothing to do, just return
-                return;
-            }
-
+        while(accumulator.size() > 0 && (accumulator.firstKey() > DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
             logger.debug("Adding rollup flush for time: " + (new DateTime(accumulator.firstKey() * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
 
             // Get the earliest map
-            for(AggregationEntry entry : accumulator.firstEntry().getValue().values()) {
-                metricsToFlush.add(entry.getMetric());
+            ConcurrentMap<MetricKey, AggregationEntry> timestampMap = accumulator.pollFirstEntry().getValue();
+
+            for(Map.Entry<MetricKey, AggregationEntry> entry : timestampMap.entrySet()) {
+                metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().getAverage()));
             }
-
-            // Remove it from accumulator
-            accumulator.remove(accumulator.firstKey());
-
         }
 
-        // call the flusher itself
         doFlush(metricsToFlush);
     }
 
@@ -140,9 +137,11 @@ public class RollupService {
 
     }
 
+    //todo: correct shutdown
     public void shutdown() {
         scheduler.shutdown();
 
+/*
         Collection<Metric> metricsToFlush = new ArrayList<>();
         for(Map.Entry<Long, Map<MetricKey, AggregationEntry>> entry : accumulator.entrySet()) {
             for(AggregationEntry aggregationEntry : entry.getValue().values()) {
@@ -150,6 +149,7 @@ public class RollupService {
             }
         }
         doFlush(metricsToFlush);
+*/
     }
 
     private static long getRollupTimestamp(long timestamp, Rollup rollup) {
@@ -157,20 +157,16 @@ public class RollupService {
     }
 
     private class AggregationEntry {
-        private Metric metric;
-        private int count = 0;
-
-        private AggregationEntry(MetricKey key, double value) {
-            metric = new Metric(key, value);
-            count = 1;
-        }
+        private AtomicDouble value = new AtomicDouble(0);
+        private AtomicInteger count = new AtomicInteger(0);
 
         public void addValue(double value) {
-            metric.setValue((count * metric.getValue() + value) / (++count) );
+            this.value.addAndGet(value);
+            this.count.addAndGet(1);
         }
 
-        public Metric getMetric() {
-            return metric;
+        public double getAverage() {
+            return value.get() / count.get();
         }
     }
 }
