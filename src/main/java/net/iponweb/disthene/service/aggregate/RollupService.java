@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Listener(references= References.Strong)
 public class RollupService {
     private static final String SCHEDULER_NAME = "distheneRollupAggregatorFlusher";
-    private static final int RATE = 1;
+    private static final int RATE = 60;
 
     private Logger logger = Logger.getLogger(RollupService.class);
 
