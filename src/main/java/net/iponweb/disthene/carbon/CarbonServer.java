@@ -2,18 +2,14 @@ package net.iponweb.disthene.carbon;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
-import io.netty.util.concurrent.Future;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
-import org.apache.commons.lang3.SystemUtils;
 import org.apache.log4j.Logger;
 
 /**
@@ -26,25 +22,20 @@ public class CarbonServer {
 
     private DistheneConfiguration configuration;
 
-    private EventLoopGroup bossGroup;
-    private EventLoopGroup workerGroup;
-    private Class channelClass;
+    private EventLoopGroup bossGroup = new NioEventLoopGroup();
+    private EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-    private ChannelFuture channelFuture;
     private MBassador<DistheneEvent> bus;
 
     public CarbonServer(DistheneConfiguration configuration, MBassador<DistheneEvent> bus) {
         this.bus = bus;
         this.configuration = configuration;
-        bossGroup = new NioEventLoopGroup();
-        workerGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads() * 2);
-        channelClass = NioServerSocketChannel.class;
     }
 
     public void run() throws InterruptedException {
         ServerBootstrap b = new ServerBootstrap();
         b.group(bossGroup, workerGroup)
-                .channel(channelClass)
+                .channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, 100)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
@@ -62,7 +53,7 @@ public class CarbonServer {
                 });
 
         // Start the server.
-        channelFuture = b.bind(configuration.getCarbon().getPort()).sync();
+        b.bind(configuration.getCarbon().getPort()).sync();
     }
 
     public void shutdown() {
