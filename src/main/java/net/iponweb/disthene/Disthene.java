@@ -233,6 +233,8 @@ public class Disthene {
             cassandraService.shutdown();
 
             logger.info("Shutdown complete");
+
+            System.exit(0);
         }
     }
 }
