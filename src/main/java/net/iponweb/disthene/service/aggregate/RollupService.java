@@ -38,7 +38,7 @@ public class RollupService {
 
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
-    private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AggregationEntry>> accumulator = new ConcurrentSkipListMap<>();
+    private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AverageRecord>> accumulator = new ConcurrentSkipListMap<>();
 
     public RollupService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
         this.distheneConfiguration = distheneConfiguration;
@@ -67,10 +67,10 @@ public class RollupService {
         }
     }
 
-    private ConcurrentMap<MetricKey, AggregationEntry> getTimestampMap(long timestamp) {
-        ConcurrentMap<MetricKey, AggregationEntry> timestampMap = accumulator.get(timestamp);
+    private ConcurrentMap<MetricKey, AverageRecord> getTimestampMap(long timestamp) {
+        ConcurrentMap<MetricKey, AverageRecord> timestampMap = accumulator.get(timestamp);
         if (timestampMap == null) {
-            ConcurrentMap<MetricKey, AggregationEntry> newTimestampMap = new ConcurrentHashMap<>();
+            ConcurrentMap<MetricKey, AverageRecord> newTimestampMap = new ConcurrentHashMap<>();
             timestampMap = accumulator.putIfAbsent(timestamp, newTimestampMap);
             if (timestampMap == null) {
                 timestampMap = newTimestampMap;
@@ -80,29 +80,29 @@ public class RollupService {
         return timestampMap;
     }
 
-    private AggregationEntry getAggregationEntry(ConcurrentMap<MetricKey, AggregationEntry> map, MetricKey metricKey) {
-        AggregationEntry aggregationEntry = map.get(metricKey);
-        if (aggregationEntry == null) {
-            AggregationEntry newAggregationEntry = new AggregationEntry();
-            aggregationEntry = map.putIfAbsent(metricKey, newAggregationEntry);
-            if (aggregationEntry == null) {
-                aggregationEntry = newAggregationEntry;
+    private AverageRecord getAverageRecord(ConcurrentMap<MetricKey, AverageRecord> map, MetricKey metricKey) {
+        AverageRecord averageRecord = map.get(metricKey);
+        if (averageRecord == null) {
+            AverageRecord newAverageRecord = new AverageRecord();
+            averageRecord = map.putIfAbsent(metricKey, newAverageRecord);
+            if (averageRecord == null) {
+                averageRecord = newAverageRecord;
             }
         }
 
-        return aggregationEntry;
+        return averageRecord;
     }
 
     public void aggregate(Metric metric) {
         for(Rollup rollup : rollups) {
             long timestamp = getRollupTimestamp(metric.getTimestamp(), rollup);
-            ConcurrentMap<MetricKey, AggregationEntry> timestampMap = getTimestampMap(timestamp);
+            ConcurrentMap<MetricKey, AverageRecord> timestampMap = getTimestampMap(timestamp);
             MetricKey destinationMetricKey = new MetricKey(
                     metric.getTenant(), metric.getPath(),
                     rollup.getRollup(), rollup.getPeriod(),
                     timestamp);
-            AggregationEntry aggregationEntry = getAggregationEntry(timestampMap, destinationMetricKey);
-            aggregationEntry.addValue(metric.getValue());
+            AverageRecord averageRecord = getAverageRecord(timestampMap, destinationMetricKey);
+            averageRecord.addValue(metric.getValue());
         }
     }
 
@@ -113,9 +113,9 @@ public class RollupService {
             logger.debug("Adding rollup flush for time: " + (new DateTime(accumulator.firstKey() * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
 
             // Get the earliest map
-            ConcurrentMap<MetricKey, AggregationEntry> timestampMap = accumulator.pollFirstEntry().getValue();
+            ConcurrentMap<MetricKey, AverageRecord> timestampMap = accumulator.pollFirstEntry().getValue();
 
-            for(Map.Entry<MetricKey, AggregationEntry> entry : timestampMap.entrySet()) {
+            for(Map.Entry<MetricKey, AverageRecord> entry : timestampMap.entrySet()) {
                 metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().getAverage()));
             }
         }
@@ -127,37 +127,28 @@ public class RollupService {
 
     private synchronized void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing rollup metrics (" + metricsToFlush.size() + ")");
-        //todo: remove this in final version
-        if (metricsToFlush.size() < 10) {
-            for(Metric metric : metricsToFlush) {
-                logger.debug(metric);
-            }
-        }
         for(Metric metric : metricsToFlush) {
             bus.post(new MetricStoreEvent(metric)).now();
         }
     }
 
-    //todo: correct shutdown
-    public void shutdown() {
+    public synchronized void shutdown() {
         scheduler.shutdown();
 
-/*
         Collection<Metric> metricsToFlush = new ArrayList<>();
-        for(Map.Entry<Long, Map<MetricKey, AggregationEntry>> entry : accumulator.entrySet()) {
-            for(AggregationEntry aggregationEntry : entry.getValue().values()) {
-                metricsToFlush.add(aggregationEntry.getMetric());
+        for(Map.Entry<Long, ConcurrentMap<MetricKey, AverageRecord>> entry : accumulator.entrySet()) {
+            for(Map.Entry<MetricKey, AverageRecord> innerEntry : entry.getValue().entrySet()) {
+                metricsToFlush.add(new Metric(innerEntry.getKey(), innerEntry.getValue().getAverage()));
             }
         }
         doFlush(metricsToFlush);
-*/
     }
 
     private static long getRollupTimestamp(long timestamp, Rollup rollup) {
         return ((long) Math.ceil(timestamp / (double) rollup.getRollup())) * rollup.getRollup();
     }
 
-    private class AggregationEntry {
+    private class AverageRecord {
         private AtomicDouble value = new AtomicDouble(0);
         private AtomicInteger count = new AtomicInteger(0);
 

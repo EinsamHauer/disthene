@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * @author Andrei Ivanov
  */
-@Listener(references= References.Strong)
+@Listener(references = References.Strong)
 public class StatsService {
     private static final String SCHEDULER_NAME = "distheneStatsFlusher";
 
@@ -37,13 +37,14 @@ public class StatsService {
     private AtomicLong storeError = new AtomicLong(0);
     private final Map<String, StatsRecord> stats = new HashMap<>();
 
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+
     public StatsService(MBassador<DistheneEvent> bus, StatsConfiguration statsConfiguration, Rollup rollup) {
         this.statsConfiguration = statsConfiguration;
         this.bus = bus;
         this.rollup = rollup;
         bus.subscribe(this);
 
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -95,7 +96,7 @@ public class StatsService {
         long storeError;
 
         synchronized (stats) {
-            for(Map.Entry<String, StatsRecord> entry : stats.entrySet()) {
+            for (Map.Entry<String, StatsRecord> entry : stats.entrySet()) {
                 statsToFlush.put(entry.getKey(), new StatsRecord(entry.getValue()));
                 entry.getValue().reset();
             }
@@ -120,7 +121,7 @@ public class StatsService {
             logger.info("======================================================================================");
         }
 
-        for(Map.Entry<String, StatsRecord> entry : stats.entrySet()) {
+        for (Map.Entry<String, StatsRecord> entry : stats.entrySet()) {
             String tenant = entry.getKey();
             StatsRecord statsRecord = entry.getValue();
 
@@ -200,6 +201,11 @@ public class StatsService {
             logger.info("======================================================================================");
         }
     }
+
+    public synchronized void shutdown() {
+        scheduler.shutdown();
+    }
+
 
     private class StatsRecord {
         private long metricsReceived = 0;

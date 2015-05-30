@@ -36,18 +36,9 @@ public class CarbonServer {
     public CarbonServer(DistheneConfiguration configuration, MBassador<DistheneEvent> bus) {
         this.bus = bus;
         this.configuration = configuration;
-
-/*
-        if (SystemUtils.IS_OS_LINUX) {
-            bossGroup = new EpollEventLoopGroup();
-            workerGroup = new EpollEventLoopGroup(configuration.getCarbon().getThreads());
-            channelClass = EpollServerSocketChannel.class;
-        } else {
-*/
-            bossGroup = new NioEventLoopGroup();
-            workerGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads() * 2);
-            channelClass = NioServerSocketChannel.class;
-//        }
+        bossGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup(configuration.getCarbon().getThreads() * 2);
+        channelClass = NioServerSocketChannel.class;
     }
 
     public void run() throws InterruptedException {
@@ -75,21 +66,10 @@ public class CarbonServer {
     }
 
     public void shutdown() {
-        try {
-            ChannelFuture f = channelFuture.channel().close();
-            logger.info("Closing channel");
-            f.awaitUninterruptibly(60000);
-        } catch (Exception e) {
-            logger.error("We failed to close channel. It may still be OK though");
-            logger.error(e);
-        }
-
-        Future bossGroupShutdownFuture = bossGroup.shutdownGracefully();
         logger.info("Shutting down boss group");
-        bossGroupShutdownFuture.awaitUninterruptibly(60000);
+        bossGroup.shutdownGracefully().awaitUninterruptibly(60000);
 
-        Future workerGroupShutdownFuture = workerGroup.shutdownGracefully();
         logger.info("Shutting down worker group");
-        workerGroupShutdownFuture.awaitUninterruptibly(180000);
+        workerGroup.shutdownGracefully().awaitUninterruptibly(60000);
     }
 }

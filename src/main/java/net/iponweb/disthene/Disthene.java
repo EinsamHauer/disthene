@@ -205,8 +205,9 @@ public class Disthene {
             logger.info("Shutting down carbon server");
             carbonServer.shutdown();
 
-            logger.info("Shutting down dispatcher");
-            bus.shutdown();
+            // We will probably loose some last stats here. But leaving it to run will complicate things
+            logger.info("Shutting down stats service");
+            statsService.shutdown();
 
             logger.info("Shutting down sum aggregator");
             sumService.shutdown();
@@ -214,6 +215,11 @@ public class Disthene {
             logger.info("Shutting down rollup aggregator");
             rollupService.shutdown();
 
+            // Now let's wait for this all to propagate and shutdown the bus
+            logger.info("Shutting down dispatcher");
+            bus.shutdown();
+
+            // Now flush what's left and shutdown
             logger.info("Shutting down ES service");
             indexService.shutdown();
 
@@ -221,13 +227,6 @@ public class Disthene {
             cassandraService.shutdown();
 
             logger.info("Shutdown complete");
-
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException ignored) {
-            }
-            System.exit(0);
-
         }
     }
 }

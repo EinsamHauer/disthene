@@ -136,17 +136,16 @@ public class SumService {
 
     }
 
-    //todo: correct shutdown
-    public void shutdown() {
+    public synchronized void shutdown() {
         scheduler.shutdown();
 
-/*
         Collection<Metric> metricsToFlush = new ArrayList<>();
-        for(Map.Entry<Long, Map<MetricKey, Metric>> entry : accumulator.entrySet()) {
-            metricsToFlush.addAll(entry.getValue().values());
+        for(Map.Entry<Long, ConcurrentMap<MetricKey, AtomicDouble>> entry : accumulator.entrySet()) {
+            for(Map.Entry<MetricKey, AtomicDouble> innerEntry : entry.getValue().entrySet()) {
+                metricsToFlush.add(new Metric(innerEntry.getKey(), innerEntry.getValue().get()));
+            }
         }
         doFlush(metricsToFlush);
-*/
     }
 
     public void setAggregationConfiguration(AggregationConfiguration aggregationConfiguration) {
