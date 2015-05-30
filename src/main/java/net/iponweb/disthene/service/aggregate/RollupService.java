@@ -120,7 +120,9 @@ public class RollupService {
             }
         }
 
-        doFlush(metricsToFlush);
+        if (metricsToFlush.size() > 0) {
+            doFlush(metricsToFlush);
+        }
     }
 
     private synchronized void doFlush(Collection<Metric> metricsToFlush) {
