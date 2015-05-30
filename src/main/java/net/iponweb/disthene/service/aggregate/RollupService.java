@@ -136,7 +136,6 @@ public class RollupService {
         for(Metric metric : metricsToFlush) {
             bus.post(new MetricStoreEvent(metric)).now();
         }
-
     }
 
     //todo: correct shutdown
