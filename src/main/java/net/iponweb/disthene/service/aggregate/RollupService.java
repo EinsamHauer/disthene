@@ -109,7 +109,7 @@ public class RollupService {
     public void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
-        while(accumulator.size() > 0 && (accumulator.firstKey() > DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
+        while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
             logger.debug("Adding rollup flush for time: " + (new DateTime(accumulator.firstKey() * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
 
             // Get the earliest map
