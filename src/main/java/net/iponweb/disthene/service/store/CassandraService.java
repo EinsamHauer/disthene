@@ -118,7 +118,14 @@ public class CassandraService {
             writerThread.shutdown();
         }
 
+        logger.info("Closing C* session");
         session.close();
+        logger.info("Sleeping for 10 seconds to allow leftovers to be written");
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException ignored) {
+        }
+        logger.info("Closing C* cluster");
         cluster.close();
     }
 }
