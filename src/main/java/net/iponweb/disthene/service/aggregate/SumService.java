@@ -16,6 +16,7 @@ import net.iponweb.disthene.events.MetricStoreEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -38,7 +39,7 @@ public class SumService {
     private DistheneConfiguration distheneConfiguration;
     private AggregationConfiguration aggregationConfiguration;
     private BlacklistService blacklistService;
-    private final TreeMap<DateTime, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
+    private final TreeMap<Long, Map<MetricKey, Metric>> accumulator = new TreeMap<>();
 
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
@@ -103,7 +104,7 @@ public class SumService {
         Collection<Metric> metricsToFlush;
         synchronized (accumulator) {
             // check earliest timestamp map
-            if (accumulator.size() == 0 || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay()))) {
+              if (accumulator.size() == 0 || (accumulator.firstKey() > DateTime.now(DateTimeZone.UTC).getMillis() * 1000 - distheneConfiguration.getCarbon().getAggregatorDelay())) {
                 // nothing to do, just return
                 return;
             }
@@ -133,7 +134,7 @@ public class SumService {
         scheduler.shutdown();
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
-        for(Map.Entry<DateTime, Map<MetricKey, Metric>> entry : accumulator.entrySet()) {
+        for(Map.Entry<Long, Map<MetricKey, Metric>> entry : accumulator.entrySet()) {
             metricsToFlush.addAll(entry.getValue().values());
         }
         doFlush(metricsToFlush);

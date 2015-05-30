@@ -50,7 +50,7 @@ public class BatchWriterThread extends WriterThread {
                         metric.getRollup(),
                         metric.getPeriod(),
                         metric.getPath(),
-                        metric.getUnixTimestamp()
+                        metric.getTimestamp()
                 )
         );
 

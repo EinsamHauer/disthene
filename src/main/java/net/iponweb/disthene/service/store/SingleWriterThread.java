@@ -45,7 +45,7 @@ public class SingleWriterThread extends WriterThread {
                 metric.getRollup(),
                 metric.getPeriod(),
                 metric.getPath(),
-                metric.getUnixTimestamp()
+                metric.getTimestamp()
         ));
 
         Futures.addCallback(future,

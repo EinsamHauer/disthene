@@ -1,7 +1,5 @@
 package net.iponweb.disthene.bean;
 
-import org.joda.time.DateTime;
-
 /**
  * @author Andrei Ivanov
  */
@@ -10,9 +8,9 @@ public class MetricKey {
     private String path;
     private int rollup;
     private int period;
-    private DateTime timestamp;
+    private long timestamp;
 
-    public MetricKey(String tenant, String path, int rollup, int period, DateTime timestamp) {
+    public MetricKey(String tenant, String path, int rollup, int period, long timestamp) {
         this.tenant = tenant;
         this.path = path;
         this.rollup = rollup;
@@ -36,7 +34,7 @@ public class MetricKey {
         return period;
     }
 
-    public DateTime getTimestamp() {
+    public long getTimestamp() {
         return timestamp;
     }
 
@@ -47,7 +45,7 @@ public class MetricKey {
 
         MetricKey metricKey = (MetricKey) o;
 
-        return period == metricKey.period && rollup == metricKey.rollup && path.equals(metricKey.path) && tenant.equals(metricKey.tenant) && timestamp.equals(metricKey.timestamp);
+        return period == metricKey.period && rollup == metricKey.rollup && timestamp == metricKey.timestamp && path.equals(metricKey.path) && tenant.equals(metricKey.tenant);
 
     }
 
@@ -57,7 +55,7 @@ public class MetricKey {
         result = 31 * result + path.hashCode();
         result = 31 * result + rollup;
         result = 31 * result + period;
-        result = 31 * result + timestamp.hashCode();
+        result = 31 * result + (int) (timestamp ^ (timestamp >>> 32));
         return result;
     }
 

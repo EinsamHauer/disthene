@@ -104,11 +104,11 @@ public class StatsService {
             storeError = this.storeError.getAndSet(0);
         }
 
-        doFlush(statsToFlush, storeSuccess, storeError, DateTime.now(DateTimeZone.UTC).withSecondOfMinute(0).withMillisOfSecond(0));
+        doFlush(statsToFlush, storeSuccess, storeError, DateTime.now(DateTimeZone.UTC).withSecondOfMinute(0).withMillisOfSecond(0).getMillis() / 1000);
     }
 
-    private synchronized void doFlush(Map<String, StatsRecord> stats, long storeSuccess, long storeError, DateTime dt) {
-        logger.debug("Flushing stats for " + dt);
+    private synchronized void doFlush(Map<String, StatsRecord> stats, long storeSuccess, long storeError, long timestamp) {
+        logger.debug("Flushing stats for " + timestamp);
 
         long totalReceived = 0;
         long totalWritten = 0;
@@ -133,7 +133,7 @@ public class StatsService {
                     rollup.getRollup(),
                     rollup.getPeriod(),
                     statsRecord.getMetricsReceived(),
-                    dt
+                    timestamp
             );
             bus.post(new MetricStoreEvent(metric)).now();
 
@@ -143,7 +143,7 @@ public class StatsService {
                     rollup.getRollup(),
                     rollup.getPeriod(),
                     statsRecord.getMetricsWritten(),
-                    dt
+                    timestamp
             );
             bus.post(new MetricStoreEvent(metric)).now();
 
@@ -158,7 +158,7 @@ public class StatsService {
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 totalReceived,
-                dt
+                timestamp
         );
         bus.post(new MetricStoreEvent(metric)).now();
 
@@ -168,7 +168,7 @@ public class StatsService {
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 totalWritten,
-                dt
+                timestamp
         );
         bus.post(new MetricStoreEvent(metric)).now();
 
@@ -178,7 +178,7 @@ public class StatsService {
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 storeSuccess,
-                dt
+                timestamp
         );
         bus.post(new MetricStoreEvent(metric)).now();
 
@@ -188,7 +188,7 @@ public class StatsService {
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 storeError,
-                dt
+                timestamp
         );
         bus.post(new MetricStoreEvent(metric)).now();
 

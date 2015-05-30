@@ -13,6 +13,7 @@ import net.iponweb.disthene.events.MetricStoreEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -37,7 +38,7 @@ public class RollupService {
 
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
-    private final TreeMap<DateTime, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
+    private final TreeMap<Long, Map<MetricKey, AggregationEntry>> accumulator = new TreeMap<>();
 
     public RollupService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, List<Rollup> rollups) {
         this.distheneConfiguration = distheneConfiguration;
@@ -74,7 +75,7 @@ public class RollupService {
             for(Rollup rollup : rollups) {
                 // Create aggregation entry (assuming average aggregator function)
                 // determine timestamp for this metric/rollup
-                DateTime timestamp = getRollupTimestamp(metric.getTimestamp(), rollup);
+                long timestamp = getRollupTimestamp(metric.getTimestamp(), rollup);
 
                 if (!accumulator.containsKey(timestamp)) {
                     accumulator.put(timestamp, new HashMap<MetricKey, AggregationEntry>());
@@ -104,12 +105,12 @@ public class RollupService {
         synchronized (accumulator) {
             // check earliest timestamp map
             // We have to wait for sum metrics and stats longer - thus * 2
-            if (accumulator.size() == 0 || !accumulator.firstKey().isBefore(DateTime.now().minusSeconds(distheneConfiguration.getCarbon().getAggregatorDelay() * 2))) {
+            if (accumulator.size() == 0 || (accumulator.firstKey() > DateTime.now(DateTimeZone.UTC).getMillis() * 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
                 // nothing to do, just return
                 return;
             }
 
-            logger.debug("Adding rollup flush for time: " + accumulator.firstKey() + " (current time is " + DateTime.now() + ")");
+            logger.debug("Adding rollup flush for time: " + accumulator.firstKey() + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
 
             // Get the earliest map
             for(AggregationEntry entry : accumulator.firstEntry().getValue().values()) {
@@ -143,7 +144,7 @@ public class RollupService {
         scheduler.shutdown();
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
-        for(Map.Entry<DateTime, Map<MetricKey, AggregationEntry>> entry : accumulator.entrySet()) {
+        for(Map.Entry<Long, Map<MetricKey, AggregationEntry>> entry : accumulator.entrySet()) {
             for(AggregationEntry aggregationEntry : entry.getValue().values()) {
                 metricsToFlush.add(aggregationEntry.getMetric());
             }
@@ -151,10 +152,8 @@ public class RollupService {
         doFlush(metricsToFlush);
     }
 
-    //todo: consntant?? wrong calculation
-    private static DateTime getRollupTimestamp(DateTime dt, Rollup rollup) {
-        int minutes = (int) (Math.ceil(dt.getMinuteOfHour() / (double) (rollup.getRollup() / 60)) * 15);
-        return dt.withMinuteOfHour(0).plusMinutes(minutes);
+    private static long getRollupTimestamp(long timestamp, Rollup rollup) {
+        return ((long) Math.ceil(timestamp / (double) rollup.getRollup())) * rollup.getRollup();
     }
 
     private class AggregationEntry {

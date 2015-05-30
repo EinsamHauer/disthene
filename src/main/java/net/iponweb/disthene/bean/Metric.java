@@ -1,8 +1,6 @@
 package net.iponweb.disthene.bean;
 
 import net.iponweb.disthene.config.Rollup;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 
 /**
  * @author Andrei Ivanov
@@ -20,11 +18,11 @@ public class Metric {
                 splitInput[0].intern(),
                 rollup.getRollup(),
                 rollup.getPeriod(),
-                new DateTime(((Long.valueOf(splitInput[2]) * 1000L) / rollup.getRollup()) * rollup.getRollup(), DateTimeZone.UTC));
+                normalizeTimestamp(Long.valueOf(splitInput[2]), rollup));
         this.value = Double.valueOf(splitInput[1]);
     }
 
-    public Metric(String tenant, String path, int rollup, int period, double value, DateTime timestamp) {
+    public Metric(String tenant, String path, int rollup, int period, double value, long timestamp) {
         this.key = new MetricKey(tenant, path, rollup, period, timestamp);
         this.value = value;
     }
@@ -32,6 +30,10 @@ public class Metric {
     public Metric(MetricKey key, double value) {
         this.key = key;
         this.value = value;
+    }
+
+    private long normalizeTimestamp(long timestamp, Rollup rollup) {
+        return (timestamp / rollup.getRollup()) * rollup.getRollup();
     }
 
     public String getId() {
@@ -62,12 +64,8 @@ public class Metric {
         this.value = value;
     }
 
-    public DateTime getTimestamp() {
+    public long getTimestamp() {
         return key.getTimestamp();
-    }
-
-    public long getUnixTimestamp() {
-        return key.getTimestamp().getMillis() / 1000;
     }
 
     @Override
