@@ -43,6 +43,11 @@ do_start()
   #   0 if daemon has been started
   #   1 if daemon was already running
   #   2 if daemon could not be started
+
+  ulimit -l unlimited
+  ulimit -n 100000
+
+
   pid=$( pidofproc -p $PIDFILE "$NAME")
   if [ -n "$pid" ] ; then
     log_daemon_msg "Disthene is already running (PID `cat ${PIDFILE}`)"

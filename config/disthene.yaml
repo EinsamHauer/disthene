@@ -19,7 +19,6 @@ store:
   batch: false
   batchSize: 500
   interval: 5
-  maxThroughput: 7000000
   pool: 10
 index:
   name: "disthene"

@@ -1,8 +1,11 @@
 package net.iponweb.disthene;
 
 import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.bus.common.Properties;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
+import net.engio.mbassy.bus.error.IPublicationErrorHandler;
+import net.engio.mbassy.bus.error.PublicationError;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
@@ -75,7 +78,14 @@ public class Disthene {
             bus = new MBassador<>(new BusConfiguration()
                     .addFeature(Feature.SyncPubSub.Default())
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
-                    .addFeature(dispatch));
+                    .addFeature(dispatch)
+                    .setProperty(Properties.Handler.PublicationError, new IPublicationErrorHandler() {
+                        @Override
+                        public void handleError(PublicationError error) {
+                            logger.error(error);
+                        }
+                    })
+            );
 
             logger.info("Loading blacklists");
             in = Files.newInputStream(Paths.get(blacklistLocation));

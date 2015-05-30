@@ -17,7 +17,6 @@ public class StoreConfiguration {
     private boolean batch;
     private int batchSize;
     private int interval;
-    private int maxThroughput;
     private int pool;
 
     public List<String> getCluster() {
@@ -100,14 +99,6 @@ public class StoreConfiguration {
         this.interval = interval;
     }
 
-    public int getMaxThroughput() {
-        return maxThroughput;
-    }
-
-    public void setMaxThroughput(int maxThroughput) {
-        this.maxThroughput = maxThroughput;
-    }
-
     public int getPool() {
         return pool;
     }
@@ -129,7 +120,6 @@ public class StoreConfiguration {
                 ", batch=" + batch +
                 ", batchSize=" + batchSize +
                 ", interval=" + interval +
-                ", maxThroughput=" + maxThroughput +
                 ", pool=" + pool +
                 '}';
     }
