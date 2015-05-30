@@ -221,6 +221,11 @@ public class Disthene {
             cassandraService.shutdown();
 
             logger.info("Shutdown complete");
+
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException ignored) {
+            }
             System.exit(0);
 
         }
