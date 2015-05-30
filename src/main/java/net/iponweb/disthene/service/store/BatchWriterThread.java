@@ -34,6 +34,11 @@ public class BatchWriterThread extends WriterThread {
             Metric metric = metrics.poll();
             if (metric != null) {
                 addToBatch(metric);
+            } else {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {
+                }
             }
         }
 

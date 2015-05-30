@@ -33,6 +33,11 @@ public class SingleWriterThread extends WriterThread {
             Metric metric = metrics.poll();
             if (metric != null) {
                 store(metric);
+            } else {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {
+                }
             }
         }
     }
