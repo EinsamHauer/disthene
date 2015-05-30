@@ -28,9 +28,15 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ByteBuf in = (ByteBuf) msg;
-        Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
+
+        try {
+            Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
+            bus.post(new MetricReceivedEvent(metric)).asynchronously();
+        } catch (Exception e) {
+            logger.debug(e);
+        }
+
         in.release();
 
-        bus.post(new MetricReceivedEvent(metric)).asynchronously();
     }
 }
