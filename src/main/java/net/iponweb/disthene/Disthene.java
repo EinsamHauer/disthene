@@ -219,6 +219,12 @@ public class Disthene {
             logger.info("Shutting down dispatcher");
             bus.shutdown();
 
+            logger.info("Sleeping for 10 seconds to allow leftovers to be written");
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException ignored) {
+            }
+
             // Now flush what's left and shutdown
             logger.info("Shutting down ES service");
             indexService.shutdown();
