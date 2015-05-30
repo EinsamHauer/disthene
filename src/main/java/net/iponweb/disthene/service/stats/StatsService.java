@@ -15,9 +15,7 @@ import org.joda.time.DateTimeZone;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -35,7 +33,7 @@ public class StatsService {
     private Rollup rollup;
     private AtomicLong storeSuccess = new AtomicLong(0);
     private AtomicLong storeError = new AtomicLong(0);
-    private final Map<String, StatsRecord> stats = new HashMap<>();
+    private ConcurrentMap<String, StatsRecord> stats = new ConcurrentHashMap<>();
 
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
@@ -54,30 +52,27 @@ public class StatsService {
 
     }
 
+    private StatsRecord getStatsRecord(String tenant) {
+        StatsRecord statsRecord = stats.get(tenant);
+        if (statsRecord == null) {
+            StatsRecord newStatsRecord = new StatsRecord();
+            statsRecord = stats.putIfAbsent(tenant, newStatsRecord);
+            if (statsRecord == null) {
+                statsRecord = newStatsRecord;
+            }
+        }
+
+        return statsRecord;
+    }
+
     @Handler(rejectSubtypes = false)
     public void handle(MetricReceivedEvent metricReceivedEvent) {
-        synchronized (stats) {
-            StatsRecord statsRecord = stats.get(metricReceivedEvent.getMetric().getTenant());
-            if (statsRecord == null) {
-                statsRecord = new StatsRecord();
-                stats.put(metricReceivedEvent.getMetric().getTenant(), statsRecord);
-            }
-
-            statsRecord.incMetricsReceived();
-        }
+        getStatsRecord(metricReceivedEvent.getMetric().getTenant()).incMetricsReceived();
     }
 
     @Handler(rejectSubtypes = false)
     public void handle(MetricStoreEvent metricStoreEvent) {
-        synchronized (stats) {
-            StatsRecord statsRecord = stats.get(metricStoreEvent.getMetric().getTenant());
-            if (statsRecord == null) {
-                statsRecord = new StatsRecord();
-                stats.put(metricStoreEvent.getMetric().getTenant(), statsRecord);
-            }
-
-            statsRecord.incMetricsWritten();
-        }
+        getStatsRecord(metricStoreEvent.getMetric().getTenant()).incMetricsWritten();
     }
 
     @Handler(rejectSubtypes = false)
@@ -90,19 +85,13 @@ public class StatsService {
         storeError.addAndGet(storeErrorEvent.getCount());
     }
 
-    public void flush() {
+    public synchronized void flush() {
         Map<String, StatsRecord> statsToFlush = new HashMap<>();
-        long storeSuccess;
-        long storeError;
+        long storeSuccess = this.storeSuccess.getAndSet(0);
+        long storeError = this.storeError.getAndSet(0);
 
-        synchronized (stats) {
-            for (Map.Entry<String, StatsRecord> entry : stats.entrySet()) {
-                statsToFlush.put(entry.getKey(), new StatsRecord(entry.getValue()));
-                entry.getValue().reset();
-            }
-
-            storeSuccess = this.storeSuccess.getAndSet(0);
-            storeError = this.storeError.getAndSet(0);
+        for (ConcurrentMap.Entry<String, StatsRecord> entry : stats.entrySet()) {
+            statsToFlush.put(entry.getKey(), entry.getValue().reset());
         }
 
         doFlush(statsToFlush, storeSuccess, storeError, DateTime.now(DateTimeZone.UTC).withSecondOfMinute(0).withMillisOfSecond(0).getMillis() / 1000);
@@ -116,9 +105,9 @@ public class StatsService {
 
         if (statsConfiguration.isLog()) {
             logger.info("Disthene stats:");
-            logger.info("======================================================================================");
-            logger.info("\tTenant\tmetrics_received\twrite_count");
-            logger.info("======================================================================================");
+            logger.info("=========================================================================");
+            logger.info("Tenant\t\tmetrics_received\t\twrite_count");
+            logger.info("=========================================================================");
         }
 
         for (Map.Entry<String, StatsRecord> entry : stats.entrySet()) {
@@ -149,7 +138,7 @@ public class StatsService {
             bus.post(new MetricStoreEvent(metric)).now();
 
             if (statsConfiguration.isLog()) {
-                logger.info("\t" + tenant + "\t" + statsRecord.metricsReceived + "\t" + statsRecord.getMetricsWritten());
+                logger.info(tenant + "\t\t" + statsRecord.metricsReceived + "\t\t" + statsRecord.getMetricsWritten());
             }
         }
 
@@ -194,11 +183,11 @@ public class StatsService {
         bus.post(new MetricStoreEvent(metric)).now();
 
         if (statsConfiguration.isLog()) {
-            logger.info("\t" + "total" + "\t" + totalReceived + "\t" + totalWritten);
-            logger.info("======================================================================================");
-            logger.info("\tstore.success:\t" + storeSuccess);
-            logger.info("\tstore.error:\t" + storeError);
-            logger.info("======================================================================================");
+            logger.info("total\t\t" + totalReceived + "\t\t" + totalWritten);
+            logger.info("=========================================================================");
+            logger.info("store.success:\t\t" + storeSuccess);
+            logger.info("store.error:\t\t" + storeError);
+            logger.info("=========================================================================");
         }
     }
 
@@ -208,36 +197,39 @@ public class StatsService {
 
 
     private class StatsRecord {
-        private long metricsReceived = 0;
-        private long metricsWritten = 0;
+        private AtomicLong metricsReceived = new AtomicLong(0);
+        private AtomicLong metricsWritten = new AtomicLong(0);
 
         private StatsRecord() {
         }
 
-        private StatsRecord(StatsRecord statsRecord) {
-            metricsReceived = statsRecord.metricsReceived;
-            metricsWritten = statsRecord.metricsWritten;
+        public StatsRecord(long metricsReceived, long metricsWritten) {
+            this.metricsReceived = new AtomicLong(metricsReceived);
+            this.metricsWritten = new AtomicLong(metricsWritten);
         }
 
-        public void reset() {
-            metricsReceived = 0;
-            metricsWritten = 0;
+        /**
+         * Resets the stats to zeroes and returns a snapshot of the record
+         * @return snapshot of the record
+         */
+        public StatsRecord reset() {
+            return new StatsRecord(metricsReceived.getAndSet(0), metricsWritten.getAndSet(0));
         }
 
         public void incMetricsReceived() {
-            metricsReceived++;
+            metricsReceived.addAndGet(1);
         }
 
         public void incMetricsWritten() {
-            metricsWritten++;
+            metricsWritten.addAndGet(1);
         }
 
         public long getMetricsReceived() {
-            return metricsReceived;
+            return metricsReceived.get();
         }
 
         public long getMetricsWritten() {
-            return metricsWritten;
+            return metricsWritten.get();
         }
     }
 }
