@@ -36,12 +36,15 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
         try {
             final Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
+/*
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     bus.post(new MetricReceivedEvent(metric)).now();
                 }
             });
+*/
+            bus.post(new MetricReceivedEvent(metric)).now();
         } catch (Exception e) {
             logger.trace(e);
         }
