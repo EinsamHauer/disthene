@@ -105,7 +105,7 @@ public class RollupService {
         synchronized (accumulator) {
             // check earliest timestamp map
             // We have to wait for sum metrics and stats longer - thus * 2
-            if (accumulator.size() == 0 || (accumulator.firstKey() > DateTime.now(DateTimeZone.UTC).getMillis() * 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
+            if (accumulator.size() == 0 || (accumulator.firstKey() > DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
                 // nothing to do, just return
                 return;
             }

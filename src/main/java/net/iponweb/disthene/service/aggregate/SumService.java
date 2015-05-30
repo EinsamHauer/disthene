@@ -104,7 +104,7 @@ public class SumService {
         Collection<Metric> metricsToFlush;
         synchronized (accumulator) {
             // check earliest timestamp map
-              if (accumulator.size() == 0 || (accumulator.firstKey() > DateTime.now(DateTimeZone.UTC).getMillis() * 1000 - distheneConfiguration.getCarbon().getAggregatorDelay())) {
+              if (accumulator.size() == 0 || (accumulator.firstKey() > DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay())) {
                 // nothing to do, just return
                 return;
             }
