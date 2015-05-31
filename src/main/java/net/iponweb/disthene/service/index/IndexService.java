@@ -79,6 +79,11 @@ public class IndexService {
 
     public void shutdown() {
         indexThread.shutdown();
+        logger.info("Sleeping for 10 seconds to allow leftovers to be written");
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException ignored) {
+        }
         logger.info("Closing ES client");
         client.close();
     }
