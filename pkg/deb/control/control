@@ -1,7 +1,8 @@
 Package: [[name]]
 Version: [[version]]
 Section: misc
-Priority: low
+Priority: optional
 Architecture: all
-Description: [[description]]
+Depends: jdk (>= 1.7)
+Description: Alternative storage backend for graphite, backed by cassandra
 Maintainer: Andrei Ivanov
