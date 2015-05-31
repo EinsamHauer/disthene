@@ -96,6 +96,7 @@ public class IndexThread extends Thread {
 
         if (request.size() >= batchSize || (lastFlushTimestamp < System.currentTimeMillis() / 1000L - flushInterval)) {
             flush();
+            lastFlushTimestamp = System.currentTimeMillis() / 1000L;
         }
     }
 
