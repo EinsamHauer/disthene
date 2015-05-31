@@ -30,8 +30,6 @@ index:
   bulk:
     actions: 10000
     interval: 5
-    size: 100
-    pool: 10
 stats:
   interval: 60
   tenant: "test"

@@ -4,7 +4,8 @@ import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
 import net.engio.mbassy.listener.Listener;
 import net.engio.mbassy.listener.References;
-import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.bean.Metric;
+import net.iponweb.disthene.config.IndexConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
 import org.apache.log4j.Logger;
@@ -13,7 +14,9 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -23,42 +26,60 @@ import java.util.concurrent.ConcurrentMap;
 public class IndexService {
     private Logger logger = Logger.getLogger(IndexService.class);
 
-    private BulkMetricProcessor processor;
+    TransportClient client;
+    private IndexThread indexThread;
+
     // tenant -> path -> dummy
     private ConcurrentMap<String, ConcurrentMap<String, Boolean>> cache = new ConcurrentHashMap<>();
+    private Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
 
-    public IndexService(DistheneConfiguration distheneConfiguration, MBassador<DistheneEvent> bus) {
+    public IndexService(IndexConfiguration indexConfiguration, MBassador<DistheneEvent> bus) {
         bus.subscribe(this);
 
         Settings settings = ImmutableSettings.settingsBuilder()
-                .put("cluster.name", distheneConfiguration.getIndex().getName())
+                .put("cluster.name", indexConfiguration.getName())
                 .build();
-        TransportClient client = new TransportClient(settings);
-        for (String node : distheneConfiguration.getIndex().getCluster()) {
-            client.addTransportAddress(new InetSocketTransportAddress(node, distheneConfiguration.getIndex().getPort()));
+        client = new TransportClient(settings);
+        for (String node : indexConfiguration.getCluster()) {
+            client.addTransportAddress(new InetSocketTransportAddress(node, indexConfiguration.getPort()));
         }
 
-        processor = new BulkMetricProcessor(client, distheneConfiguration.getIndex());
+        indexThread = new IndexThread(
+                "distheneIndexThread",
+                client,
+                metrics,
+                indexConfiguration.getIndex(),
+                indexConfiguration.getType(),
+                indexConfiguration.getBulk().getActions(),
+                indexConfiguration.getBulk().getInterval()
+        );
+
+        indexThread.start();
     }
 
-    @Handler(rejectSubtypes = false)
-    public void handle(MetricStoreEvent metricStoreEvent) {
-        ConcurrentMap<String, Boolean> tenantPaths = cache.get(metricStoreEvent.getMetric().getTenant());
+    private ConcurrentMap<String, Boolean> getTenantPaths(String tenant) {
+        ConcurrentMap<String, Boolean> tenantPaths = cache.get(tenant);
         if (tenantPaths == null) {
             ConcurrentMap<String, Boolean> newTenantPaths = new ConcurrentHashMap<>();
-            tenantPaths = cache.putIfAbsent(metricStoreEvent.getMetric().getTenant(), newTenantPaths);
+            tenantPaths = cache.putIfAbsent(tenant, newTenantPaths);
             if (tenantPaths == null) {
                 tenantPaths = newTenantPaths;
             }
         }
 
-        if (tenantPaths.putIfAbsent(metricStoreEvent.getMetric().getPath(), true) == null) {
-            processor.add(metricStoreEvent.getMetric());
-        }
+        return tenantPaths;
+    }
 
+    @Handler(rejectSubtypes = false)
+    public void handle(MetricStoreEvent metricStoreEvent) {
+        if (getTenantPaths(metricStoreEvent.getMetric().getTenant()).putIfAbsent(metricStoreEvent.getMetric().getPath(), true) == null) {
+            metrics.offer(metricStoreEvent.getMetric());
+        }
     }
 
     public void shutdown() {
-        processor.shutdown();
+        indexThread.shutdown();
+        logger.info("Closing ES client");
+        client.close();
     }
 }

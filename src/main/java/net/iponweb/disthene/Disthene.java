@@ -101,7 +101,7 @@ public class Disthene {
             statsService = new StatsService(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
 
             logger.info("Creating ES index service");
-            indexService = new IndexService(distheneConfiguration, bus);
+            indexService = new IndexService(distheneConfiguration.getIndex(), bus);
 
             logger.info("Creating C* service");
             cassandraService = new CassandraService(distheneConfiguration.getStore(), bus);
