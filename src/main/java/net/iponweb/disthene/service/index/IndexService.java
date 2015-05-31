@@ -66,14 +66,14 @@ public class IndexService {
 
         indexThread.start();
 
-        scheduler.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                expireCache();
-            }
-        }, indexConfiguration.getExpire(), indexConfiguration.getExpire(), TimeUnit.SECONDS);
-
-
+        if (indexConfiguration.isCache()) {
+            scheduler.scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                    expireCache();
+                }
+            }, indexConfiguration.getExpire(), indexConfiguration.getExpire(), TimeUnit.SECONDS);
+        }
     }
 
     private ConcurrentMap<String, AtomicLong> getTenantPaths(String tenant) {
@@ -91,13 +91,21 @@ public class IndexService {
 
     @Handler(rejectSubtypes = false)
     public void handle(MetricStoreEvent metricStoreEvent) {
-        ConcurrentMap<String, AtomicLong> tenantPaths = getTenantPaths(metricStoreEvent.getMetric().getTenant());
-        AtomicLong lastSeen = tenantPaths.get(metricStoreEvent.getMetric().getPath());
+        if (indexConfiguration.isCache()) {
+            handleWithCache(metricStoreEvent.getMetric());
+        } else {
+            metrics.offer(metricStoreEvent.getMetric());
+        }
+    }
+
+    private void handleWithCache(Metric metric) {
+        ConcurrentMap<String, AtomicLong> tenantPaths = getTenantPaths(metric.getTenant());
+        AtomicLong lastSeen = tenantPaths.get(metric.getPath());
 
         if (lastSeen == null) {
-            lastSeen = tenantPaths.putIfAbsent(metricStoreEvent.getMetric().getPath(), new AtomicLong(System.currentTimeMillis() / 1000L));
+            lastSeen = tenantPaths.putIfAbsent(metric.getPath(), new AtomicLong(System.currentTimeMillis() / 1000L));
             if (lastSeen == null) {
-                metrics.offer(metricStoreEvent.getMetric());
+                metrics.offer(metric);
             } else {
                 lastSeen.getAndSet(System.currentTimeMillis() / 1000L);
             }
@@ -105,7 +113,7 @@ public class IndexService {
     }
 
     private synchronized void expireCache() {
-        logger.debug("Trying index cache expiration");
+        logger.debug("Expiring index cache");
 
         long currentTimestamp = System.currentTimeMillis() / 1000L;
         int pathsRemoved = 0;
