@@ -8,30 +8,38 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.IndexConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
+import net.iponweb.disthene.util.NamedThreadFactory;
 import org.apache.log4j.Logger;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author Andrei Ivanov
  */
 @Listener(references= References.Strong)
 public class IndexService {
+    private static final long EXPIRATION_SECONDS = 180;
+    private static final String SCHEDULER_NAME = "distheneIndexCacheExpire";
+
     private Logger logger = Logger.getLogger(IndexService.class);
 
     TransportClient client;
     private IndexThread indexThread;
 
     // tenant -> path -> dummy
-    private ConcurrentMap<String, ConcurrentMap<String, Boolean>> cache = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, ConcurrentMap<String, AtomicLong>> cache = new ConcurrentHashMap<>();
     private Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
+
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+
 
     public IndexService(IndexConfiguration indexConfiguration, MBassador<DistheneEvent> bus) {
         bus.subscribe(this);
@@ -55,12 +63,21 @@ public class IndexService {
         );
 
         indexThread.start();
+
+        scheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                expireCache();
+            }
+        }, EXPIRATION_SECONDS, EXPIRATION_SECONDS, TimeUnit.SECONDS);
+
+
     }
 
-    private ConcurrentMap<String, Boolean> getTenantPaths(String tenant) {
-        ConcurrentMap<String, Boolean> tenantPaths = cache.get(tenant);
+    private ConcurrentMap<String, AtomicLong> getTenantPaths(String tenant) {
+        ConcurrentMap<String, AtomicLong> tenantPaths = cache.get(tenant);
         if (tenantPaths == null) {
-            ConcurrentMap<String, Boolean> newTenantPaths = new ConcurrentHashMap<>();
+            ConcurrentMap<String, AtomicLong> newTenantPaths = new ConcurrentHashMap<>();
             tenantPaths = cache.putIfAbsent(tenant, newTenantPaths);
             if (tenantPaths == null) {
                 tenantPaths = newTenantPaths;
@@ -72,9 +89,36 @@ public class IndexService {
 
     @Handler(rejectSubtypes = false)
     public void handle(MetricStoreEvent metricStoreEvent) {
-        if (getTenantPaths(metricStoreEvent.getMetric().getTenant()).putIfAbsent(metricStoreEvent.getMetric().getPath(), true) == null) {
-            metrics.offer(metricStoreEvent.getMetric());
+        ConcurrentMap<String, AtomicLong> tenantPaths = getTenantPaths(metricStoreEvent.getMetric().getTenant());
+        AtomicLong lastSeen = tenantPaths.get(metricStoreEvent.getMetric().getPath());
+
+        if (lastSeen == null) {
+            lastSeen = tenantPaths.putIfAbsent(metricStoreEvent.getMetric().getPath(), new AtomicLong(System.currentTimeMillis() / 1000L));
+            if (lastSeen == null) {
+                metrics.offer(metricStoreEvent.getMetric());
+            } else {
+                lastSeen.getAndSet(System.currentTimeMillis() / 1000L);
+            }
         }
+    }
+
+    private synchronized void expireCache() {
+        logger.debug("Trying index cache expiration");
+
+        long currentTimestamp = System.currentTimeMillis() / 1000L;
+        int pathsRemoved = 0;
+
+        for(ConcurrentMap<String, AtomicLong> tenantMap : cache.values()) {
+            for(Iterator<Map.Entry<String, AtomicLong>> iterator = tenantMap.entrySet().iterator(); iterator.hasNext();) {
+                Map.Entry<String, AtomicLong> entry = iterator.next();
+                if (entry.getValue().get() < currentTimestamp - EXPIRATION_SECONDS) {
+                    iterator.remove();
+                    pathsRemoved++;
+                }
+            }
+        }
+
+        logger.debug("Expired " + pathsRemoved + " paths from index cache");
     }
 
     public void shutdown() {
