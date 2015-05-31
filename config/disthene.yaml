@@ -27,6 +27,8 @@ index:
   port: 9300
   index: "disthene"
   type: "path"
+  cache: true
+  expire: 3600
   bulk:
     actions: 10000
     interval: 5

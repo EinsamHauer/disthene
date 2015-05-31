@@ -11,6 +11,8 @@ public class IndexConfiguration {
     private String name;
     private String index;
     private String type;
+    private boolean cache;
+    private long expire;
     private List<String> cluster = new ArrayList<>();
     private int port;
     private IndexBulkConfiguration bulk;
@@ -63,12 +65,30 @@ public class IndexConfiguration {
         this.bulk = bulk;
     }
 
+    public boolean isCache() {
+        return cache;
+    }
+
+    public void setCache(boolean cache) {
+        this.cache = cache;
+    }
+
+    public long getExpire() {
+        return expire;
+    }
+
+    public void setExpire(long expire) {
+        this.expire = expire;
+    }
+
     @Override
     public String toString() {
         return "IndexConfiguration{" +
                 "name='" + name + '\'' +
                 ", index='" + index + '\'' +
                 ", type='" + type + '\'' +
+                ", cache=" + cache +
+                ", expire=" + expire +
                 ", cluster=" + cluster +
                 ", port=" + port +
                 ", bulk=" + bulk +

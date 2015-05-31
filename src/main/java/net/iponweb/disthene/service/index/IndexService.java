@@ -26,12 +26,12 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Listener(references= References.Strong)
 public class IndexService {
-    private static final long EXPIRATION_SECONDS = 180;
     private static final String SCHEDULER_NAME = "distheneIndexCacheExpire";
 
     private Logger logger = Logger.getLogger(IndexService.class);
 
-    TransportClient client;
+    private IndexConfiguration indexConfiguration;
+    private TransportClient client;
     private IndexThread indexThread;
 
     // tenant -> path -> dummy
@@ -42,6 +42,8 @@ public class IndexService {
 
 
     public IndexService(IndexConfiguration indexConfiguration, MBassador<DistheneEvent> bus) {
+        this.indexConfiguration = indexConfiguration;
+
         bus.subscribe(this);
 
         Settings settings = ImmutableSettings.settingsBuilder()
@@ -69,7 +71,7 @@ public class IndexService {
             public void run() {
                 expireCache();
             }
-        }, EXPIRATION_SECONDS, EXPIRATION_SECONDS, TimeUnit.SECONDS);
+        }, indexConfiguration.getExpire(), indexConfiguration.getExpire(), TimeUnit.SECONDS);
 
 
     }
@@ -111,7 +113,7 @@ public class IndexService {
         for(ConcurrentMap<String, AtomicLong> tenantMap : cache.values()) {
             for(Iterator<Map.Entry<String, AtomicLong>> iterator = tenantMap.entrySet().iterator(); iterator.hasNext();) {
                 Map.Entry<String, AtomicLong> entry = iterator.next();
-                if (entry.getValue().get() < currentTimestamp - EXPIRATION_SECONDS) {
+                if (entry.getValue().get() < currentTimestamp - indexConfiguration.getExpire()) {
                     iterator.remove();
                     pathsRemoved++;
                 }
@@ -122,6 +124,7 @@ public class IndexService {
     }
 
     public void shutdown() {
+        scheduler.shutdown();
         indexThread.shutdown();
         logger.info("Sleeping for 10 seconds to allow leftovers to be written");
         try {
