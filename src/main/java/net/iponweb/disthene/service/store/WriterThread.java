@@ -2,7 +2,6 @@ package net.iponweb.disthene.service.store;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.google.common.util.concurrent.RateLimiter;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.events.DistheneEvent;
