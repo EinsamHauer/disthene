@@ -18,8 +18,8 @@ public class Metric {
                 splitInput[0].intern(),
                 rollup.getRollup(),
                 rollup.getPeriod(),
-                normalizeTimestamp(Long.valueOf(splitInput[2]), rollup));
-        this.value = Double.valueOf(splitInput[1]);
+                normalizeTimestamp(Long.parseLong(splitInput[2]), rollup));
+        this.value = Double.parseDouble(splitInput[1]);
     }
 
     public Metric(String tenant, String path, int rollup, int period, double value, long timestamp) {

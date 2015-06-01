@@ -10,8 +10,8 @@ public class Rollup {
 
     public Rollup(String s) {
         String[] ss = s.split(":");
-        rollup = Integer.valueOf(ss[0].substring(0, ss[0].length() - 1));
-        period = (int) (Long.valueOf(ss[1].substring(0, ss[1].length() - 1)) / rollup);
+        rollup = Integer.parseInt(ss[0].substring(0, ss[0].length() - 1));
+        period = (int) (Long.parseLong(ss[1].substring(0, ss[1].length() - 1)) / rollup);
     }
 
     public int getRollup() {
