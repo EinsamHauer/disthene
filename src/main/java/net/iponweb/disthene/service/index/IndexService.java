@@ -109,6 +109,8 @@ public class IndexService {
             } else {
                 lastSeen.getAndSet(System.currentTimeMillis() / 1000L);
             }
+        } else {
+            lastSeen.getAndSet(System.currentTimeMillis() / 1000L);
         }
     }
 
