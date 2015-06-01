@@ -40,6 +40,7 @@ public class IndexService {
 
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
+    private AtomicLong indexCount = new AtomicLong(0);
 
     public IndexService(IndexConfiguration indexConfiguration, MBassador<DistheneEvent> bus) {
         this.indexConfiguration = indexConfiguration;
@@ -74,6 +75,25 @@ public class IndexService {
                 }
             }, indexConfiguration.getExpire(), indexConfiguration.getExpire(), TimeUnit.SECONDS);
         }
+
+        ScheduledExecutorService debugScheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory("distheneIndexDebug"));
+        debugScheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                long cacheSize = 0;
+                for(ConcurrentMap<String, AtomicLong> tenantMap : cache.values()) {
+                    cacheSize += tenantMap.size();
+                }
+
+                logger.debug("+++++++++++++++++++++++++++++++");
+                logger.debug("+  Index debug stats  +++++++++");
+                logger.debug("+++++++++++++++++++++++++++++++");
+                logger.debug("Queue size: " + metrics.size());
+                logger.debug("Indexed: " + indexCount.getAndSet(0));
+                logger.debug("Cache size: " + cacheSize);
+                logger.debug("+++++++++++++++++++++++++++++++");
+            }
+        }, 1, 1, TimeUnit.MINUTES);
     }
 
     private ConcurrentMap<String, AtomicLong> getTenantPaths(String tenant) {
@@ -95,6 +115,7 @@ public class IndexService {
             handleWithCache(metricStoreEvent.getMetric());
         } else {
             metrics.offer(metricStoreEvent.getMetric());
+            indexCount.addAndGet(1);
         }
     }
 
@@ -106,6 +127,7 @@ public class IndexService {
             lastSeen = tenantPaths.putIfAbsent(metric.getPath(), new AtomicLong(System.currentTimeMillis() / 1000L));
             if (lastSeen == null) {
                 metrics.offer(metric);
+                indexCount.addAndGet(1);
             } else {
                 lastSeen.getAndSet(System.currentTimeMillis() / 1000L);
             }
