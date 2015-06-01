@@ -48,7 +48,7 @@ public class StatsService {
             public void run() {
                 flush();
             }
-        }, statsConfiguration.getInterval(), statsConfiguration.getInterval(), TimeUnit.SECONDS);
+        }, 60 - ((System.currentTimeMillis() / 1000L) % 60), statsConfiguration.getInterval(), TimeUnit.SECONDS);
 
     }
 
