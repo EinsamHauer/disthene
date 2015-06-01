@@ -16,8 +16,8 @@ There are a couple of things which seem to be an absolute must and which were mi
 * true multitenancy
 
 The other thing is performance. **Disthene** is being developed with one major requirement in mind - performance. 
-Essentially, in most cases the only bottleneck will be C*. 
-There is no ultimate benchmark here (mostly because of the C* bottleneck in test lab) 
+Essentially, in most cases the only bottleneck will be C\*. 
+There is no ultimate benchmark here (mostly because of the C\* bottleneck in test lab) 
 but it looks like something like 1M data points/core/minute should not be a problem     
 
 ## Compiling 
