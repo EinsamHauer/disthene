@@ -15,6 +15,7 @@ import net.iponweb.disthene.events.MetricStoreEvent;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -118,14 +119,25 @@ public class CassandraService {
         }
 
         logger.info("Closing C* session");
-        session.close();
-        logger.info("Sleeping for 10 seconds to allow leftovers to be written");
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException ignored) {
+        logger.info("Waiting for C* queries to be completed");
+        while (getInFlightQueries(session.getState()) > 0) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ignored) {
+            }
         }
         logger.info("Closing C* cluster");
         cluster.close();
+    }
+
+    private int getInFlightQueries(Session.State state) {
+        int result = 0;
+        Collection<Host> hosts = state.getConnectedHosts();
+        for(Host host : hosts) {
+            result += state.getInFlightQueries(host);
+        }
+
+        return result;
     }
 }
 
