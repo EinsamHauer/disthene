@@ -14,8 +14,8 @@ public class Metric {
         String[] splitInput = input.split("\\s");
         // We are interning tenant and path here - we are going to store them all (or almost so) constantly anyhow in multiple places
         this.key = new MetricKey(
-                splitInput.length >=4 ? splitInput[3].intern() : "NONE",
-                splitInput[0].intern(),
+                splitInput.length >=4 ? splitInput[3] : "NONE",
+                splitInput[0],
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 normalizeTimestamp(Long.parseLong(splitInput[2]), rollup));
