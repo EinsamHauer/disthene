@@ -1,0 +1,23 @@
+# JAVA_OPTS
+JAVA_OPTS="-server"
+JAVA_OPTS="-Xms<%= @java_xms %> -Xmx<%= @java_xmx %>"
+JAVA_OPTS="$JAVA_OPTS -XX:+UseStringCache -XX:StringTableSize=<%= @java_string_table_size %>"
+JAVA_OPTS="$JAVA_OPTS -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/tmp"
+JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.port=7199 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false"
+JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=<%= @fqdn -%>"
+
+# Alternative path to config file
+# default is /etc/disthene/disthene.yaml
+# DISTHENE_CONFIG_FILE=
+
+# Alternative path to log4j config file
+# default is /etc/disthene/disthene-log4j.xml
+# DISTHENE_LOG_CONFIG_FILE=
+
+# Alternative path to blacklist file
+# default is /etc/disthene/blacklist.yaml
+# DISTHENE_BLACKLIST_FILE=
+
+# Alternative path to aggragation config file
+# default is /etc/disthene/aggregator.yaml
+# DISTHENE_AGGREGATION_CONFIG_FILE=

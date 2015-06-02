@@ -1,0 +1,41 @@
+carbon:
+  bind: "<%= @carbon_host %>"
+  port: <%= @carbon_port %>
+  rollups:
+<% @carbon_rollups.each do |rollup| -%>
+    - <%= rollup %>
+<% end -%>
+  aggregatorDelay: <%= @carbon_aggregator_delay %>
+store:
+  cluster:
+<% @store_cluster.each do |node| -%>
+    - "<%= node %>"
+<% end -%>
+  port: <%= @store_port %>
+  keyspace: "<%= @store_keyspace %>"
+  maxConnections: <%= @store_max_connections %>
+  readTimeout: <%= @store_read_timeout %>
+  connectTimeout: <%= @store_connect_timeout %>
+  maxRequests: <%= @store_max_requests %>
+  batch: <%= @store_batch %>
+  batchSize: <%= @store_batch_size %>
+  pool: <%= @store_pool %>
+index:
+  name: "<%= @index_name %>"
+  cluster:
+<% @index_cluster.each do |node| -%>
+    - "<%= node %>"
+<% end -%>
+  port: <%= @index_port %>
+  index: "<%= @index_index %>"
+  type: "<%= @index_type %>"
+  cache: <%= @index_cache %>
+  expire: <%= @index_expire %>
+  bulk:
+    actions: <%= @index_bulk_actions %>
+    interval: <%= @index_bulk_interval %>
+stats:
+  interval: <%= @stats_interval %>
+  tenant: "<%= @stats_tenant %>"
+  hostname: "<%= @stats_hostname %>"
+  log: <%= @stats_log %>

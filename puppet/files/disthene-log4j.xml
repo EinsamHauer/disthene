@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration PUBLIC "-//APACHE//DTD LOG4J 1.2//EN" "C:\Work\Various\Vaadin\my\occ\src\main\resources\log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+    <appender name="FILE" class="org.apache.log4j.RollingFileAppender">
+
+        <param name="file" value="<%= @log_path -%>"/>
+        <param name="maxFileSize" value="20MB"/>
+        <param name="maxBackupIndex" value="50"/>
+        <param name="immediateFlush" value="true"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%p %d{dd.MM.yyyy HH:mm:ss,SSS} [%t] %c %x - %m%n"/>
+        </layout>
+    </appender>
+
+    <!-- Root Logger -->
+    <root>
+        <priority value="info"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</log4j:configuration>
