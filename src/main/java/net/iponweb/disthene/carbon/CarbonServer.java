@@ -53,7 +53,7 @@ public class CarbonServer {
                 });
 
         // Start the server.
-        b.bind(configuration.getCarbon().getPort()).sync();
+        b.bind(configuration.getCarbon().getBind(), configuration.getCarbon().getPort()).sync();
     }
 
     public void shutdown() {
