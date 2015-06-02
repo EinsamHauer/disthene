@@ -17,7 +17,6 @@ store:
   maxRequests: 128
   batch: false
   batchSize: 500
-  interval: 5
   pool: 10
 index:
   name: "disthene"

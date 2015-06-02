@@ -16,7 +16,6 @@ public class StoreConfiguration {
     private int maxRequests;
     private boolean batch;
     private int batchSize;
-    private int interval;
     private int pool;
 
     public List<String> getCluster() {
@@ -91,14 +90,6 @@ public class StoreConfiguration {
         this.batchSize = batchSize;
     }
 
-    public int getInterval() {
-        return interval;
-    }
-
-    public void setInterval(int interval) {
-        this.interval = interval;
-    }
-
     public int getPool() {
         return pool;
     }
@@ -119,7 +110,6 @@ public class StoreConfiguration {
                 ", maxRequests=" + maxRequests +
                 ", batch=" + batch +
                 ", batchSize=" + batchSize +
-                ", interval=" + interval +
                 ", pool=" + pool +
                 '}';
     }
