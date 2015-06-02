@@ -103,8 +103,8 @@ public class Disthene {
             logger.info("Creating ES index service");
             indexService = new IndexService(distheneConfiguration.getIndex(), bus);
 
-//            logger.info("Creating C* service");
-//            cassandraService = new CassandraService(distheneConfiguration.getStore(), bus);
+            logger.info("Creating C* service");
+            cassandraService = new CassandraService(distheneConfiguration.getStore(), bus);
 
             logger.info("Loading aggregation rules");
             in = Files.newInputStream(Paths.get(aggregationConfigLocation));
@@ -223,8 +223,8 @@ public class Disthene {
             logger.info("Shutting down ES service");
             indexService.shutdown();
 
-//            logger.info("Shutting down C* service");
-//            cassandraService.shutdown();
+            logger.info("Shutting down C* service");
+            cassandraService.shutdown();
 
             logger.info("Shutdown complete");
 
