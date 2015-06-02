@@ -49,6 +49,7 @@ public class IndexService {
 
         Settings settings = ImmutableSettings.settingsBuilder()
                 .put("cluster.name", indexConfiguration.getName())
+                .put("transport.netty.workerCount", 8)
                 .build();
         client = new TransportClient(settings);
         for (String node : indexConfiguration.getCluster()) {
