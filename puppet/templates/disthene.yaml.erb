@@ -13,6 +13,7 @@ store:
 <% end -%>
   port: <%= @store_port %>
   keyspace: "<%= @store_keyspace %>"
+  columnFamily: "<%= @store_column_family %>"
   maxConnections: <%= @store_max_connections %>
   readTimeout: <%= @store_read_timeout %>
   connectTimeout: <%= @store_connect_timeout %>

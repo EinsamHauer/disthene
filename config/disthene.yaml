@@ -11,6 +11,7 @@ store:
     - "cassandra-2"
   port: 9042
   keyspace: 'metric'
+  columnFamily: 'metric'
   maxConnections: 2048
   readTimeout: 10
   connectTimeout: 10

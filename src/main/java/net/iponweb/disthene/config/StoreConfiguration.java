@@ -9,6 +9,7 @@ import java.util.List;
 public class StoreConfiguration {
     private List<String> cluster = new ArrayList<>();
     private String keyspace;
+    private String columnFamily;
     private int port;
     private int maxConnections;
     private int readTimeout;
@@ -98,11 +99,20 @@ public class StoreConfiguration {
         this.pool = pool;
     }
 
+    public String getColumnFamily() {
+        return columnFamily;
+    }
+
+    public void setColumnFamily(String columnFamily) {
+        this.columnFamily = columnFamily;
+    }
+
     @Override
     public String toString() {
         return "StoreConfiguration{" +
                 "cluster=" + cluster +
                 ", keyspace='" + keyspace + '\'' +
+                ", columnFamily='" + columnFamily + '\'' +
                 ", port=" + port +
                 ", maxConnections=" + maxConnections +
                 ", readTimeout=" + readTimeout +

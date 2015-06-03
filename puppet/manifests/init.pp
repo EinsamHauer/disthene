@@ -14,6 +14,7 @@ class disthene (
   $store_cluster = [$::ipaddress],
   $store_port = '9042',
   $store_keyspace = 'metric',
+  $store_column_family = 'metric',
   $store_max_connections = '2048',
   $store_read_timeout = '5',
   $store_connect_timeout = '5',

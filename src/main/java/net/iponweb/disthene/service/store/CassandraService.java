@@ -26,8 +26,6 @@ import java.util.concurrent.Executors;
  */
 @Listener(references = References.Strong)
 public class CassandraService {
-    private static final String QUERY = "UPDATE metric.metric USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
-
     private Logger logger = Logger.getLogger(CassandraService.class);
 
     private Cluster cluster;
@@ -38,6 +36,10 @@ public class CassandraService {
 
     public CassandraService(StoreConfiguration storeConfiguration, MBassador<DistheneEvent> bus) {
         bus.subscribe(this);
+
+        String query = "UPDATE " +
+                storeConfiguration.getKeyspace() + "." + storeConfiguration.getColumnFamily() +
+                " USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
 
         SocketOptions socketOptions = new SocketOptions()
                 .setReceiveBufferSize(1024 * 1024)
@@ -72,7 +74,7 @@ public class CassandraService {
         }
 
         session = cluster.connect();
-        PreparedStatement statement = session.prepare(QUERY);
+        PreparedStatement statement = session.prepare(query);
 
         // Creating writers
 
