@@ -1,7 +1,7 @@
 disthene: cassandra backed metric storage *writer*
 ==================================================
 
-This project is inspired by [cyanite](https://github.com/pyr/cyanite) and is intended to replace it in write mode only. 
+This project is inspired by [cyanite](https://github.com/pyr/cyanite) and is intended to replace it in write mode only (thus transiently replacing **Graphite**).
 It must be fully compatible with **cyanite** and cyanite can still be used for reading. I've started another project 
 which will do the reads. And, yes, I'm convinced that in a large scale setup (and that's why I started **disthene** project) it's best to separate these two roles. 
 
