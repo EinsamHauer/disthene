@@ -2,6 +2,7 @@ class disthene (
   $java_xmx = '16G',
   $java_xms = '2G',
   $java_string_table_size = '10000019',
+  $java_extra_options = '',
 
   $disthene_package_version = 'present',
 

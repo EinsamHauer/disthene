@@ -2,9 +2,7 @@
 JAVA_OPTS="-server"
 JAVA_OPTS="-Xms<%= @java_xms %> -Xmx<%= @java_xmx %>"
 JAVA_OPTS="$JAVA_OPTS -XX:+UseStringCache -XX:StringTableSize=<%= @java_string_table_size %>"
-JAVA_OPTS="$JAVA_OPTS -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/tmp"
-JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.port=7199 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false"
-JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.authenticate=false -Djava.rmi.server.hostname=<%= @fqdn -%>"
+JAVA_OPTS="$JAVA_OPTS <%= @java_extra_options %>"
 
 # Alternative path to config file
 # default is /etc/disthene/disthene.yaml
