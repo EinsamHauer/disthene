@@ -64,14 +64,6 @@ class disthene (
     $disthene_log_config = 'puppet:///modules/disthene/disthene-log4j.xml'
   }
 
-  ensure_packages(['oracle-java8-installer'])
-
-
-  package { 'disthene':
-    ensure  => $disthene_package_version,
-    require => Package['oracle-java8-installer'],
-  }
-
   file { 'disthene_config':
     ensure  => present,
     path    => '/etc/disthene/disthene.yaml',
