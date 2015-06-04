@@ -23,6 +23,8 @@ public class BatchWriterThread extends WriterThread {
     private int batchSize;
     private BatchStatement batch = new BatchStatement();
 
+    private long lastFlushTimestamp = System.currentTimeMillis() / 1000L;
+
     public BatchWriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor, int batchSize) {
         super(name, bus, session, statement, metrics, executor);
         this.batchSize = batchSize;
@@ -59,8 +61,10 @@ public class BatchWriterThread extends WriterThread {
                 )
         );
 
-        if (batch.size() >= batchSize) {
+        //todo: interval via config?
+        if (batch.size() >= batchSize || (lastFlushTimestamp < System.currentTimeMillis() / 1000L - 60)) {
             flush();
+            lastFlushTimestamp = System.currentTimeMillis() / 1000L;
         }
     }
 
