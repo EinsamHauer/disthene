@@ -1,5 +1,6 @@
 package net.iponweb.disthene;
 
+import com.datastax.driver.core.policies.LatencyAwarePolicy;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.bus.common.Properties;
 import net.engio.mbassy.bus.config.BusConfiguration;
@@ -24,8 +25,11 @@ import org.yaml.snakeyaml.Yaml;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -100,11 +104,21 @@ public class Disthene {
             logger.info("Creating stats");
             statsService = new StatsService(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
 
+            try {
+                MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+                ObjectName name = new ObjectName("net.iponweb.disthene.service:type=Stats");
+                mbs.registerMBean(statsService, name);
+            } catch (Exception e) {
+                logger.error("Failed to create MBean: " + e);
+            }
+
+
+
             logger.info("Creating ES index service");
-            indexService = new IndexService(distheneConfiguration.getIndex(), bus);
+//            indexService = new IndexService(distheneConfiguration.getIndex(), bus);
 
             logger.info("Creating C* service");
-            cassandraService = new CassandraService(distheneConfiguration.getStore(), bus);
+//            cassandraService = new CassandraService(distheneConfiguration.getStore(), bus);
 
             logger.info("Loading aggregation rules");
             in = Files.newInputStream(Paths.get(aggregationConfigLocation));

@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Andrei Ivanov
  */
 @Listener(references = References.Strong)
-public class StatsService {
+public class StatsService implements StatsServiceMBean {
     private static final String SCHEDULER_NAME = "distheneStatsFlusher";
 
     private Logger logger = Logger.getLogger(StatsService.class);
@@ -34,6 +34,15 @@ public class StatsService {
     private AtomicLong storeSuccess = new AtomicLong(0);
     private AtomicLong storeError = new AtomicLong(0);
     private ConcurrentMap<String, StatsRecord> stats = new ConcurrentHashMap<>();
+
+    // MBean
+    private long lastStoreSuccess = 0;
+    private long lastStoreError = 0;
+    private long lastMetricsReceived = 0;
+    private long lastWriteCount = 0;
+    private Map<String, Long> lastMetricsReceivedPerTenant = new HashMap<>();
+    private Map<String, Long> lastWriteCountPerTenant = new HashMap<>();
+
 
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
@@ -99,6 +108,8 @@ public class StatsService {
 
     private synchronized void doFlush(Map<String, StatsRecord> stats, long storeSuccess, long storeError, long timestamp) {
         logger.debug("Flushing stats for " + timestamp);
+        lastMetricsReceivedPerTenant.clear();
+        lastWriteCountPerTenant.clear();
 
         long totalReceived = 0;
         long totalWritten = 0;
@@ -126,6 +137,7 @@ public class StatsService {
                     timestamp
             );
             bus.post(new MetricStoreEvent(metric)).now();
+            lastMetricsReceivedPerTenant.put(tenant, statsRecord.getMetricsReceived());
 
             metric = new Metric(
                     statsConfiguration.getTenant(),
@@ -136,6 +148,7 @@ public class StatsService {
                     timestamp
             );
             bus.post(new MetricStoreEvent(metric)).now();
+            lastMetricsReceivedPerTenant.put(tenant, statsRecord.getMetricsWritten());
 
             if (statsConfiguration.isLog()) {
                 logger.info(tenant + "\t\t" + statsRecord.metricsReceived + "\t\t" + statsRecord.getMetricsWritten());
@@ -151,6 +164,7 @@ public class StatsService {
                 timestamp
         );
         bus.post(new MetricStoreEvent(metric)).now();
+        lastMetricsReceived = totalReceived;
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -161,6 +175,7 @@ public class StatsService {
                 timestamp
         );
         bus.post(new MetricStoreEvent(metric)).now();
+        lastWriteCount = totalWritten;
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -171,6 +186,7 @@ public class StatsService {
                 timestamp
         );
         bus.post(new MetricStoreEvent(metric)).now();
+        lastStoreSuccess = storeSuccess;
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
@@ -181,6 +197,7 @@ public class StatsService {
                 timestamp
         );
         bus.post(new MetricStoreEvent(metric)).now();
+        lastStoreError = storeError;
 
         if (statsConfiguration.isLog()) {
             logger.info("total\t\t" + totalReceived + "\t\t" + totalWritten);
@@ -195,6 +212,38 @@ public class StatsService {
         scheduler.shutdown();
     }
 
+    // MBean
+
+
+    @Override
+    public long getStoreSuccess() {
+        return lastStoreSuccess;
+    }
+
+    @Override
+    public long getStoreError() {
+        return lastStoreError;
+    }
+
+    @Override
+    public long getMetricsReceived() {
+        return lastMetricsReceived;
+    }
+
+    @Override
+    public long getWriteCount() {
+        return lastWriteCount;
+    }
+
+    @Override
+    public Map<String, Long> getMetricsReceivedPerTenant() {
+        return lastMetricsReceivedPerTenant;
+    }
+
+    @Override
+    public Map<String, Long> getWriteCountPerTenant() {
+        return lastWriteCountPerTenant;
+    }
 
     private class StatsRecord {
         private AtomicLong metricsReceived = new AtomicLong(0);
