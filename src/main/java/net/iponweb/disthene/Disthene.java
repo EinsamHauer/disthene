@@ -115,10 +115,10 @@ public class Disthene {
 
 
             logger.info("Creating ES index service");
-//            indexService = new IndexService(distheneConfiguration.getIndex(), bus);
+            indexService = new IndexService(distheneConfiguration.getIndex(), bus);
 
             logger.info("Creating C* service");
-//            cassandraService = new CassandraService(distheneConfiguration.getStore(), bus);
+            cassandraService = new CassandraService(distheneConfiguration.getStore(), bus);
 
             logger.info("Loading aggregation rules");
             in = Files.newInputStream(Paths.get(aggregationConfigLocation));
