@@ -20,6 +20,8 @@ Essentially, in most cases the only bottleneck will be C\*.
 There is no ultimate benchmark here (mostly because of the C\* bottleneck in test lab) 
 but it looks like something like 1M data points/core/minute should not be a problem     
 
+(Here is a quick performance [comparison](https://gist.github.com/EinsamHauer/2aa552a63add5415bfe5))
+
 ## Compiling 
 
 This is a standard Java Maven project. 
