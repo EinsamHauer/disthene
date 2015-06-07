@@ -145,8 +145,6 @@
                                     </paths>
                                     <mapper>
                                         <type>perm</type>
-                                        <user>disthene</user>
-                                        <group>disthene</group>
                                     </mapper>
                                 </data>
 
@@ -156,8 +154,6 @@
                                     <mapper>
                                         <type>perm</type>
                                         <prefix>/usr/lib/disthene</prefix>
-                                        <user>disthene</user>
-                                        <group>disthene</group>
                                     </mapper>
                                 </data>
 
@@ -175,8 +171,6 @@
                                     <mapper>
                                         <type>perm</type>
                                         <prefix>/etc/init.d</prefix>
-                                        <user>disthene</user>
-                                        <group>disthene</group>
                                         <filemode>755</filemode>
                                     </mapper>
                                 </data>
@@ -188,8 +182,6 @@
                                     <mapper>
                                         <type>perm</type>
                                         <prefix>/etc/default</prefix>
-                                        <user>disthene</user>
-                                        <group>disthene</group>
                                     </mapper>
                                 </data>
 
@@ -199,8 +191,6 @@
                                     <mapper>
                                         <type>perm</type>
                                         <prefix>/usr/bin</prefix>
-                                        <user>disthene</user>
-                                        <group>disthene</group>
                                         <filemode>755</filemode>
                                     </mapper>
                                 </data>
@@ -211,8 +201,6 @@
                                     <mapper>
                                         <type>perm</type>
                                         <prefix>/etc/disthene</prefix>
-                                        <user>disthene</user>
-                                        <group>disthene</group>
                                     </mapper>
                                 </data>
                             </dataSet>
