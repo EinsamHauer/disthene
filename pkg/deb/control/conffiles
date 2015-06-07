@@ -1,0 +1,5 @@
+ /etc/disthene/disthene.yaml
+ /etc/disthene/blacklist.yaml
+ /etc/disthene/aggregator.yaml
+ /etc/disthene/disthene-log4j.xml
+ /etc/default/disthene
