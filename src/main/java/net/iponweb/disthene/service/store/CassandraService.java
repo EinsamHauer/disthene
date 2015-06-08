@@ -128,6 +128,7 @@ public class CassandraService {
             } catch (InterruptedException ignored) {
             }
         }
+        session.close();
         logger.info("Closing C* cluster");
         cluster.close();
     }
