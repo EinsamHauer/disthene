@@ -74,8 +74,8 @@ CREATE TABLE metric (
 There several configuration files involved
 * /etc/disthene/disthene.yaml (location can be changed with -c command line option if needed)
 * /etc/disthene/disthene-log4j.xml (location can be changed with -l command line option if needed)
-* /etc/disthene/aggregator.yaml (location can be changed with -a command line option if needed)
 * /etc/disthene/blacklist.yaml (location can be changed with -b command line option if needed)
+* /etc/disthene/aggregator.yaml (location can be changed with -a command line option if needed)
 
 ##### Main configuration in disthene.yaml
 ```
@@ -135,6 +135,20 @@ stats:
 # output stats to log as well
   log: true
 ```
+
+##### Logging configuration in disthene-log4j.xml
+Configuration is straight forward as per log4j
+
+##### Blacklist configuration in blacklist.yaml
+This is a list of regular expressions per tenant. Matching metrics will NOT be store but they still WILL be aggregated (see below)
+
+##### Blacklist configuration in aggregator.yaml
+List of aggregation rules per tenant. By exmaple:
+```
+"xxx_test_server*.<data>": "xxx_sum.<data>"
+```
+means that disthene will sum all the values matching 'xxx_test_server*.<data>' (where <data> is a placeholder for deeper path) and put the value into 'xxx_sum.<data>'
+
 
 ## Thanks
 
