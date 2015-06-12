@@ -71,8 +71,62 @@ CREATE TABLE metric (
 
 ```
 ## Configuration
+There several configuration files involved
+* /etc/disthene/disthene.yaml (location can be changed with -c command line option if needed)
+* /etc/disthene/disthene-log4j.xml (location can be changed with -l command line option if needed)
+* /etc/disthene/aggregator.yaml (location can be changed with -a command line option if needed)
+* /etc/disthene/blacklist.yaml (location can be changed with -b command line option if needed)
 
-TBD
+##### Main configuration in disthene.yaml
+```
+carbon:
+# bind address and port
+  bind: "127.0.0.0"
+  port: 2003
+# rollups - currently only "s" units supported  
+  rollups:
+    - 60s:5356800s
+    - 900s:62208000s
+# seconds to wait before flushing aggregated metrics   
+  aggregatorDelay: 90
+store:
+# C* contact points, port, keyspace and table
+  cluster:
+    - "cassandra-1"
+    - "cassandra-2"
+  port: 9042
+  keyspace: 'metric'
+  columnFamily: 'metric'
+# maximum connections per host , timeouts in seconds, max requests per host - these are literally used in C* java driver settings
+  maxConnections: 2048
+  readTimeout: 10
+  connectTimeout: 10
+  maxRequests: 128
+# use C* batch statetments - the trade off is: using batch puts load on C*, not using it may cause congestion on disthene side
+  batch: true
+# batch size if above is true
+  batchSize: 500
+# number of threads submitting requests to C*  
+  pool: 2
+index:
+  name: "disthene"
+  cluster:
+    - "es-1"
+    - "es-2"
+  port: 9300
+  index: "disthene"
+  type: "path"
+  cache: true
+  expire: 3600
+  bulk:
+    actions: 10000
+    interval: 5
+stats:
+  interval: 60
+  tenant: "test"
+  hostname: "disthene-1a"
+  log: true
+```
 
 ## Thanks
 
