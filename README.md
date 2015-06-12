@@ -109,6 +109,7 @@ store:
 # number of threads submitting requests to C*  
   pool: 2
 index:
+# ES cluster name, contact points, native port, index name & type
   name: "disthene"
   cluster:
     - "es-1"
@@ -116,15 +117,22 @@ index:
   port: 9300
   index: "disthene"
   type: "path"
+# cache paths on disthene side?
   cache: true
+# if cached is used, expire it after seconds below. That is, if we haven't seen metric name on 'expire' seconds - remove it from cache
   expire: 3600
+# when to flush bulk - either when incoming queue reaches 'actions' size or every 'interval' seconds
   bulk:
     actions: 10000
     interval: 5
 stats:
+# flush self metrics every 'interval' seconds
   interval: 60
+# tenant to use for stats
   tenant: "test"
+# hostname to use
   hostname: "disthene-1a"
+# output stats to log as well
   log: true
 ```
 
