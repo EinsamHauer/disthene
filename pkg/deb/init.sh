@@ -5,8 +5,8 @@
 # Required-Stop:     $remote_fs $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Riemann server
-# Description:       The Riemann monitoring system's event processor.
+# Short-Description: Disthene server
+# Description:       Disthene server
 ### END INIT INFO
 
 # Author: Andrey Ivanov
