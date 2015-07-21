@@ -1,6 +1,6 @@
 # JAVA_OPTS
 JAVA_OPTS="-server"
-JAVA_OPTS="-Xms8G -Xmx18G -XX:+UseStringCache"
+JAVA_OPTS="-Xms8G -Xmx18G"
 JAVA_OPTS="$JAVA_OPTS -XX:+UseStringCache -XX:StringTableSize=10000003"
 JAVA_OPTS="$JAVA_OPTS -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/tmp"
 JAVA_OPTS="$JAVA_OPTS -XX:+PrintStringTableStatistics"
