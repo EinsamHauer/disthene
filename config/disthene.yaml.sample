@@ -16,9 +16,9 @@ store:
   readTimeout: 10
   connectTimeout: 10
   maxRequests: 128
-  batch: false
+  batch: true
   batchSize: 500
-  pool: 10
+  pool: 2
 index:
   name: "disthene"
   cluster:

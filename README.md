@@ -71,8 +71,84 @@ CREATE TABLE metric (
 
 ```
 ## Configuration
+There several configuration files involved
+* /etc/disthene/disthene.yaml (location can be changed with -c command line option if needed)
+* /etc/disthene/disthene-log4j.xml (location can be changed with -l command line option if needed)
+* /etc/disthene/blacklist.yaml (location can be changed with -b command line option if needed)
+* /etc/disthene/aggregator.yaml (location can be changed with -a command line option if needed)
 
-TBD
+##### Main configuration in disthene.yaml
+```
+carbon:
+# bind address and port
+  bind: "127.0.0.0"
+  port: 2003
+# rollups - currently only "s" units supported  
+  rollups:
+    - 60s:5356800s
+    - 900s:62208000s
+# seconds to wait before flushing aggregated metrics   
+  aggregatorDelay: 90
+store:
+# C* contact points, port, keyspace and table
+  cluster:
+    - "cassandra-1"
+    - "cassandra-2"
+  port: 9042
+  keyspace: 'metric'
+  columnFamily: 'metric'
+# maximum connections per host , timeouts in seconds, max requests per host - these are literally used in C* java driver settings
+  maxConnections: 2048
+  readTimeout: 10
+  connectTimeout: 10
+  maxRequests: 128
+# use C* batch statetments - the trade off is: using batch puts load on C*, not using it may cause congestion on disthene side
+  batch: true
+# batch size if above is true
+  batchSize: 500
+# number of threads submitting requests to C*  
+  pool: 2
+index:
+# ES cluster name, contact points, native port, index name & type
+  name: "disthene"
+  cluster:
+    - "es-1"
+    - "es-2"
+  port: 9300
+  index: "disthene"
+  type: "path"
+# cache paths on disthene side?
+  cache: true
+# if cached is used, expire it after seconds below. That is, if we haven't seen metric name on 'expire' seconds - remove it from cache
+  expire: 3600
+# when to flush bulk - either when incoming queue reaches 'actions' size or every 'interval' seconds
+  bulk:
+    actions: 10000
+    interval: 5
+stats:
+# flush self metrics every 'interval' seconds
+  interval: 60
+# tenant to use for stats
+  tenant: "test"
+# hostname to use
+  hostname: "disthene-1a"
+# output stats to log as well
+  log: true
+```
+
+##### Logging configuration in disthene-log4j.xml
+Configuration is straight forward as per log4j
+
+##### Blacklist configuration in blacklist.yaml
+This is a list of regular expressions per tenant. Matching metrics will NOT be store but they still WILL be aggregated (see below)
+
+##### Blacklist configuration in aggregator.yaml
+List of aggregation rules per tenant. By exmaple:
+```
+"xxx_test_server*.<data>": "xxx_sum.<data>"
+```
+means that disthene will sum all the values matching 'xxx_test_server*.<data>' (where <data> is a placeholder for deeper path) and put the value into 'xxx_sum.<data>'
+
 
 ## Thanks
 
