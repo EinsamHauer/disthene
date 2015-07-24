@@ -142,7 +142,7 @@ Configuration is straight forward as per log4j
 ##### Blacklist configuration in blacklist.yaml
 This is a list of regular expressions per tenant. Matching metrics will NOT be store but they still WILL be aggregated (see below)
 
-##### Blacklist configuration in aggregator.yaml
+##### Aggregation configuration in aggregator.yaml
 List of aggregation rules per tenant. By exmaple:
 ```
 "xxx_test_server*.<data>": "xxx_sum.<data>"
