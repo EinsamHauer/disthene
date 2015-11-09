@@ -10,6 +10,8 @@ store:
     - "cassandra-1"
     - "cassandra-2"
   port: 9042
+  userName: 'username'
+  userPassword: 'password'
   keyspace: 'metric'
   columnFamily: 'metric'
   maxConnections: 2048

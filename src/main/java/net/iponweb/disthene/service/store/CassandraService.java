@@ -62,6 +62,11 @@ public class CassandraService {
                 .withQueryOptions(new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE))
                 .withProtocolVersion(ProtocolVersion.V2)
                 .withPort(storeConfiguration.getPort());
+
+        if ( storeConfiguration.getUserName() != null && storeConfiguration.getUserPassword() != null ) {
+            builder = builder.withCredentials(storeConfiguration.getUserName(), storeConfiguration.getUserPassword());
+        }
+
         for (String cp : storeConfiguration.getCluster()) {
             builder.addContactPoint(cp);
         }
