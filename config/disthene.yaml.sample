@@ -39,4 +39,3 @@ stats:
   tenant: "test"
   hostname: "disthene-1a"
   log: true
-
