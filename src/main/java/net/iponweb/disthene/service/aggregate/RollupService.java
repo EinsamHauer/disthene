@@ -1,6 +1,7 @@
 package net.iponweb.disthene.service.aggregate;
 
 import com.google.common.util.concurrent.AtomicDouble;
+import com.google.common.util.concurrent.RateLimiter;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
 import net.engio.mbassy.listener.Listener;
@@ -12,6 +13,7 @@ import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -108,6 +110,10 @@ public class RollupService {
 
     public void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
+        Map<Integer, MutableInt> rollupCounters = new HashMap<>();
+        for(Rollup rollup : rollups) {
+            rollupCounters.put(rollup.getRollup(), new MutableInt(0));
+        }
 
         while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
             logger.debug("Adding rollup flush for time: " + (new DateTime(accumulator.firstKey() * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
@@ -117,17 +123,30 @@ public class RollupService {
 
             for(Map.Entry<MetricKey, AverageRecord> entry : timestampMap.entrySet()) {
                 metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().getAverage()));
+                rollupCounters.get(entry.getKey().getRollup()).increment();
             }
         }
 
         if (metricsToFlush.size() > 0) {
-            doFlush(metricsToFlush);
+            doFlush(metricsToFlush, getRateLimiters(rollupCounters));
         }
     }
 
-    private synchronized void doFlush(Collection<Metric> metricsToFlush) {
+    private synchronized void doFlush(Collection<Metric> metricsToFlush, Map<Integer, RateLimiter> rateLimiters) {
+        // We'd like to feed metrics in a more gentle manner here but not allowing the queue to grow.
+        // Let's be pessimistic and try to make it within 1/2 of aggregation period
+
         logger.debug("Flushing rollup metrics (" + metricsToFlush.size() + ")");
+
+        for (Map.Entry<Integer, RateLimiter> rateLimiterEntry : rateLimiters.entrySet()) {
+            logger.debug("Will limit qps to " + rateLimiterEntry.getValue().getRate() + " for " + rateLimiterEntry.getKey() + " seconds rollups");
+        }
+
         for(Metric metric : metricsToFlush) {
+
+            if (rateLimiters.containsKey(metric.getRollup())) {
+                rateLimiters.get(metric.getRollup()).acquire();
+            }
             bus.post(new MetricStoreEvent(metric)).now();
         }
     }
@@ -136,12 +155,28 @@ public class RollupService {
         scheduler.shutdown();
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
+
         for(Map.Entry<Long, ConcurrentMap<MetricKey, AverageRecord>> entry : accumulator.entrySet()) {
             for(Map.Entry<MetricKey, AverageRecord> innerEntry : entry.getValue().entrySet()) {
                 metricsToFlush.add(new Metric(innerEntry.getKey(), innerEntry.getValue().getAverage()));
             }
         }
-        doFlush(metricsToFlush);
+        // When shutting down we'd like to do flushing as fast as possible
+        doFlush(metricsToFlush, Collections.<Integer, RateLimiter>emptyMap());
+    }
+
+    private Map<Integer, RateLimiter> getRateLimiters(Map<Integer, MutableInt> rollupCounters) {
+        // Create rate limiters for all the rollups
+        Map<Integer, RateLimiter> rateLimiters = new HashMap<>();
+        for(Rollup rollup : rollups) {
+            // create it only if we've seen at least one metric for this rollup
+            if (rollupCounters.get(rollup.getRollup()).intValue() > 0) {
+                double qps = Math.ceil((2.0 * rollupCounters.get(rollup.getRollup()).intValue()) / rollup.getRollup());
+                rateLimiters.put(rollup.getRollup(), RateLimiter.create(qps));
+            }
+        }
+
+        return rateLimiters;
     }
 
     private static long getRollupTimestamp(long timestamp, Rollup rollup) {
