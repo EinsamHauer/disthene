@@ -134,12 +134,11 @@ public class RollupService {
 
     private synchronized void doFlush(Collection<Metric> metricsToFlush, Map<Integer, RateLimiter> rateLimiters) {
         // We'd like to feed metrics in a more gentle manner here but not allowing the queue to grow.
-        // Let's be pessimistic and try to make it within 1/2 of aggregation period
 
         logger.debug("Flushing rollup metrics (" + metricsToFlush.size() + ")");
 
         for (Map.Entry<Integer, RateLimiter> rateLimiterEntry : rateLimiters.entrySet()) {
-            logger.debug("Will limit qps to " + rateLimiterEntry.getValue().getRate() + " for " + rateLimiterEntry.getKey() + " seconds rollups");
+            logger.debug("Will limit qps to " + (long) rateLimiterEntry.getValue().getRate() + " for " + rateLimiterEntry.getKey() + " seconds rollups");
         }
 
         for(Metric metric : metricsToFlush) {
@@ -167,11 +166,12 @@ public class RollupService {
 
     private Map<Integer, RateLimiter> getRateLimiters(Map<Integer, MutableInt> rollupCounters) {
         // Create rate limiters for all the rollups
+        // Let's be pessimistic and try to make it within 2/3 of aggregation period
         Map<Integer, RateLimiter> rateLimiters = new HashMap<>();
         for(Rollup rollup : rollups) {
             // create it only if we've seen at least one metric for this rollup
             if (rollupCounters.get(rollup.getRollup()).intValue() > 0) {
-                double qps = Math.ceil((2.0 * rollupCounters.get(rollup.getRollup()).intValue()) / rollup.getRollup());
+                long qps = Math.round((2.0 * rollupCounters.get(rollup.getRollup()).intValue()) / (3.0 * rollup.getRollup()));
                 rateLimiters.put(rollup.getRollup(), RateLimiter.create(qps));
             }
         }
