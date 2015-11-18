@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RollupService {
     private static final String SCHEDULER_NAME = "distheneRollupAggregatorFlusher";
     private static final int RATE = 60;
-    private AtomicBoolean shuttingDown = new AtomicBoolean(false);
+    private volatile boolean shuttingDown = false;
 
     private Logger logger = Logger.getLogger(RollupService.class);
 
@@ -143,9 +143,15 @@ public class RollupService {
             logger.debug("Will limit qps to " + (long) rateLimiterEntry.getValue().getRate() + " for " + rateLimiterEntry.getKey() + " seconds rollups");
         }
 
-        for(Metric metric : metricsToFlush) {
+        boolean rateLimitersEnabled = true;
 
-            if (rateLimiters.containsKey(metric.getRollup()) && !shuttingDown.get()) {
+        for(Metric metric : metricsToFlush) {
+            if (rateLimitersEnabled && shuttingDown) {
+                rateLimitersEnabled = false;
+                logger.info("Got shutdown signal while flushing. Disabling rate limiters");
+            }
+
+            if (rateLimitersEnabled && rateLimiters.containsKey(metric.getRollup())) {
                 rateLimiters.get(metric.getRollup()).acquire();
             }
             bus.post(new MetricStoreEvent(metric)).now();
@@ -154,7 +160,7 @@ public class RollupService {
 
     public synchronized void shutdown() {
         // disable rate limiters
-        shuttingDown.set(true);
+        shuttingDown = false;
         scheduler.shutdown();
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
