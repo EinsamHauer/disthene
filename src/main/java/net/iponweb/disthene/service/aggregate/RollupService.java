@@ -146,7 +146,7 @@ public class RollupService {
         boolean rateLimitersEnabled = true;
 
         for(Metric metric : metricsToFlush) {
-            if (rateLimitersEnabled && shuttingDown) {
+            if (rateLimitersEnabled && isShuttingDown()) {
                 rateLimitersEnabled = false;
                 logger.info("Got shutdown signal while flushing. Disabling rate limiters");
             }
@@ -156,6 +156,10 @@ public class RollupService {
             }
             bus.post(new MetricStoreEvent(metric)).now();
         }
+    }
+
+    private boolean isShuttingDown() {
+        return shuttingDown;
     }
 
     public synchronized void shutdown() {
