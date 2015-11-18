@@ -39,7 +39,7 @@ public class RollupService {
     private Rollup maxRollup;
     private List<Rollup> rollups;
 
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16, new NamedThreadFactory(SCHEDULER_NAME));
 
     private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AverageRecord>> accumulator = new ConcurrentSkipListMap<>();
 
