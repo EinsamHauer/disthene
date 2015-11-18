@@ -20,6 +20,7 @@ import org.joda.time.DateTimeZone;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -29,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RollupService {
     private static final String SCHEDULER_NAME = "distheneRollupAggregatorFlusher";
     private static final int RATE = 60;
+    private AtomicBoolean shuttingDown = new AtomicBoolean(false);
 
     private Logger logger = Logger.getLogger(RollupService.class);
 
@@ -143,7 +145,7 @@ public class RollupService {
 
         for(Metric metric : metricsToFlush) {
 
-            if (rateLimiters.containsKey(metric.getRollup())) {
+            if (rateLimiters.containsKey(metric.getRollup()) && !shuttingDown.get()) {
                 rateLimiters.get(metric.getRollup()).acquire();
             }
             bus.post(new MetricStoreEvent(metric)).now();
@@ -151,6 +153,8 @@ public class RollupService {
     }
 
     public synchronized void shutdown() {
+        // disable rate limiters
+        shuttingDown.set(true);
         scheduler.shutdown();
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
@@ -171,7 +175,7 @@ public class RollupService {
         for(Rollup rollup : rollups) {
             // create it only if we've seen at least one metric for this rollup
             if (rollupCounters.get(rollup.getRollup()).intValue() > 0) {
-                long qps = Math.round((2.0 * rollupCounters.get(rollup.getRollup()).intValue()) / (3.0 * rollup.getRollup()));
+                long qps = Math.round((3.0 * rollupCounters.get(rollup.getRollup()).intValue()) / (2.0 * rollup.getRollup()));
                 rateLimiters.put(rollup.getRollup(), RateLimiter.create(qps));
             }
         }
