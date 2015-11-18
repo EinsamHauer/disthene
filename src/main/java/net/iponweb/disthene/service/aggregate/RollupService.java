@@ -120,9 +120,6 @@ public class RollupService {
             ConcurrentMap<MetricKey, AverageRecord> timestampMap = accumulator.pollFirstEntry().getValue();
 
             for(Map.Entry<MetricKey, AverageRecord> entry : timestampMap.entrySet()) {
-                if ( (System.currentTimeMillis() / 100L) - entry.getKey().getTimestamp() > 3600) {
-                    logger.debug("The strangely outdated metric is: " + entry.getKey());
-                }
                 metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().getAverage()));
             }
         }
@@ -148,7 +145,10 @@ public class RollupService {
         // Just in case
         if (deadline - timestamp <= 0) return null;
 
-        return RateLimiter.create(2 * currentBatch / (deadline - timestamp));
+        // 100 is an arbitrary small number here
+        double rate = Math.max(100, 2 * currentBatch / (deadline - timestamp));
+
+        return RateLimiter.create(rate);
     }
 
     private void doFlush(Collection<Metric> metricsToFlush, RateLimiter rateLimiter) {

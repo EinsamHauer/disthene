@@ -137,7 +137,10 @@ public class SumService {
         // Get the smallest rollup - we can never get here if there are no rollups at all
         Rollup rollup = distheneConfiguration.getCarbon().getBaseRollup();
 
-        return RateLimiter.create(2 * currentBatch / rollup.getRollup());
+        // 100 is an arbitrary small number here
+        double rate = Math.max(100, 2 * currentBatch / rollup.getRollup());
+
+        return RateLimiter.create(rate);
     }
 
     private void doFlush(Collection<Metric> metricsToFlush, RateLimiter rateLimiter) {
