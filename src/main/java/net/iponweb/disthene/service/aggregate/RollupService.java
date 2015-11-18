@@ -173,8 +173,14 @@ public class RollupService {
         for(Rollup rollup : rollups) {
             // create it only if we've seen at least one metric for this rollup
             if (rollupCounters.get(rollup.getRollup()).intValue() > 0) {
-                long qps = Math.round((3.0 * rollupCounters.get(rollup.getRollup()).intValue()) / (2.0 * rollup.getRollup()));
-                rateLimiters.put(rollup.getRollup(), RateLimiter.create(qps));
+                // we absolutely want to flush before next rollup
+                long timestamp = System.currentTimeMillis() / 1000;
+                long deadline = getRollupTimestamp(timestamp, rollup);
+
+                if (deadline - timestamp > 0) {
+                    long qps = Math.round((3.0 * rollupCounters.get(rollup.getRollup()).intValue()) / (2.0 * (deadline - timestamp)));
+                    rateLimiters.put(rollup.getRollup(), RateLimiter.create(qps));
+                }
             }
         }
 
