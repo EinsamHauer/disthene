@@ -157,10 +157,6 @@ public class SumService {
         }
     }
 
-    private static long getRollupTimestamp(long timestamp, Rollup rollup) {
-        return ((long) Math.ceil(timestamp / (double) rollup.getRollup())) * rollup.getRollup();
-    }
-
     public synchronized void shutdown() {
         // disable rate limiters
         shuttingDown = true;
