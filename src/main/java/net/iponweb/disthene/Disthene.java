@@ -209,6 +209,9 @@ public class Disthene {
                 logger.error("Reloading aggregation rules failed");
                 logger.error(e);
             }
+
+            logger.info("Invalidating index cache");
+            indexService.invalidateCache();
         }
     }
 

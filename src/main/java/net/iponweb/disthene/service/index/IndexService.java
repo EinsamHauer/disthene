@@ -133,6 +133,10 @@ public class IndexService {
         logger.debug("Expired " + pathsRemoved + " paths from index cache");
     }
 
+    public void invalidateCache() {
+        cache = new ConcurrentHashMap<>();
+    }
+
     public void shutdown() {
         scheduler.shutdown();
         indexThread.shutdown();
