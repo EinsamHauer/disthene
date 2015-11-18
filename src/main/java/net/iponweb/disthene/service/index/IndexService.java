@@ -114,7 +114,7 @@ public class IndexService {
         }
     }
 
-    private synchronized void expireCache() {
+    private void expireCache() {
         logger.debug("Expiring index cache");
 
         long currentTimestamp = System.currentTimeMillis() / 1000L;
@@ -131,6 +131,10 @@ public class IndexService {
         }
 
         logger.debug("Expired " + pathsRemoved + " paths from index cache");
+    }
+
+    public void invalidateCache() {
+        cache = new ConcurrentHashMap<>();
     }
 
     public void shutdown() {
