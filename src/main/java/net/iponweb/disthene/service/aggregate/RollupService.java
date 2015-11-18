@@ -120,6 +120,9 @@ public class RollupService {
             ConcurrentMap<MetricKey, AverageRecord> timestampMap = accumulator.pollFirstEntry().getValue();
 
             for(Map.Entry<MetricKey, AverageRecord> entry : timestampMap.entrySet()) {
+                if ( (System.currentTimeMillis() / 100L) - entry.getKey().getTimestamp() > 3600) {
+                    logger.debug("The strangely outdated metric is: " + entry.getKey());
+                }
                 metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().getAverage()));
             }
         }
