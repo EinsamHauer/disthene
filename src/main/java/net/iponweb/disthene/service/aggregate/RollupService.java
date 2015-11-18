@@ -61,7 +61,7 @@ public class RollupService {
             public void run() {
                 flush();
             }
-        }, RATE, 60 - ((System.currentTimeMillis() / 1000L) % 60), TimeUnit.SECONDS);
+        }, 60 - ((System.currentTimeMillis() / 1000L) % 60), RATE, TimeUnit.SECONDS);
     }
 
     @Handler(rejectSubtypes = false)
