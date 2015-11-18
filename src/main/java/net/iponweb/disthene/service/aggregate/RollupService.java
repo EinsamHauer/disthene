@@ -131,14 +131,21 @@ public class RollupService {
 
     private RateLimiter getFlushRateLimiter(int currentBatch) {
         /*
-        The idea is that we'd like to be able to process ALL the contents of the batch in 1/2 of rollup.
+        The idea is that we'd like to be able to process ALL the contents of accumulator in 1/2 time till next rollup time.
         Doing so, we hope to never limit as much as to saturate the accumulator and to heavily fall back
          */
 
         // Get the smallest rollup - we can never get here if there are no rollups at all
         Rollup rollup = rollups.get(0);
 
-        return RateLimiter.create(2 * currentBatch / rollup.getRollup());
+        long timestamp = System.currentTimeMillis() / 1000;
+        // Get the deadline - next rollup border
+        long deadline = getRollupTimestamp(timestamp, rollup);
+
+        // Just in case
+        if (deadline - timestamp <= 0) return null;
+
+        return RateLimiter.create(2 * currentBatch / (deadline - timestamp));
     }
 
     private void doFlush(Collection<Metric> metricsToFlush, RateLimiter rateLimiter) {
