@@ -1,6 +1,7 @@
 package net.iponweb.disthene.service.aggregate;
 
 import com.google.common.util.concurrent.AtomicDouble;
+import com.google.common.util.concurrent.RateLimiter;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
 import net.engio.mbassy.listener.Listener;
@@ -10,6 +11,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.bean.MetricKey;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
+import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.service.blacklist.BlacklistService;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricReceivedEvent;
@@ -31,6 +33,7 @@ import java.util.regex.Matcher;
 public class SumService {
     private static final String SCHEDULER_NAME = "distheneSumAggregatorFlusher";
     private static final int RATE = 60;
+    private volatile boolean shuttingDown = false;
 
     private Logger logger = Logger.getLogger(SumService.class);
 
@@ -55,8 +58,7 @@ public class SumService {
             public void run() {
                 flush();
             }
-        }, RATE, RATE, TimeUnit.SECONDS);
-
+        }, RATE, 60 - ((System.currentTimeMillis() / 1000L) % 60), TimeUnit.SECONDS);
     }
 
     @Handler(rejectSubtypes = false)
@@ -122,21 +124,60 @@ public class SumService {
         }
 
         if (metricsToFlush.size() > 0) {
-            doFlush(metricsToFlush);
+            doFlush(metricsToFlush, getFlushRateLimiter(metricsToFlush.size()));
         }
     }
 
-    private void doFlush(Collection<Metric> metricsToFlush) {
+    private RateLimiter getFlushRateLimiter(int currentBatch) {
+        /*
+        The idea is that we'd like to be able to process ALL the contents of accumulator in 1/2 time till next rollup time.
+        Doing so, we hope to never limit as much as to saturate the accumulator and to heavily fall back
+         */
+
+        // Get the smallest rollup - we can never get here if there are no rollups at all
+        Rollup rollup = distheneConfiguration.getCarbon().getBaseRollup();
+
+        // Calculate current accumulator size (weakly consistent, but must be OK)
+        int outstandingMetrics = 0;
+        for (ConcurrentMap<MetricKey, AtomicDouble> timestampMap : accumulator.values()) {
+            outstandingMetrics += timestampMap.size();
+        }
+
+        long timestamp = System.currentTimeMillis() / 1000;
+        // Get the deadline - next rollup border
+        long deadline = getRollupTimestamp(timestamp, rollup);
+
+        // Just in case
+        if (deadline - timestamp <= 0) return null;
+
+        return RateLimiter.create(2 * (outstandingMetrics + currentBatch) / (deadline - timestamp));
+    }
+
+    private void doFlush(Collection<Metric> metricsToFlush, RateLimiter rateLimiter) {
         logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
+
+        if (rateLimiter != null) {
+            logger.debug("QPS is limited to " + (long) rateLimiter.getRate());
+        }
+
         for(Metric metric : metricsToFlush) {
             if (!blacklistService.isBlackListed(metric)) {
+                if (!shuttingDown && rateLimiter != null) {
+                    rateLimiter.acquire();
+                }
                 bus.post(new MetricStoreEvent(metric)).now();
             }
         }
+    }
 
+    private static long getRollupTimestamp(long timestamp, Rollup rollup) {
+        return ((long) Math.ceil(timestamp / (double) rollup.getRollup())) * rollup.getRollup();
     }
 
     public synchronized void shutdown() {
+        // disable rate limiters
+        shuttingDown = true;
+
         scheduler.shutdown();
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
@@ -145,7 +186,7 @@ public class SumService {
                 metricsToFlush.add(new Metric(innerEntry.getKey(), innerEntry.getValue().get()));
             }
         }
-        doFlush(metricsToFlush);
+        doFlush(metricsToFlush, null);
     }
 
     public void setAggregationConfiguration(AggregationConfiguration aggregationConfiguration) {

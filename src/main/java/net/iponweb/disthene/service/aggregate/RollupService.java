@@ -13,12 +13,14 @@ import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
-import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -33,13 +35,12 @@ public class RollupService {
 
     private Logger logger = Logger.getLogger(RollupService.class);
 
-
     private MBassador<DistheneEvent> bus;
     private DistheneConfiguration distheneConfiguration;
     private Rollup maxRollup;
     private List<Rollup> rollups;
 
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16, new NamedThreadFactory(SCHEDULER_NAME));
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
     private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AverageRecord>> accumulator = new ConcurrentSkipListMap<>();
 
@@ -60,7 +61,7 @@ public class RollupService {
             public void run() {
                 flush();
             }
-        }, RATE, RATE, TimeUnit.SECONDS);
+        }, RATE, 60 - ((System.currentTimeMillis() / 1000L) % 60), TimeUnit.SECONDS);
     }
 
     @Handler(rejectSubtypes = false)
@@ -111,10 +112,6 @@ public class RollupService {
 
     public void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
-        Map<Integer, MutableInt> rollupCounters = new HashMap<>();
-        for(Rollup rollup : rollups) {
-            rollupCounters.put(rollup.getRollup(), new MutableInt(0));
-        }
 
         while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
             logger.debug("Adding rollup flush for time: " + (new DateTime(accumulator.firstKey() * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
@@ -124,27 +121,50 @@ public class RollupService {
 
             for(Map.Entry<MetricKey, AverageRecord> entry : timestampMap.entrySet()) {
                 metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().getAverage()));
-                rollupCounters.get(entry.getKey().getRollup()).increment();
             }
         }
 
         if (metricsToFlush.size() > 0) {
-            doFlush(metricsToFlush, getRateLimiters(rollupCounters));
+            doFlush(metricsToFlush, getFlushRateLimiter(metricsToFlush.size()));
         }
     }
 
-    private void doFlush(Collection<Metric> metricsToFlush, Map<Integer, RateLimiter> rateLimiters) {
+    private RateLimiter getFlushRateLimiter(int currentBatch) {
+        /*
+        The idea is that we'd like to be able to process ALL the contents of accumulator in 1/2 time till next rollup time.
+        Doing so, we hope to never limit as much as to saturate the accumulator and to heavily fall back
+         */
+
+        // Get the smallest rollup - we can never get here if there are no rollups at all
+        Rollup rollup = rollups.get(0);
+
+        // Calculate current accumulator size (weakly consistent, but must be OK)
+        int outstandingMetrics = 0;
+        for (ConcurrentMap<MetricKey, AverageRecord> timestampMap : accumulator.values()) {
+            outstandingMetrics += timestampMap.size();
+        }
+
+        long timestamp = System.currentTimeMillis() / 1000;
+        // Get the deadline - next rollup border
+        long deadline = getRollupTimestamp(timestamp, rollup);
+
+        // Just in case
+        if (deadline - timestamp <= 0) return null;
+
+        return RateLimiter.create(2 * (outstandingMetrics + currentBatch) / (deadline - timestamp));
+    }
+
+    private void doFlush(Collection<Metric> metricsToFlush, RateLimiter rateLimiter) {
         // We'd like to feed metrics in a more gentle manner here but not allowing the queue to grow.
 
         logger.debug("Flushing rollup metrics (" + metricsToFlush.size() + ")");
-
-        for (Map.Entry<Integer, RateLimiter> rateLimiterEntry : rateLimiters.entrySet()) {
-            logger.debug("Will limit qps to " + (long) rateLimiterEntry.getValue().getRate() + " for " + rateLimiterEntry.getKey() + " seconds rollups");
+        if (rateLimiter != null) {
+            logger.debug("QPS is limited to " + (long) rateLimiter.getRate());
         }
 
         for(Metric metric : metricsToFlush) {
-            if (!shuttingDown && rateLimiters.containsKey(metric.getRollup())) {
-                rateLimiters.get(metric.getRollup()).acquire();
+            if (!shuttingDown && rateLimiter != null) {
+                rateLimiter.acquire();
             }
             bus.post(new MetricStoreEvent(metric)).now();
         }
@@ -153,6 +173,7 @@ public class RollupService {
     public synchronized void shutdown() {
         // disable rate limiters
         shuttingDown = true;
+
         scheduler.shutdown();
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
@@ -163,28 +184,7 @@ public class RollupService {
             }
         }
         // When shutting down we'd like to do flushing as fast as possible
-        doFlush(metricsToFlush, Collections.<Integer, RateLimiter>emptyMap());
-    }
-
-    private Map<Integer, RateLimiter> getRateLimiters(Map<Integer, MutableInt> rollupCounters) {
-        // Create rate limiters for all the rollups
-        // Let's be pessimistic and try to make it within 2/3 of aggregation period
-        Map<Integer, RateLimiter> rateLimiters = new HashMap<>();
-        for(Rollup rollup : rollups) {
-            // create it only if we've seen at least one metric for this rollup
-            if (rollupCounters.get(rollup.getRollup()).intValue() > 0) {
-                // we absolutely want to flush before next rollup
-                long timestamp = System.currentTimeMillis() / 1000;
-                long deadline = getRollupTimestamp(timestamp, rollup);
-
-                if (deadline - timestamp > 0) {
-                    long qps = Math.round((3.0 * rollupCounters.get(rollup.getRollup()).intValue()) / (2.0 * (deadline - timestamp)));
-                    rateLimiters.put(rollup.getRollup(), RateLimiter.create(qps));
-                }
-            }
-        }
-
-        return rateLimiters;
+        doFlush(metricsToFlush, null);
     }
 
     private static long getRollupTimestamp(long timestamp, Rollup rollup) {
