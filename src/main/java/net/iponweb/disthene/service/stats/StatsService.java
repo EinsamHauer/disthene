@@ -94,7 +94,7 @@ public class StatsService implements StatsServiceMBean {
         storeError.addAndGet(storeErrorEvent.getCount());
     }
 
-    public synchronized void flush() {
+    public void flush() {
         Map<String, StatsRecord> statsToFlush = new HashMap<>();
         long storeSuccess = this.storeSuccess.getAndSet(0);
         long storeError = this.storeError.getAndSet(0);
@@ -106,7 +106,7 @@ public class StatsService implements StatsServiceMBean {
         doFlush(statsToFlush, storeSuccess, storeError, DateTime.now(DateTimeZone.UTC).withSecondOfMinute(0).withMillisOfSecond(0).getMillis() / 1000);
     }
 
-    private synchronized void doFlush(Map<String, StatsRecord> stats, long storeSuccess, long storeError, long timestamp) {
+    private void doFlush(Map<String, StatsRecord> stats, long storeSuccess, long storeError, long timestamp) {
         logger.debug("Flushing stats for " + timestamp);
         lastMetricsReceivedPerTenant.clear();
         lastWriteCountPerTenant.clear();

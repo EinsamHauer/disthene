@@ -126,7 +126,7 @@ public class SumService {
         }
     }
 
-    private synchronized void doFlush(Collection<Metric> metricsToFlush) {
+    private void doFlush(Collection<Metric> metricsToFlush) {
         logger.debug("Flushing metrics (" + metricsToFlush.size() + ")");
         for(Metric metric : metricsToFlush) {
             if (!blacklistService.isBlackListed(metric)) {

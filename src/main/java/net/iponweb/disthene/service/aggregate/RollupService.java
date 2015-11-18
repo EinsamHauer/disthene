@@ -134,7 +134,7 @@ public class RollupService {
         }
     }
 
-    private synchronized void doFlush(Collection<Metric> metricsToFlush, Map<Integer, RateLimiter> rateLimiters) {
+    private void doFlush(Collection<Metric> metricsToFlush, Map<Integer, RateLimiter> rateLimiters) {
         // We'd like to feed metrics in a more gentle manner here but not allowing the queue to grow.
 
         logger.debug("Flushing rollup metrics (" + metricsToFlush.size() + ")");

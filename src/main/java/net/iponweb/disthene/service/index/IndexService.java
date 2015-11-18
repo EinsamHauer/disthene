@@ -114,7 +114,7 @@ public class IndexService {
         }
     }
 
-    private synchronized void expireCache() {
+    private void expireCache() {
         logger.debug("Expiring index cache");
 
         long currentTimestamp = System.currentTimeMillis() / 1000L;
