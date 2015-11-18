@@ -160,7 +160,7 @@ public class RollupService {
 
     public synchronized void shutdown() {
         // disable rate limiters
-        shuttingDown = false;
+        shuttingDown = true;
         scheduler.shutdown();
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
