@@ -20,7 +20,6 @@ import org.joda.time.DateTimeZone;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -143,23 +142,12 @@ public class RollupService {
             logger.debug("Will limit qps to " + (long) rateLimiterEntry.getValue().getRate() + " for " + rateLimiterEntry.getKey() + " seconds rollups");
         }
 
-        boolean rateLimitersEnabled = true;
-
         for(Metric metric : metricsToFlush) {
-            if (rateLimitersEnabled && isShuttingDown()) {
-                rateLimitersEnabled = false;
-                logger.info("Got shutdown signal while flushing. Disabling rate limiters");
-            }
-
-            if (rateLimitersEnabled && rateLimiters.containsKey(metric.getRollup())) {
+            if (!shuttingDown && rateLimiters.containsKey(metric.getRollup())) {
                 rateLimiters.get(metric.getRollup()).acquire();
             }
             bus.post(new MetricStoreEvent(metric)).now();
         }
-    }
-
-    private boolean isShuttingDown() {
-        return shuttingDown;
     }
 
     public synchronized void shutdown() {
