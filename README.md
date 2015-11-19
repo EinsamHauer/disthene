@@ -36,7 +36,7 @@ will most probably do the trick.
 
 First of all, it's strongly recommended to run it with Java 8. Even though this software is fully compatible with Java 7. 
 The main reason for that is a bug in Java ([JDK-7032154](http://bugs.java.com/view_bug.do?bug_id=7032154)) prior to version 8
-Moreover, it's strongly recommended to have some GC tuning. For a start here is some universal options:
+Moreover, it's strongly recommended to have some GC tuning. For a start here is a set of some universal options:
 * -XX:+UseConcMarkSweepGC
 * -XX:+CMSParallelRemarkEnabled
 * -XX:+UseCMSInitiatingOccupancyOnly
