@@ -32,7 +32,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
         try {
             final Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
             if ((System.currentTimeMillis() / 1000L) - metric.getTimestamp() > 3600) {
-                logger.warn("Metric is from distant path (older than 1 hour): " + metric);
+                logger.warn("Metric is from distant past (older than 1 hour): " + metric);
             }
             bus.post(new MetricReceivedEvent(metric)).now();
         } catch (Exception e) {
