@@ -75,14 +75,15 @@ public class IndexThread extends Thread {
     @Override
     public void run() {
         while (!shutdown) {
-            Metric metric = metrics.poll();
-            if (metric != null) {
-                addToBatch(metric);
-            } else {
-                try {
+            try {
+                Metric metric = metrics.poll();
+                if (metric != null) {
+                    addToBatch(metric);
+                } else {
                     Thread.sleep(100);
-                } catch (InterruptedException ignored) {
                 }
+            } catch (Exception e) {
+                logger.error("Encountered error in busy loop: ", e);
             }
         }
 
@@ -100,7 +101,7 @@ public class IndexThread extends Thread {
         }
     }
 
-    private void flush() {
+    private synchronized void flush() {
         MultiGetResponse multiGetItemResponse = request.execute().actionGet();
 
         for(MultiGetItemResponse response : multiGetItemResponse.getResponses()) {

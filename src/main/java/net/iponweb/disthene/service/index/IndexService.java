@@ -119,6 +119,7 @@ public class IndexService {
 
         long currentTimestamp = System.currentTimeMillis() / 1000L;
         int pathsRemoved = 0;
+        int pathsTotal = 0;
 
         for(ConcurrentMap<String, AtomicLong> tenantMap : cache.values()) {
             for(Iterator<Map.Entry<String, AtomicLong>> iterator = tenantMap.entrySet().iterator(); iterator.hasNext();) {
@@ -127,10 +128,12 @@ public class IndexService {
                     iterator.remove();
                     pathsRemoved++;
                 }
+
+                pathsTotal++;
             }
         }
 
-        logger.debug("Expired " + pathsRemoved + " paths from index cache");
+        logger.debug("Expired " + pathsRemoved + " paths from index cache (from " + pathsTotal + " total paths)");
     }
 
     public synchronized void invalidateCache() {
