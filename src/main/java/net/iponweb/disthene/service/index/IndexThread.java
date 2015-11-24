@@ -101,12 +101,16 @@ public class IndexThread extends Thread {
         }
     }
 
-    private synchronized void flush() {
+    private void flush() {
         MultiGetResponse multiGetItemResponse = request.execute().actionGet();
 
         for(MultiGetItemResponse response : multiGetItemResponse.getResponses()) {
+            if (response.isFailed()) {
+                logger.error("Get failed: " + response.getFailure().getMessage());
+            }
+
             Metric metric = request.metrics.get(response.getId());
-            if (!response.getResponse().isExists()) {
+            if (response.isFailed() || !response.getResponse().isExists()) {
                 final String[] parts = metric.getPath().split("\\.");
                 final StringBuilder sb = new StringBuilder();
 
