@@ -17,15 +17,18 @@ import java.util.concurrent.Executor;
 /**
  * @author Andrei Ivanov
  */
-public class BatchWriterThread extends WriterThread {
+class BatchWriterThread extends WriterThread {
+    //todo: interval via config?
+    private static final long INTERVAL = 60_000;
+
     private Logger logger = Logger.getLogger(BatchWriterThread.class);
 
     private int batchSize;
     private BatchStatement batch = new BatchStatement();
 
-    private long lastFlushTimestamp = System.currentTimeMillis() / 1000L;
+    private long lastFlushTimestamp = System.currentTimeMillis();
 
-    public BatchWriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor, int batchSize) {
+    BatchWriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor, int batchSize) {
         super(name, bus, session, statement, metrics, executor);
         this.batchSize = batchSize;
     }
@@ -61,10 +64,9 @@ public class BatchWriterThread extends WriterThread {
                 )
         );
 
-        //todo: interval via config?
-        if (batch.size() >= batchSize || (lastFlushTimestamp < System.currentTimeMillis() / 1000L - 60)) {
+        if (batch.size() >= batchSize || (lastFlushTimestamp < System.currentTimeMillis() - INTERVAL)) {
+            lastFlushTimestamp = System.currentTimeMillis();
             flush();
-            lastFlushTimestamp = System.currentTimeMillis() / 1000L;
         }
     }
 
