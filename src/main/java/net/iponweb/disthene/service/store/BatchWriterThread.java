@@ -52,8 +52,8 @@ class BatchWriterThread extends WriterThread {
         }
 
         if (batch.size() > 0) {
-//            flush();
-            flushTokenAware();
+            flush();
+//            flushTokenAware();
         }
     }
 
@@ -69,7 +69,6 @@ class BatchWriterThread extends WriterThread {
                 )
         );
 
-/*
         batch.add(statement.bind(
                         metric.getRollup() * metric.getPeriod(),
                         Collections.singletonList(metric.getValue()),
@@ -81,11 +80,10 @@ class BatchWriterThread extends WriterThread {
                 )
         );
 
-*/
         if (statements.size() >= batchSize || (lastFlushTimestamp < System.currentTimeMillis() - INTERVAL)) {
             lastFlushTimestamp = System.currentTimeMillis();
-//            flush();
-            flushTokenAware();
+            flush();
+//            flushTokenAware();
         }
     }
 
