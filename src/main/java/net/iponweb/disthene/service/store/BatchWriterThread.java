@@ -17,9 +17,6 @@ import java.util.concurrent.Executor;
  * @author Andrei Ivanov
  */
 class BatchWriterThread extends WriterThread {
-    //todo: do we really need this?
-    private static final int RF = 2;
-
     //todo: interval via config?
     private static final long INTERVAL = 60_000;
 
@@ -126,13 +123,15 @@ class BatchWriterThread extends WriterThread {
         Map<Set<Host>,List<Statement>> batches = new HashMap<>();
         for (Statement statement : statements) {
             Set<Host> hosts = new HashSet<>();
-            int replicas = 0;
+
             Iterator<Host> it = session.getCluster().getConfiguration().getPolicies().
                     getLoadBalancingPolicy().newQueryPlan(statement.getKeyspace(), statement);
-            while (it.hasNext() && replicas < RF) {
+
+            // We are using TokenAwarePolicy without shuffling. Let's group by primary replica only then
+            if (it.hasNext()) {
                 hosts.add(it.next());
-                replicas++;
             }
+
             List<Statement> tokenBatch = batches.get(hosts);
             if (tokenBatch == null) {
                 tokenBatch = new ArrayList<>();
