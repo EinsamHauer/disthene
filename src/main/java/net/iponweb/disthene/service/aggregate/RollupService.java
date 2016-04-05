@@ -1,6 +1,7 @@
 package net.iponweb.disthene.service.aggregate;
 
 import com.google.common.util.concurrent.AtomicDouble;
+import com.google.common.util.concurrent.RateLimiter;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
 import net.engio.mbassy.listener.Listener;
@@ -30,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RollupService {
     private static final String SCHEDULER_NAME = "distheneRollupAggregatorFlusher";
     private static final int RATE = 60;
+    private volatile boolean shuttingDown = false;
 
     private Logger logger = Logger.getLogger(RollupService.class);
 
@@ -123,19 +125,52 @@ public class RollupService {
         }
 
         if (metricsToFlush.size() > 0) {
-            doFlush(metricsToFlush);
+            doFlush(metricsToFlush, getFlushRateLimiter(metricsToFlush.size()));
         }
     }
 
-    private void doFlush(Collection<Metric> metricsToFlush) {
+    private RateLimiter getFlushRateLimiter(int currentBatch) {
+        /*
+        The idea is that we'd like to be able to process ALL the contents of accumulator in 1/2 time till next rollup time.
+        Doing so, we hope to never limit as much as to saturate the accumulator and to heavily fall back
+         */
+
+        // Get the smallest rollup - we can never get here if there are no rollups at all
+        Rollup rollup = rollups.get(0);
+
+        long timestamp = System.currentTimeMillis() / 1000;
+        // Get the deadline - next rollup border
+        long deadline = getRollupTimestamp(timestamp, rollup);
+
+        // Just in case
+        if (deadline - timestamp <= 0) return null;
+
+        // 100 is an arbitrary small number here
+        double rate = Math.max(100, 2 * currentBatch / (deadline - timestamp));
+
+        return RateLimiter.create(rate);
+    }
+
+    private void doFlush(Collection<Metric> metricsToFlush, RateLimiter rateLimiter) {
+        // We'd like to feed metrics in a more gentle manner here but not allowing the queue to grow.
+
         logger.debug("Flushing rollup metrics (" + metricsToFlush.size() + ")");
+        if (rateLimiter != null) {
+            logger.debug("QPS is limited to " + (long) rateLimiter.getRate());
+        }
 
         for(Metric metric : metricsToFlush) {
+            if (!shuttingDown && rateLimiter != null) {
+                rateLimiter.acquire();
+            }
             bus.post(new MetricStoreEvent(metric)).now();
         }
     }
 
     public synchronized void shutdown() {
+        // disable rate limiters
+        shuttingDown = true;
+
         scheduler.shutdown();
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
@@ -145,8 +180,8 @@ public class RollupService {
                 metricsToFlush.add(new Metric(innerEntry.getKey(), innerEntry.getValue().getAverage()));
             }
         }
-
-        doFlush(metricsToFlush);
+        // When shutting down we'd like to do flushing as fast as possible
+        doFlush(metricsToFlush, null);
     }
 
     private static long getRollupTimestamp(long timestamp, Rollup rollup) {
