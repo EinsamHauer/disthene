@@ -49,8 +49,7 @@ class BatchWriterThread extends WriterThread {
         }
 
         if (batch.size() > 0) {
-//            flush();
-            flushTokenAware();
+            flush();
         }
     }
 
@@ -66,27 +65,13 @@ class BatchWriterThread extends WriterThread {
                 )
         );
 
-/*
-        batch.add(statement.bind(
-                        metric.getRollup() * metric.getPeriod(),
-                        Collections.singletonList(metric.getValue()),
-                        metric.getTenant(),
-                        metric.getRollup(),
-                        metric.getPeriod(),
-                        metric.getPath(),
-                        metric.getTimestamp()
-                )
-        );
-*/
-
         if (statements.size() >= batchSize || (lastFlushTimestamp < System.currentTimeMillis() - INTERVAL)) {
             lastFlushTimestamp = System.currentTimeMillis();
-//            flush();
-            flushTokenAware();
+            flush();
         }
     }
 
-    private void flushTokenAware() {
+    private void flush() {
         List<List<Statement>> batches = splitByToken();
 
         for (List<Statement> batchStatements : batches) {
@@ -142,25 +127,4 @@ class BatchWriterThread extends WriterThread {
         return new ArrayList<>(batches.values());
     }
 
-    private void flush() {
-        final int batchSize = batch.size();
-        ResultSetFuture future = session.executeAsync(batch);
-        Futures.addCallback(future,
-                new FutureCallback<ResultSet>() {
-                    @Override
-                    public void onSuccess(ResultSet result) {
-                        bus.post(new StoreSuccessEvent(batchSize)).now();
-                    }
-
-                    @Override
-                    public void onFailure(Throwable t) {
-                        bus.post(new StoreErrorEvent(batchSize)).now();
-                        logger.error(t);
-                    }
-                },
-                executor
-        );
-
-        batch = new BatchStatement();
-    }
 }
