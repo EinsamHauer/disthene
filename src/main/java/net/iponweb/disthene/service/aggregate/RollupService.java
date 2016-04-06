@@ -40,7 +40,7 @@ public class RollupService {
     private Rollup maxRollup;
     private List<Rollup> rollups;
 
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
     private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AverageRecord>> accumulator = new ConcurrentSkipListMap<>();
 
@@ -97,7 +97,7 @@ public class RollupService {
         return averageRecord;
     }
 
-    public void aggregate(Metric metric) {
+    private void aggregate(Metric metric) {
         for(Rollup rollup : rollups) {
             long timestamp = getRollupTimestamp(metric.getTimestamp(), rollup);
             ConcurrentMap<MetricKey, AverageRecord> timestampMap = getTimestampMap(timestamp);
@@ -110,7 +110,7 @@ public class RollupService {
         }
     }
 
-    public void flush() {
+    private void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
         while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
@@ -192,12 +192,12 @@ public class RollupService {
         private AtomicDouble value = new AtomicDouble(0);
         private AtomicInteger count = new AtomicInteger(0);
 
-        public void addValue(double value) {
+        void addValue(double value) {
             this.value.addAndGet(value);
             this.count.addAndGet(1);
         }
 
-        public double getAverage() {
+        double getAverage() {
             return value.get() / count.get();
         }
     }

@@ -43,7 +43,7 @@ public class SumService {
     private BlacklistService blacklistService;
     private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AtomicDouble>> accumulator = new ConcurrentSkipListMap<>();
 
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
     public SumService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlacklistService blacklistService) {
         this.bus = bus;
@@ -92,7 +92,7 @@ public class SumService {
         return value;
     }
 
-    public void aggregate(Metric metric) {
+    private void aggregate(Metric metric) {
         List<AggregationRule> rules = aggregationConfiguration.getRules().get(metric.getTenant());
 
         if (rules == null) {
@@ -112,7 +112,7 @@ public class SumService {
         }
     }
 
-    public void flush() {
+    private void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
         while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay())) {
