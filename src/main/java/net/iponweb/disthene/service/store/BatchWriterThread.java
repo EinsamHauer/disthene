@@ -23,7 +23,6 @@ class BatchWriterThread extends WriterThread {
     private Logger logger = Logger.getLogger(BatchWriterThread.class);
 
     private int batchSize;
-    private BatchStatement batch = new BatchStatement();
 
     private List<Statement> statements = new LinkedList<>();
 
@@ -48,7 +47,7 @@ class BatchWriterThread extends WriterThread {
             }
         }
 
-        if (batch.size() > 0) {
+        if (statements.size() > 0) {
             flush();
         }
     }
