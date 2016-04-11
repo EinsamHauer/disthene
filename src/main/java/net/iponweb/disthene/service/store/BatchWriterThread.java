@@ -75,7 +75,7 @@ class BatchWriterThread extends WriterThread {
         List<List<Statement>> batches = splitByToken();
 
         for (List<Statement> batchStatements : batches) {
-            BatchStatement batch = new BatchStatement();
+            BatchStatement batch = new BatchStatement(BatchStatement.Type.UNLOGGED);
             final int batchSize = batchStatements.size();
 
             for (Statement s : batchStatements) {
