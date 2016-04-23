@@ -77,6 +77,18 @@ CREATE TABLE metric (
   compression={'sstable_compression': 'LZ4Compressor'};
 
 ```
+
+Your mileage may vary but generally (as graphite like systems are closer to write only/read never type) one would benefit from changing
+```
+  compression={'sstable_compression': 'LZ4Compressor'};
+```
+to
+```
+  compression={'sstable_compression': 'DeflateCompressor'};
+```
+This will probably save ~25% on disk storage and quite some IO on reads at the cost of slightly increased CPU.
+
+
 ## Configuration
 There several configuration files involved
 * /etc/disthene/disthene.yaml (location can be changed with -c command line option if needed)
