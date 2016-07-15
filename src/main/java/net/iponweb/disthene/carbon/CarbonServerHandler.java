@@ -1,5 +1,6 @@
 package net.iponweb.disthene.carbon;
 
+import com.google.common.base.CharMatcher;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -34,7 +35,12 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
             if ((System.currentTimeMillis() / 1000L) - metric.getTimestamp() > 3600) {
                 logger.warn("Metric is from distant past (older than 1 hour): " + metric);
             }
-            bus.post(new MetricReceivedEvent(metric)).now();
+
+            if (CharMatcher.ASCII.matchesAllOf(metric.getPath()) && CharMatcher.ASCII.matchesAllOf(metric.getTenant())) {
+                bus.post(new MetricReceivedEvent(metric)).now();
+            } else {
+                logger.warn("Non ASCII characters received, discarding: " + metric);
+            }
         } catch (Exception e) {
             logger.trace(e);
         }
