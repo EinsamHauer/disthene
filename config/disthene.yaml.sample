@@ -18,9 +18,9 @@ store:
   readTimeout: 10
   connectTimeout: 10
   maxRequests: 128
+  multiValueDatapoint: true
   batch: true
   batchSize: 500
-  multiValueDatapoint: true
   pool: 2
 index:
   name: "disthene"
