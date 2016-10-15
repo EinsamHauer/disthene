@@ -20,6 +20,7 @@ store:
   maxRequests: 128
   batch: true
   batchSize: 500
+  multiValueDatapoint: true
   pool: 2
 index:
   name: "disthene"
