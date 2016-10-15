@@ -39,7 +39,9 @@ public class CassandraService {
 
         String query = "UPDATE " +
                 storeConfiguration.getKeyspace() + "." + storeConfiguration.getColumnFamily() +
-                " USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
+                " USING TTL ? SET " +
+                (storeConfiguration.allowMultiValueDatapoint() ? "data = data + ?" : "data = ?") +
+                " WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
 
         SocketOptions socketOptions = new SocketOptions()
                 .setReceiveBufferSize(1024 * 1024)

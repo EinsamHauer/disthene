@@ -121,6 +121,8 @@ store:
   readTimeout: 10
   connectTimeout: 10
   maxRequests: 128
+# allow many values per datapoint (agregated - avg, sum - on read), otherwise overwrites existing datapoint - last value will be kept
+  multiValueDatapoint: true
 # use C* batch statetments - the trade off is: using batch puts load on C*, not using it may cause congestion on disthene side
   batch: true
 # batch size if above is true

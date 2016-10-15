@@ -20,6 +20,7 @@ public class StoreConfiguration {
     private boolean batch;
     private int batchSize;
     private int pool;
+    private boolean multiValueDatapoint;
 
     public String getUserName() {
         return userName;
@@ -125,6 +126,14 @@ public class StoreConfiguration {
         this.columnFamily = columnFamily;
     }
 
+    public boolean allowMultiValueDatapoint() {
+        return multiValueDatapoint;
+    }
+
+    public void setMultiValueDatapoint(boolean multiValueDatapoint) {
+        this.multiValueDatapoint = multiValueDatapoint;
+    }
+
     @Override
     public String toString() {
         return "StoreConfiguration{" +
@@ -139,6 +148,7 @@ public class StoreConfiguration {
                 ", batch=" + batch +
                 ", batchSize=" + batchSize +
                 ", pool=" + pool +
+                ", multiValueDatapoint=" + multiValueDatapoint +
                 '}';
     }
 }
