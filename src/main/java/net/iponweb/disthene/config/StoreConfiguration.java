@@ -22,6 +22,7 @@ public class StoreConfiguration {
     private int batchSize;
     private int pool;
     private String loadBalancingPolicyName = CassandraLoadBalancingPolicies.tokenDcAwareRoundRobinPolicy;
+    private String protocolVersion = "V2";
 
     public String getUserName() {
         return userName;
@@ -135,12 +136,22 @@ public class StoreConfiguration {
         this.loadBalancingPolicyName = policy;
     }
 
+    public String getProtocolVersion() {
+        return protocolVersion;
+    }
+
+    public void setProtocolVersion(String protocolVersion) {
+        this.protocolVersion = protocolVersion;
+    }
+
     @Override
     public String toString() {
         return "StoreConfiguration{" +
                 "cluster=" + cluster +
                 ", keyspace='" + keyspace + '\'' +
                 ", columnFamily='" + columnFamily + '\'' +
+                ", userName='" + userName + '\'' +
+                ", userPassword='" + userPassword + '\'' +
                 ", port=" + port +
                 ", maxConnections=" + maxConnections +
                 ", readTimeout=" + readTimeout +
@@ -150,6 +161,7 @@ public class StoreConfiguration {
                 ", batchSize=" + batchSize +
                 ", pool=" + pool +
                 ", loadBalancingPolicyName='" + loadBalancingPolicyName + '\'' +
+                ", protocolVersion='" + protocolVersion + '\'' +
                 '}';
     }
 }

@@ -1,8 +1,6 @@
 package net.iponweb.disthene.service.store;
 
 import com.datastax.driver.core.*;
-import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
-import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.google.common.util.concurrent.MoreExecutors;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.listener.Handler;
@@ -52,8 +50,8 @@ public class CassandraService {
         PoolingOptions poolingOptions = new PoolingOptions();
         poolingOptions.setMaxConnectionsPerHost(HostDistance.LOCAL, storeConfiguration.getMaxConnections());
         poolingOptions.setMaxConnectionsPerHost(HostDistance.REMOTE, storeConfiguration.getMaxConnections());
-        poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.REMOTE, storeConfiguration.getMaxRequests());
-        poolingOptions.setMaxSimultaneousRequestsPerConnectionThreshold(HostDistance.LOCAL, storeConfiguration.getMaxRequests());
+        poolingOptions.setMaxRequestsPerConnection(HostDistance.REMOTE, storeConfiguration.getMaxRequests());
+        poolingOptions.setMaxRequestsPerConnection(HostDistance.LOCAL, storeConfiguration.getMaxRequests());
 
         Cluster.Builder builder = Cluster.builder()
                 .withSocketOptions(socketOptions)
@@ -61,7 +59,7 @@ public class CassandraService {
                 .withLoadBalancingPolicy(CassandraLoadBalancingPolicies.getLoadBalancingPolicy(storeConfiguration.getLoadBalancingPolicyName()))
                 .withPoolingOptions(poolingOptions)
                 .withQueryOptions(new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE))
-                .withProtocolVersion(ProtocolVersion.V2)
+                .withProtocolVersion(ProtocolVersion.valueOf(storeConfiguration.getProtocolVersion()))
                 .withPort(storeConfiguration.getPort());
 
         if ( storeConfiguration.getUserName() != null && storeConfiguration.getUserPassword() != null ) {
