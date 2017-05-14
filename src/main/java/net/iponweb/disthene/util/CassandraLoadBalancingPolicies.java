@@ -1,4 +1,4 @@
-package net.iponweb.disthene.reader.utils;
+package net.iponweb.disthene.util;
 
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import com.datastax.driver.core.policies.LatencyAwarePolicy;
@@ -26,7 +26,7 @@ public class CassandraLoadBalancingPolicies {
                 break;
             default:
                 throw new IllegalArgumentException("Cassandra load balancing policy can be " + tokenAwarePolicy + " ," + tokenLatencyAwarePolicy
-                       + " ," + dcAwareRoundRobinPolicy);
+                       + " ," + tokenDcAwareRoundRobinPolicy);
         }
         return loadBalancingPolicy;
     }

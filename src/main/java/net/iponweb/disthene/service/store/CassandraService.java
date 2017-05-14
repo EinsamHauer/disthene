@@ -12,7 +12,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.StoreConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
-import net.iponweb.disthene.utils.CassandraLoadBalancingPolicies;
+import net.iponweb.disthene.util.CassandraLoadBalancingPolicies;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;

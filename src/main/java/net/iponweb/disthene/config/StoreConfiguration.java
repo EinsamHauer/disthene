@@ -1,6 +1,6 @@
 package net.iponweb.disthene.config;
 
-import net.iponweb.disthene.utils.CassandraLoadBalancingPolicies;
+import net.iponweb.disthene.util.CassandraLoadBalancingPolicies;
 import java.util.ArrayList;
 import java.util.List;
 
