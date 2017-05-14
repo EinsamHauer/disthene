@@ -12,6 +12,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.StoreConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
+import net.iponweb.disthene.util.CassandraLoadBalancingPolicies;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
@@ -57,7 +58,7 @@ public class CassandraService {
         Cluster.Builder builder = Cluster.builder()
                 .withSocketOptions(socketOptions)
                 .withCompression(ProtocolOptions.Compression.LZ4)
-                .withLoadBalancingPolicy(new TokenAwarePolicy(new DCAwareRoundRobinPolicy(), false))
+                .withLoadBalancingPolicy(CassandraLoadBalancingPolicies.getLoadBalancingPolicy(storeConfiguration.getLoadBalancingPolicyName()))
                 .withPoolingOptions(poolingOptions)
                 .withQueryOptions(new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE))
                 .withProtocolVersion(ProtocolVersion.V2)
