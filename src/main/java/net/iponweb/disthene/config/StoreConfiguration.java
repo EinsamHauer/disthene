@@ -1,5 +1,6 @@
 package net.iponweb.disthene.config;
 
+import net.iponweb.disthene.utils.CassandraLoadBalancingPolicies;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +21,7 @@ public class StoreConfiguration {
     private boolean batch;
     private int batchSize;
     private int pool;
+    private String loadBalancingPolicyName = CassandraLoadBalancingPolicies.tokenDcAwareRoundRobinPolicy;
 
     public String getUserName() {
         return userName;
@@ -125,6 +127,14 @@ public class StoreConfiguration {
         this.columnFamily = columnFamily;
     }
 
+    public String getLoadBalancingPolicyName() {
+        return loadBalancingPolicyName;
+    }
+
+    public void setLoadBalancingPolicyName(String policy) {
+        this.loadBalancingPolicyName = policy;
+    }
+
     @Override
     public String toString() {
         return "StoreConfiguration{" +
@@ -139,6 +149,7 @@ public class StoreConfiguration {
                 ", batch=" + batch +
                 ", batchSize=" + batchSize +
                 ", pool=" + pool +
+                ", loadBalancigPolicyName='" + loadBalancingPolicyName + '\'' +
                 '}';
     }
 }

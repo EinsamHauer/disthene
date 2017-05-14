@@ -21,6 +21,7 @@ store:
   batch: true
   batchSize: 500
   pool: 2
+  loadBalancingPolicyName: 'TokenDcAwareRoundRobinPolicy'
 index:
   name: "disthene"
   cluster:
