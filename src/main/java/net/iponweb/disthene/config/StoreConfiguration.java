@@ -149,7 +149,7 @@ public class StoreConfiguration {
                 ", batch=" + batch +
                 ", batchSize=" + batchSize +
                 ", pool=" + pool +
-                ", loadBalancigPolicyName='" + loadBalancingPolicyName + '\'' +
+                ", loadBalancingPolicyName='" + loadBalancingPolicyName + '\'' +
                 '}';
     }
 }
