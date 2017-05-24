@@ -14,9 +14,9 @@ public class Metric {
         String[] splitInput = input.split("\\s");
         // We were interning tenant and path here - we are going to store them all (or almost so) constantly anyhow in multiple places
         // In fact this also work for a moderate metrics stream. Once we start receiving 10s of millions different metrics, it tends to degrade quite a bit
-        // So, leaving this only for tenant
+        // So, removing all intern calls here
         this.key = new MetricKey(
-                splitInput.length >=4 ? splitInput[3].intern() : "NONE",
+                splitInput.length >=4 ? splitInput[3] : "NONE",
                 splitInput[0],
                 rollup.getRollup(),
                 rollup.getPeriod(),
