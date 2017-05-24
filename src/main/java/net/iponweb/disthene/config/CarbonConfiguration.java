@@ -13,6 +13,7 @@ public class CarbonConfiguration {
     private List<Rollup> rollups = new ArrayList<>();
     private Rollup baseRollup;
     private int aggregatorDelay;
+    private boolean intern = false;
 
     public String getBind() {
         return bind;
@@ -45,6 +46,14 @@ public class CarbonConfiguration {
     public void setRollups(List<Rollup> rollups) {
         baseRollup = rollups.get(0);
         this.rollups = rollups.subList(1, rollups.size());
+    }
+
+    public boolean isIntern() {
+        return intern;
+    }
+
+    public void setIntern(boolean intern) {
+        this.intern = intern;
     }
 
     public Rollup getBaseRollup() {

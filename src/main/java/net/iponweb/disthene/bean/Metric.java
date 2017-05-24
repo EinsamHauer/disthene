@@ -10,12 +10,14 @@ public class Metric {
     private MetricKey key;
     private double value;
 
-    public Metric(String input, Rollup rollup) {
+    public Metric(String input, Rollup rollup, boolean internStrings) {
         String[] splitInput = input.split("\\s");
         // We are interning tenant and path here - we are going to store them all (or almost so) constantly anyhow in multiple places
+        // In fact this also work for a moderate metrics stream. Once we start receiving 10s of millions different metrics, it tends to degrade quite a bit
+        // So, leaving this as an option.
         this.key = new MetricKey(
-                splitInput.length >=4 ? splitInput[3].intern() : "NONE",
-                splitInput[0].intern(),
+                splitInput.length >=4 ? (internStrings ? splitInput[3].intern() : splitInput[3]) : "NONE",
+                internStrings ? splitInput[0].intern() : splitInput[0],
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 normalizeTimestamp(Long.parseLong(splitInput[2]), rollup));

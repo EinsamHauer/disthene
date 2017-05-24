@@ -20,10 +20,12 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
     private MBassador<DistheneEvent> bus;
     private Rollup rollup;
+    private boolean internStrings = false;
 
-    public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup) {
+    public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup, boolean internStrings) {
         this.bus = bus;
         this.rollup = rollup;
+        this.internStrings = internStrings;
     }
 
     @Override
@@ -31,7 +33,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
         ByteBuf in = (ByteBuf) msg;
 
         try {
-            final Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
+            final Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup, internStrings);
             if ((System.currentTimeMillis() / 1000L) - metric.getTimestamp() > 3600) {
                 logger.warn("Metric is from distant past (older than 1 hour): " + metric);
             }
