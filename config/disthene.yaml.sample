@@ -5,7 +5,6 @@ carbon:
     - 60s:5356800s
     - 900s:62208000s
   aggregatorDelay: 90
-  intern: false
 store:
   cluster:
     - "cassandra-1"

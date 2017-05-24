@@ -1,7 +1,6 @@
 # JAVA_OPTS
 JAVA_OPTS="-server"
 JAVA_OPTS="-Xms8G -Xmx18G"
-JAVA_OPTS="$JAVA_OPTS -XX:+UseStringCache -XX:StringTableSize=10000003"
 JAVA_OPTS="$JAVA_OPTS -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/tmp"
 JAVA_OPTS="$JAVA_OPTS -XX:+PrintStringTableStatistics"
 JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.port=7199 -Dcom.sun.management.jmxremote.rmi.port=7199 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"

@@ -17,7 +17,7 @@ import org.apache.log4j.Logger;
  */
 
 public class CarbonServer {
-    public static final int MAX_FRAME_LENGTH = 8192 ;
+    private static final int MAX_FRAME_LENGTH = 8192 ;
     private Logger logger = Logger.getLogger(CarbonServer.class);
 
     private DistheneConfiguration configuration;
@@ -42,7 +42,7 @@ public class CarbonServer {
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, false, Delimiters.lineDelimiter()));
-                        p.addLast(new CarbonServerHandler(bus, configuration.getCarbon().getBaseRollup(), configuration.getCarbon().isIntern()));
+                        p.addLast(new CarbonServerHandler(bus, configuration.getCarbon().getBaseRollup()));
                     }
 
                     @Override
