@@ -9,10 +9,12 @@ public class AggregationRule {
 
     private Pattern source;
     private String destination;
+    private String prefix;
 
     public AggregationRule(String sourceDefinition, String destination) {
         this.destination = destination;
         source = Pattern.compile(sourceDefinition.replace(".", "\\.").replace("*", ".*?").replaceAll("<([a-z]+)>", "(?<$1>.*?)"));
+        prefix = destination.split("<data>",-1)[0];
     }
 
     public Pattern getSource() {
@@ -31,11 +33,16 @@ public class AggregationRule {
         this.destination = destination;
     }
 
+    public String getPrefix() {
+        return prefix;
+    }
+
     @Override
     public String toString() {
         return "AggregationRule{" +
                 "source=" + source +
                 ", destination='" + destination + '\'' +
+                ", prefix='" + prefix + '\'' +
                 '}';
     }
 }
