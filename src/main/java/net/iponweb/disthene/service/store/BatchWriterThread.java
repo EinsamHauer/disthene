@@ -28,8 +28,8 @@ class BatchWriterThread extends WriterThread {
 
     private long lastFlushTimestamp = System.currentTimeMillis();
 
-    BatchWriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor, int batchSize) {
-        super(name, bus, session, statement, metrics, executor);
+    BatchWriterThread(String name, MBassador<DistheneEvent> bus, Session session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor, int batchSize) {
+        super(name, bus, session, tablesRegistry, metrics, executor);
         this.batchSize = batchSize;
     }
 
@@ -53,12 +53,10 @@ class BatchWriterThread extends WriterThread {
     }
 
     private void addToBatch(Metric metric) {
-        statements.add(statement.bind(
+        statements.add(
+                tablesRegistry.getStatement(metric.getTenant(), metric.getRollup()) .bind(
                             metric.getRollup() * metric.getPeriod(),
                             Collections.singletonList(metric.getValue()),
-                            metric.getTenant(),
-                            metric.getRollup(),
-                            metric.getPeriod(),
                             metric.getPath(),
                             metric.getTimestamp()
                 )

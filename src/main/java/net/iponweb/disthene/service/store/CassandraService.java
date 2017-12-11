@@ -36,10 +36,6 @@ public class CassandraService {
     public CassandraService(StoreConfiguration storeConfiguration, MBassador<DistheneEvent> bus) {
         bus.subscribe(this);
 
-        String query = "UPDATE " +
-                storeConfiguration.getKeyspace() + "." + storeConfiguration.getColumnFamily() +
-                " USING TTL ? SET data = data + ? WHERE tenant = ? AND rollup = ? AND period = ? AND path = ? AND time = ?;";
-
         SocketOptions socketOptions = new SocketOptions()
                 .setReceiveBufferSize(1024 * 1024)
                 .setSendBufferSize(1024 * 1024)
@@ -78,17 +74,17 @@ public class CassandraService {
         }
 
         session = cluster.connect();
-        PreparedStatement statement = session.prepare(query);
+
+        TablesRegistry tablesRegistry = new TablesRegistry(session, storeConfiguration.getKeyspace());
 
         // Creating writers
-
         if (storeConfiguration.isBatch()) {
             for (int i = 0; i < storeConfiguration.getPool(); i++) {
                 WriterThread writerThread = new BatchWriterThread(
                         "distheneCassandraBatchWriter" + i,
                         bus,
                         session,
-                        statement,
+                        tablesRegistry,
                         metrics,
                         MoreExecutors.listeningDecorator(Executors.newCachedThreadPool()),
                         storeConfiguration.getBatchSize()
@@ -103,7 +99,7 @@ public class CassandraService {
                         "distheneCassandraSingleWriter" + i,
                         bus,
                         session,
-                        statement,
+                        tablesRegistry,
                         metrics,
                         MoreExecutors.listeningDecorator(Executors.newCachedThreadPool())
                 );

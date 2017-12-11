@@ -18,17 +18,18 @@ public abstract class WriterThread extends Thread {
 
     protected MBassador<DistheneEvent> bus;
     protected Session session;
-    protected PreparedStatement statement;
+
+    protected TablesRegistry tablesRegistry;
 
     protected Queue<Metric> metrics;
 
     protected Executor executor;
 
-    public WriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor) {
+    public WriterThread(String name, MBassador<DistheneEvent> bus, Session session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor) {
         super(name);
         this.bus = bus;
         this.session = session;
-        this.statement = statement;
+        this.tablesRegistry = tablesRegistry;
         this.metrics = metrics;
         this.executor = executor;
     }

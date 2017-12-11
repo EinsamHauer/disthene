@@ -23,8 +23,8 @@ import java.util.concurrent.Executor;
 public class SingleWriterThread extends WriterThread {
     private Logger logger = Logger.getLogger(SingleWriterThread.class);
 
-    public SingleWriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor) {
-        super(name, bus, session, statement, metrics, executor);
+    public SingleWriterThread(String name, MBassador<DistheneEvent> bus, Session session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor) {
+        super(name, bus, session, tablesRegistry, metrics, executor);
     }
 
     @Override
@@ -43,12 +43,10 @@ public class SingleWriterThread extends WriterThread {
     }
 
     private void store(Metric metric) {
-        ResultSetFuture future = session.executeAsync(statement.bind(
+        ResultSetFuture future = session.executeAsync(
+                tablesRegistry.getStatement(metric.getTenant(), metric.getRollup()).bind(
                 metric.getRollup() * metric.getPeriod(),
                 Collections.singletonList(metric.getValue()),
-                metric.getTenant(),
-                metric.getRollup(),
-                metric.getPeriod(),
                 metric.getPath(),
                 metric.getTimestamp()
         ));
