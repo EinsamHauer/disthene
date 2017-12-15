@@ -24,6 +24,19 @@ public class StoreConfiguration {
     private String loadBalancingPolicyName = CassandraLoadBalancingPolicies.tokenDcAwareRoundRobinPolicy;
     private String protocolVersion = "V2";
 
+    // tables properties
+    private double fpChance = 0.01;
+    private double dclocalReadRepairChance = 0.1;
+    private long gcGraceSeconds = 86400;
+    private double readRepairChance = 0.1;
+    private long memtableFlushPeriodInMs = 60000;
+    private int compactionMinThreshold = 2;
+    private boolean uncheckedTombstoneCompaction = false;
+    private double tombstoneThreshold = 0.1;
+    private String compactionClass = "org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy";
+    private String compression = "org.apache.cassandra.io.compress.LZ4Compressor";
+
+
     public String getUserName() {
         return userName;
     }
@@ -140,6 +153,86 @@ public class StoreConfiguration {
         return protocolVersion;
     }
 
+    public double getFpChance() {
+        return fpChance;
+    }
+
+    public void setFpChance(double fpChance) {
+        this.fpChance = fpChance;
+    }
+
+    public double getDclocalReadRepairChance() {
+        return dclocalReadRepairChance;
+    }
+
+    public void setDclocalReadRepairChance(double dclocalReadRepairChance) {
+        this.dclocalReadRepairChance = dclocalReadRepairChance;
+    }
+
+    public long getGcGraceSeconds() {
+        return gcGraceSeconds;
+    }
+
+    public void setGcGraceSeconds(long gcGraceSeconds) {
+        this.gcGraceSeconds = gcGraceSeconds;
+    }
+
+    public double getReadRepairChance() {
+        return readRepairChance;
+    }
+
+    public void setReadRepairChance(double readRepairChance) {
+        this.readRepairChance = readRepairChance;
+    }
+
+    public long getMemtableFlushPeriodInMs() {
+        return memtableFlushPeriodInMs;
+    }
+
+    public void setMemtableFlushPeriodInMs(long memtableFlushPeriodInMs) {
+        this.memtableFlushPeriodInMs = memtableFlushPeriodInMs;
+    }
+
+    public int getCompactionMinThreshold() {
+        return compactionMinThreshold;
+    }
+
+    public void setCompactionMinThreshold(int compactionMinThreshold) {
+        this.compactionMinThreshold = compactionMinThreshold;
+    }
+
+    public boolean isUncheckedTombstoneCompaction() {
+        return uncheckedTombstoneCompaction;
+    }
+
+    public void setUncheckedTombstoneCompaction(boolean uncheckedTombstoneCompaction) {
+        this.uncheckedTombstoneCompaction = uncheckedTombstoneCompaction;
+    }
+
+    public double getTombstoneThreshold() {
+        return tombstoneThreshold;
+    }
+
+    public void setTombstoneThreshold(double tombstoneThreshold) {
+        this.tombstoneThreshold = tombstoneThreshold;
+    }
+
+    public String getCompactionClass() {
+        return compactionClass;
+    }
+
+    public void setCompactionClass(String compactionClass) {
+        this.compactionClass = compactionClass;
+    }
+
+    public String getCompression() {
+        return compression;
+    }
+
+    public void setCompression(String compression) {
+        this.compression = compression;
+    }
+
     public void setProtocolVersion(String protocolVersion) {
         this.protocolVersion = protocolVersion;
     }
@@ -162,6 +255,16 @@ public class StoreConfiguration {
                 ", pool=" + pool +
                 ", loadBalancingPolicyName='" + loadBalancingPolicyName + '\'' +
                 ", protocolVersion='" + protocolVersion + '\'' +
+                ", fpChance=" + fpChance +
+                ", dclocalReadRepairChance=" + dclocalReadRepairChance +
+                ", gcGraceSeconds=" + gcGraceSeconds +
+                ", readRepairChance=" + readRepairChance +
+                ", memtableFlushPeriodInMs=" + memtableFlushPeriodInMs +
+                ", compactionMinThreshold=" + compactionMinThreshold +
+                ", uncheckedTombstoneCompaction=" + uncheckedTombstoneCompaction +
+                ", tombstoneThreshold=" + tombstoneThreshold +
+                ", compactionClass='" + compactionClass + '\'' +
+                ", compression='" + compression + '\'' +
                 '}';
     }
 }

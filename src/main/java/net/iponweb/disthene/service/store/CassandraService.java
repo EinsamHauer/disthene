@@ -75,7 +75,7 @@ public class CassandraService {
 
         session = cluster.connect();
 
-        TablesRegistry tablesRegistry = new TablesRegistry(session, storeConfiguration.getKeyspace());
+        TablesRegistry tablesRegistry = new TablesRegistry(session, storeConfiguration);
 
         // Creating writers
         if (storeConfiguration.isBatch()) {
