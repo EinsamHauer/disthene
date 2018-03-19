@@ -43,8 +43,14 @@ public class SingleWriterThread extends WriterThread {
     }
 
     private void store(Metric metric) {
+        PreparedStatement statement = tablesRegistry.getStatement(metric.getTenant(), metric.getRollup());
+        if (statement == null) {
+            logger.error("Unable to store metric " + metric + ". Can't get the statement");
+            return;
+        }
+
         ResultSetFuture future = session.executeAsync(
-                tablesRegistry.getStatement(metric.getTenant(), metric.getRollup()).bind(
+                statement.bind(
                 metric.getRollup() * metric.getPeriod(),
                 Collections.singletonList(metric.getValue()),
                 metric.getPath(),

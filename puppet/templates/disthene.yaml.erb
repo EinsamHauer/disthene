@@ -21,6 +21,11 @@ store:
   batch: <%= @store_batch %>
   batchSize: <%= @store_batch_size %>
   pool: <%= @store_pool %>
+  loadBalancingPolicyName: "<%= @store_load_balancing_policy %>"
+  protocolVersion: "<%= @store_protocol_version %>"
+  tenantKeyspace: "<%= @store_tenant_keyspace %>"
+  tenantTableTemplate: "<%= @store_tenant_table_template %>"
+  tenantTableCreateTemplate: "<%= @store_tenant_table_create_template %>"
 index:
   name: "<%= @index_name %>"
   cluster:

@@ -19,7 +19,7 @@ public class CassandraLoadBalancingPolicies {
                 loadBalancingPolicy = new TokenAwarePolicy(new RoundRobinPolicy());
                 break;
             case tokenDcAwareRoundRobinPolicy:
-                loadBalancingPolicy = new TokenAwarePolicy(DCAwareRoundRobinPolicy.builder().build());
+                loadBalancingPolicy = new TokenAwarePolicy(new DCAwareRoundRobinPolicy());
                 break;
             case tokenLatencyAwarePolicy:
                 loadBalancingPolicy = new TokenAwarePolicy(LatencyAwarePolicy.builder(new RoundRobinPolicy()).build());

@@ -23,19 +23,22 @@ public class StoreConfiguration {
     private int pool;
     private String loadBalancingPolicyName = CassandraLoadBalancingPolicies.tokenDcAwareRoundRobinPolicy;
     private String protocolVersion = "V2";
-
-    // tables properties
-    private double fpChance = 0.01;
-    private double dclocalReadRepairChance = 0.1;
-    private long gcGraceSeconds = 86400;
-    private double readRepairChance = 0.1;
-    private long memtableFlushPeriodInMs = 60000;
-    private int compactionMinThreshold = 2;
-    private boolean uncheckedTombstoneCompaction = false;
-    private double tombstoneThreshold = 0.1;
-    private String compactionClass = "org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy";
-    private String compression = "org.apache.cassandra.io.compress.LZ4Compressor";
-
+    private String tenantTableTemplate = "metric_%s_%d"; //%s - tenant, %d rollup
+    private String tenantKeyspace = null;
+    private String tenantTableCreateTemplate = "CREATE TABLE IF NOT EXISTS %s.%s (\n" +
+            "  path text,\n" +
+            "  time bigint,\n" +
+            "  data list<double>,\n" +
+            "  PRIMARY KEY ((path), time)\n" +
+            ") WITH CLUSTERING ORDER BY (time ASC)\n" +
+            "  AND bloom_filter_fp_chance = 0.01\n" +
+            "  AND caching = {'keys': 'ALL'}\n" +
+            "  AND compaction = {'min_threshold': '2', 'unchecked_tombstone_compaction': 'true', 'tombstone_compaction_interval': '86400', 'min_sstable_size': '104857600', 'tombstone_threshold': '0.1', 'bucket_low': '0.5', 'bucket_high': '1.5', 'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy'}\n" +
+            "  AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}\n" +
+            "  AND dclocal_read_repair_chance = 0.1\n" +
+            "  AND default_time_to_live = 0\n" +
+            "  AND gc_grace_seconds = 43200\n" +
+            "  AND read_repair_chance = 0.1;\n";
 
     public String getUserName() {
         return userName;
@@ -153,88 +156,32 @@ public class StoreConfiguration {
         return protocolVersion;
     }
 
-    public double getFpChance() {
-        return fpChance;
-    }
-
-    public void setFpChance(double fpChance) {
-        this.fpChance = fpChance;
-    }
-
-    public double getDclocalReadRepairChance() {
-        return dclocalReadRepairChance;
-    }
-
-    public void setDclocalReadRepairChance(double dclocalReadRepairChance) {
-        this.dclocalReadRepairChance = dclocalReadRepairChance;
-    }
-
-    public long getGcGraceSeconds() {
-        return gcGraceSeconds;
-    }
-
-    public void setGcGraceSeconds(long gcGraceSeconds) {
-        this.gcGraceSeconds = gcGraceSeconds;
-    }
-
-    public double getReadRepairChance() {
-        return readRepairChance;
-    }
-
-    public void setReadRepairChance(double readRepairChance) {
-        this.readRepairChance = readRepairChance;
-    }
-
-    public long getMemtableFlushPeriodInMs() {
-        return memtableFlushPeriodInMs;
-    }
-
-    public void setMemtableFlushPeriodInMs(long memtableFlushPeriodInMs) {
-        this.memtableFlushPeriodInMs = memtableFlushPeriodInMs;
-    }
-
-    public int getCompactionMinThreshold() {
-        return compactionMinThreshold;
-    }
-
-    public void setCompactionMinThreshold(int compactionMinThreshold) {
-        this.compactionMinThreshold = compactionMinThreshold;
-    }
-
-    public boolean isUncheckedTombstoneCompaction() {
-        return uncheckedTombstoneCompaction;
-    }
-
-    public void setUncheckedTombstoneCompaction(boolean uncheckedTombstoneCompaction) {
-        this.uncheckedTombstoneCompaction = uncheckedTombstoneCompaction;
-    }
-
-    public double getTombstoneThreshold() {
-        return tombstoneThreshold;
-    }
-
-    public void setTombstoneThreshold(double tombstoneThreshold) {
-        this.tombstoneThreshold = tombstoneThreshold;
-    }
-
-    public String getCompactionClass() {
-        return compactionClass;
-    }
-
-    public void setCompactionClass(String compactionClass) {
-        this.compactionClass = compactionClass;
-    }
-
-    public String getCompression() {
-        return compression;
-    }
-
-    public void setCompression(String compression) {
-        this.compression = compression;
-    }
-
     public void setProtocolVersion(String protocolVersion) {
         this.protocolVersion = protocolVersion;
+    }
+
+    public String getTenantTableTemplate() {
+        return tenantTableTemplate;
+    }
+
+    public void setTenantTableTemplate(String tenantTableTemplate) {
+        this.tenantTableTemplate = tenantTableTemplate;
+    }
+
+    public String getTenantKeyspace() {
+        return tenantKeyspace != null ? tenantKeyspace : keyspace;
+    }
+
+    public void setTenantKeyspace(String tenantKeyspace) {
+        this.tenantKeyspace = tenantKeyspace;
+    }
+
+    public String getTenantTableCreateTemplate() {
+        return tenantTableCreateTemplate;
+    }
+
+    public void setTenantTableCreateTemplate(String tenantTableCreateTemplate) {
+        this.tenantTableCreateTemplate = tenantTableCreateTemplate;
     }
 
     @Override
@@ -255,16 +202,9 @@ public class StoreConfiguration {
                 ", pool=" + pool +
                 ", loadBalancingPolicyName='" + loadBalancingPolicyName + '\'' +
                 ", protocolVersion='" + protocolVersion + '\'' +
-                ", fpChance=" + fpChance +
-                ", dclocalReadRepairChance=" + dclocalReadRepairChance +
-                ", gcGraceSeconds=" + gcGraceSeconds +
-                ", readRepairChance=" + readRepairChance +
-                ", memtableFlushPeriodInMs=" + memtableFlushPeriodInMs +
-                ", compactionMinThreshold=" + compactionMinThreshold +
-                ", uncheckedTombstoneCompaction=" + uncheckedTombstoneCompaction +
-                ", tombstoneThreshold=" + tombstoneThreshold +
-                ", compactionClass='" + compactionClass + '\'' +
-                ", compression='" + compression + '\'' +
+                ", tenantTableTemplate='" + tenantTableTemplate + '\'' +
+                ", tenantKeyspace='" + tenantKeyspace + '\'' +
+                ", tenantTableCreateTemplate='" + tenantTableCreateTemplate + '\'' +
                 '}';
     }
 }

@@ -22,6 +22,24 @@ class disthene (
   $store_batch = 'true',
   $store_batch_size = '200',
   $store_pool = '2',
+  $store_load_balancing_policy = "TokenDcAwareRoundRobinPolicy",
+  $store_protocol_version = "V2",
+  $store_tenant_keyspace = "metric",
+  $store_tenant_table_template = "metric_%s_%d",
+  $store_tenant_table_create_template = "CREATE TABLE IF NOT EXISTS %s.%s (
+  path text,
+  time bigint,
+  data list<double>,
+  PRIMARY KEY ((path), time)
+) WITH CLUSTERING ORDER BY (time ASC)
+  AND bloom_filter_fp_chance = 0.01
+  AND caching = {'keys':'ALL'}
+  AND compaction = {'min_threshold': '2', 'unchecked_tombstone_compaction': 'true', 'tombstone_compaction_interval': '86400', 'min_sstable_size': '104857600', 'tombstone_threshold': '0.1', 'bucket_low': '0.5', 'bucket_high': '1.5', 'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy'}
+  AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
+  AND dclocal_read_repair_chance = 0.1
+  AND default_time_to_live = 0
+  AND gc_grace_seconds = 43200
+  AND read_repair_chance = 0.1;",
 
   $index_name = 'disthene',
   $index_cluster = [$::ipaddress],

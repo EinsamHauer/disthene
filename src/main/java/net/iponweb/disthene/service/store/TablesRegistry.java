@@ -8,6 +8,9 @@ import org.apache.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Pattern;
 
 /**
  * @author Andrei Ivanov
@@ -16,33 +19,23 @@ public class TablesRegistry {
     private Logger logger = Logger.getLogger(TablesRegistry.class);
 
     private static final String TABLE_QUERY = "SELECT COUNT(1) FROM SYSTEM.SCHEMA_COLUMNFAMILIES WHERE KEYSPACE_NAME=? AND COLUMNFAMILY_NAME=?";
-    private static final String TABLE_TEMPLATE = "%s_%d_metric";
     private static final String UPSERT_QUERY = "UPDATE %s.%s USING TTL ? SET data = data + ? WHERE path = ? AND time = ?;";
-
-    // todo: configure table properties
-    private static final String TABLE_CREATE = "CREATE TABLE IF NOT EXISTS %s.%s (\n" +
-            "  path text,\n" +
-            "  time bigint,\n" +
-            "  data list<double>,\n" +
-            "  PRIMARY KEY ((path), time)\n" +
-            ") WITH\n" +
-            "  bloom_filter_fp_chance=%f AND\n" +
-            "  caching='{\"keys\":\"ALL\"}' AND\n" +
-            "  dclocal_read_repair_chance=%f AND\n" +
-            "  gc_grace_seconds=%d AND\n" +
-            "  read_repair_chance=%f AND\n" +
-            "  memtable_flush_period_in_ms=%d AND\n" +
-            "  compaction={'min_threshold': '%d', 'unchecked_tombstone_compaction': '%b', 'tombstone_threshold': '%f', 'class': '%s'} AND\n" +
-            "  compression={'sstable_compression': '%s'};";
 
     private final Map<String, PreparedStatement> tables = new HashMap<>();
     private Session session;
     private StoreConfiguration storeConfiguration;
     private final PreparedStatement queryStatement;
 
+    private String tableTemplate;
+    private ConcurrentMap<String, String> tenants = new ConcurrentHashMap<>();
+    private Pattern normalizationPattern = Pattern.compile("[^0-9a-zA-Z_]");
+
+
+
     public TablesRegistry(Session session, StoreConfiguration storeConfiguration) {
         this.session = session;
         this.storeConfiguration = storeConfiguration;
+        this.tableTemplate = storeConfiguration.getTenantTableTemplate();
 
         queryStatement = session.prepare(TABLE_QUERY);
     }
@@ -50,7 +43,7 @@ public class TablesRegistry {
     public PreparedStatement getStatement(String tenant, int rollup) {
         logger.trace(String.format("Getting statement for %s, %d", tenant, rollup));
 
-        String table = String.format(TABLE_TEMPLATE, tenant, rollup);
+        String table = String.format(tableTemplate, getNormalizedTenant(tenant), rollup);
         if (tables.containsKey(table)) return tables.get(table);
 
         synchronized (this) {
@@ -61,15 +54,20 @@ public class TablesRegistry {
                 if (!checkTable(table)) {
                     logger.debug(String.format("Table %s not found. Creating", table));
 
-                    ResultSet resultSet = session.execute(getCreateTableQuery(table));
-                    if (!resultSet.wasApplied()) {
-                        throw new RuntimeException(String.format("Couldn't create table %s", table));
+                    try {
+                        ResultSet resultSet = session.execute(getCreateTableQuery(table));
+                        if (!resultSet.wasApplied()) {
+                            logger.error(String.format("Couldn't create table %s", table));
+                        } else {
+                            logger.debug(String.format("Created table %s. Preparing statement.", table));
+                            tables.put(table, session.prepare(String.format(UPSERT_QUERY, storeConfiguration.getTenantKeyspace(), table)));
+                        }
+                    } catch (Exception e) {
+                        logger.error(String.format("Couldn't create table %s", table), e);
                     }
-                    logger.debug(String.format("Created table %s. Preparing statement.", table));
-                    tables.put(table, session.prepare(String.format(UPSERT_QUERY, storeConfiguration.getKeyspace(), table)));
                 } else {
                     logger.debug(String.format("Found table %s. Preparing statement", table));
-                    tables.put(table, session.prepare(String.format(UPSERT_QUERY, storeConfiguration.getKeyspace(), table)));
+                    tables.put(table, session.prepare(String.format(UPSERT_QUERY, storeConfiguration.getTenantKeyspace(), table)));
                 }
             }
         }
@@ -78,26 +76,22 @@ public class TablesRegistry {
     }
 
     private String getCreateTableQuery(String table) {
-        return String.format(TABLE_CREATE,
-                storeConfiguration.getKeyspace(),
-                table,
-                storeConfiguration.getFpChance(),
-                storeConfiguration.getDclocalReadRepairChance(),
-                storeConfiguration.getGcGraceSeconds(),
-                storeConfiguration.getReadRepairChance(),
-                storeConfiguration.getMemtableFlushPeriodInMs(),
-                storeConfiguration.getCompactionMinThreshold(),
-                storeConfiguration.isUncheckedTombstoneCompaction(),
-                storeConfiguration.getTombstoneThreshold(),
-                storeConfiguration.getCompactionClass(),
-                storeConfiguration.getCompression()
+        return String.format(storeConfiguration.getTenantTableCreateTemplate(),
+                storeConfiguration.getTenantKeyspace(),
+                table
                 );
     }
 
-
     private boolean checkTable(String table) {
-        ResultSet resultSet = session.execute(queryStatement.bind(storeConfiguration.getKeyspace(), table));
+        ResultSet resultSet = session.execute(queryStatement.bind(storeConfiguration.getTenantKeyspace(), table));
         return resultSet.one().getLong(0) > 0;
     }
 
+    private String getNormalizedTenant(String tenant) {
+        if (tenants.containsKey(tenant)) return tenants.get(tenant);
+
+        String normalizedTenant = normalizationPattern.matcher(tenant).replaceAll("_");
+        tenants.putIfAbsent(tenant, normalizedTenant);
+        return normalizedTenant;
+    }
 }
