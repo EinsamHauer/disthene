@@ -17,6 +17,10 @@ JAVA_OPTS="$JAVA_OPTS -Dcom.sun.management.jmxremote.port=7199 -Dcom.sun.managem
 # default is /etc/disthene/blacklist.yaml
 # DISTHENE_BLACKLIST_FILE=
 
+# Alternative path to whitelist file
+# default is /etc/disthene/whitelist.yaml
+# DISTHENE_WHITELIST_FILE=
+
 # Alternative path to aggragation config file
 # default is /etc/disthene/aggregator.yaml
 # DISTHENE_AGGREGATION_CONFIG_FILE=

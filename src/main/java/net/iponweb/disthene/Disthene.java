@@ -27,12 +27,13 @@ import sun.misc.SignalHandler;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
-import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -46,11 +47,13 @@ public class Disthene {
 
     private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yaml";
     private static final String DEFAULT_BLACKLIST_LOCATION = "/etc/disthene/blacklist.yaml";
+    private static final String DEFAULT_WHITELIST_LOCATION = "/etc/disthene/whitelist.yaml";
     private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
     private String configLocation;
     private String blacklistLocation;
+    private String whitelistLocation;
     private String aggregationConfigLocation;
 
     private MBassador<DistheneEvent> bus;
@@ -63,9 +66,10 @@ public class Disthene {
     private RollupService rollupService;
     private CarbonServer carbonServer;
 
-    public Disthene(String configLocation, String blacklistLocation, String aggregationConfigLocation) {
+    public Disthene(String configLocation, String blacklistLocation, String whitelistLocation, String aggregationConfigLocation) {
         this.configLocation = configLocation;
         this.blacklistLocation = blacklistLocation;
+        this.whitelistLocation = whitelistLocation;
         this.aggregationConfigLocation = aggregationConfigLocation;
     }
 
@@ -91,10 +95,27 @@ public class Disthene {
                     })
             );
 
-            logger.info("Loading blacklists");
-            in = Files.newInputStream(Paths.get(blacklistLocation));
-            BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
-            in.close();
+            logger.info("Loading blacklists & whitelists");
+            Map<String, List<String>> blacklistRules = Collections.emptyMap();
+            Map<String, List<String>> whitelistRules = Collections.emptyMap();
+
+            if (new File(blacklistLocation).exists()) {
+                in = Files.newInputStream(Paths.get(blacklistLocation));
+                //noinspection unchecked
+                Map<String, List<String>> map = (Map<String, List<String>>) yaml.load(in);
+                if (map != null) blacklistRules = map;
+                in.close();
+            }
+
+            if (new File(whitelistLocation).exists()) {
+                in = Files.newInputStream(Paths.get(whitelistLocation));
+                //noinspection unchecked
+                Map<String, List<String>> map = (Map<String, List<String>>) yaml.load(in);
+                if (map != null) whitelistRules = map;
+                in.close();
+            }
+
+            BlackListConfiguration blackListConfiguration = new BlackListConfiguration(blacklistRules, whitelistRules);
             logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
             blacklistService = new BlacklistService(blackListConfiguration);
 
@@ -122,6 +143,7 @@ public class Disthene {
 
             logger.info("Loading aggregation rules");
             in = Files.newInputStream(Paths.get(aggregationConfigLocation));
+            @SuppressWarnings("unchecked")
             AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
             in.close();
             logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
@@ -146,11 +168,12 @@ public class Disthene {
         }
     }
 
-    public static void main(String[] args) throws MalformedURLException {
+    public static void main(String[] args) {
         Options options = new Options();
         options.addOption("c", "config", true, "config location");
         options.addOption("l", "log-config", true, "log config location");
         options.addOption("b", "blacklist", true, "blacklist location");
+        options.addOption("w", "whitelist", true, "whitelist location");
         options.addOption("a", "agg-config", true, "aggregation config location");
 
         CommandLineParser parser = new GnuParser();
@@ -162,6 +185,7 @@ public class Disthene {
 
             new Disthene(commandLine.getOptionValue("c", DEFAULT_CONFIG_LOCATION),
                     commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION),
+                    commandLine.getOptionValue("w", DEFAULT_WHITELIST_LOCATION),
                     commandLine.getOptionValue("a", DEFAULT_AGGREGATION_CONFIG_LOCATION)
             ).run();
 
@@ -169,6 +193,9 @@ public class Disthene {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("Disthene", options);
         } catch (Exception e) {
+            if (logger != null) {
+                logger.fatal("Start failed", e);
+            }
             System.out.println("Start failed");
             e.printStackTrace();
         }
@@ -184,8 +211,27 @@ public class Disthene {
             logger.info("Reloading blacklists");
             try {
                 Yaml yaml = new Yaml();
+
+                Map<String, List<String>> blacklistRules = Collections.emptyMap();
+                Map<String, List<String>> whitelistRules = Collections.emptyMap();
+
+                if (new File(blacklistLocation).exists()) {
+                    InputStream in = Files.newInputStream(Paths.get(blacklistLocation));
+                    //noinspection unchecked
+                    Map<String, List<String>> map = (Map<String, List<String>>) yaml.load(in);
+                    if (map != null) blacklistRules = map;
+                    in.close();
+                }
+
+                if (new File(whitelistLocation).exists()) {
+                    InputStream in = Files.newInputStream(Paths.get(whitelistLocation));
+                    //noinspection unchecked
+                    Map<String, List<String>> map = (Map<String, List<String>>) yaml.load(in);
+                    if (map != null) whitelistRules = map;
+                    in.close();
+                }
                 InputStream in = Files.newInputStream(Paths.get(blacklistLocation));
-                BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
+                BlackListConfiguration blackListConfiguration = new BlackListConfiguration(blacklistRules, whitelistRules);
                 in.close();
 
                 blacklistService.setRules(blackListConfiguration);
@@ -200,6 +246,7 @@ public class Disthene {
             try {
                 Yaml yaml = new Yaml();
                 InputStream in = Files.newInputStream(Paths.get(aggregationConfigLocation));
+                @SuppressWarnings("unchecked")
                 AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
                 in.close();
 
