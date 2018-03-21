@@ -58,6 +58,7 @@ class disthene (
 
   $custom_aggregator_config = false,
   $custom_blacklist_config = false,
+  $custom_whitelist_config = false,
   $custom_log_config = false,
 )
 {
@@ -73,6 +74,13 @@ class disthene (
   }
   else {
     $disthene_blacklist_config = 'puppet:///modules/disthene/blacklist.yaml'
+  }
+
+  if $custom_whitelist_config {
+    $disthene_whitelist_config = 'puppet:///modules/config/whitelist.yaml'
+  }
+  else {
+    $disthene_whitelist_config = 'puppet:///modules/disthene/whitelist.yaml'
   }
 
   if $custom_log_config {
@@ -101,6 +109,14 @@ class disthene (
     ensure  => present,
     path    => '/etc/disthene/blacklist.yaml',
     source  => $disthene_blacklist_config,
+    require => Package['disthene'],
+    notify  => Service['disthene'],
+  }
+
+  file { 'disthene_whitelist_config':
+    ensure  => present,
+    path    => '/etc/disthene/whitelist.yaml',
+    source  => $disthene_whitelist_config,
     require => Package['disthene'],
     notify  => Service['disthene'],
   }

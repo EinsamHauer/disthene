@@ -9,24 +9,35 @@ import java.util.Map;
  */
 public class BlackListConfiguration {
 
-    private Map<String, List<String>> rules = new HashMap<>();
+    private Map<String, List<String>> blackListRules;
+    private Map<String, List<String>> whiteListRules;
 
-    public BlackListConfiguration(Map<String, List<String>> rules) {
-        this.rules = rules;
+    public BlackListConfiguration(Map<String, List<String>> blackListRules, Map<String, List<String>> whiteListRules) {
+        this.blackListRules = blackListRules;
+        this.whiteListRules = whiteListRules;
     }
 
-    public Map<String, List<String>> getRules() {
-        return rules;
+    public Map<String, List<String>> getBlackListRules() {
+        return blackListRules;
     }
 
-    public void setRules(Map<String, List<String>> rules) {
-        this.rules = rules;
+    public void setBlackListRules(Map<String, List<String>> blackListRules) {
+        this.blackListRules = blackListRules;
+    }
+
+    public Map<String, List<String>> getWhiteListRules() {
+        return whiteListRules;
+    }
+
+    public void setWhiteListRules(Map<String, List<String>> whiteListRules) {
+        this.whiteListRules = whiteListRules;
     }
 
     @Override
     public String toString() {
         return "BlackListConfiguration{" +
-                "rules=" + rules +
+                "blackListRules=" + blackListRules +
+                ", whiteListRules=" + whiteListRules +
                 '}';
     }
 }
