@@ -12,6 +12,8 @@ import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricReceivedEvent;
 import org.apache.log4j.Logger;
 
+import java.util.Set;
+
 /**
  * @author Andrei Ivanov
  */
@@ -20,10 +22,14 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
     private MBassador<DistheneEvent> bus;
     private Rollup rollup;
+    private Set<String> authorizedTenants;
+    private boolean allowAll;
 
-    public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup) {
+    public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup, Set<String> authorizedTenants, boolean allowAll) {
         this.bus = bus;
         this.rollup = rollup;
+        this.authorizedTenants = authorizedTenants;
+        this.allowAll = allowAll;
     }
 
     @Override
@@ -36,10 +42,20 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
                 logger.warn("Metric is from distant past (older than 1 hour): " + metric);
             }
 
-            if (CharMatcher.ASCII.matchesAllOf(metric.getPath()) && CharMatcher.ASCII.matchesAllOf(metric.getTenant())) {
-                bus.post(new MetricReceivedEvent(metric)).now();
-            } else {
+            boolean isValid = true;
+
+            if (!allowAll && !authorizedTenants.contains(metric.getTenant())) {
+                isValid = false;
+                logger.error("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
+            }
+
+            if (!CharMatcher.ASCII.matchesAllOf(metric.getPath()) || !CharMatcher.ASCII.matchesAllOf(metric.getTenant())) {
+                isValid = false;
                 logger.warn("Non ASCII characters received, discarding: " + metric);
+            }
+
+            if (isValid) {
+                bus.post(new MetricReceivedEvent(metric)).now();
             }
         } catch (Exception e) {
             logger.trace(e);

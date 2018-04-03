@@ -13,6 +13,8 @@ public class CarbonConfiguration {
     private List<Rollup> rollups = new ArrayList<>();
     private Rollup baseRollup;
     private int aggregatorDelay;
+    private List<String> authorizedTenants = new ArrayList<>();
+    private boolean allowAll = true;
 
     public String getBind() {
         return bind;
@@ -51,6 +53,22 @@ public class CarbonConfiguration {
         return baseRollup;
     }
 
+    public List<String> getAuthorizedTenants() {
+        return authorizedTenants;
+    }
+
+    public void setAuthorizedTenants(List<String> authorizedTenants) {
+        this.authorizedTenants = authorizedTenants;
+    }
+
+    public boolean isAllowAll() {
+        return allowAll;
+    }
+
+    public void setAllowAll(boolean allowAll) {
+        this.allowAll = allowAll;
+    }
+
     @Override
     public String toString() {
         return "CarbonConfiguration{" +
@@ -59,6 +77,8 @@ public class CarbonConfiguration {
                 ", rollups=" + rollups +
                 ", baseRollup=" + baseRollup +
                 ", aggregatorDelay=" + aggregatorDelay +
+                ", authorizedTenants=" + authorizedTenants +
+                ", allowAll=" + allowAll +
                 '}';
     }
 }
