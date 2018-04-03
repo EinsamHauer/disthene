@@ -12,6 +12,8 @@ import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import org.apache.log4j.Logger;
 
+import java.util.HashSet;
+
 /**
  * @author Andrei Ivanov
  */
@@ -42,7 +44,11 @@ public class CarbonServer {
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, false, Delimiters.lineDelimiter()));
-                        p.addLast(new CarbonServerHandler(bus, configuration.getCarbon().getBaseRollup()));
+                        p.addLast(new CarbonServerHandler(
+                                bus,
+                                configuration.getCarbon().getBaseRollup(),
+                                new HashSet<>(configuration.getCarbon().getAuthorizedTenants()),
+                                configuration.getCarbon().isAllowAll()));
                     }
 
                     @Override
