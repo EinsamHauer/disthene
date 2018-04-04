@@ -5,6 +5,9 @@ carbon:
     - 60s:5356800s
     - 900s:62208000s
   aggregatorDelay: 90
+  authorizedTenants:
+    - "tenant1"
+  allowAll: false
 store:
   cluster:
     - "cassandra-1"

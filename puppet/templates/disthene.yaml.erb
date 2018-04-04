@@ -6,6 +6,15 @@ carbon:
     - <%= rollup %>
 <% end -%>
   aggregatorDelay: <%= @carbon_aggregator_delay %>
+<%if @carbon_authorized_tenants.empty? -%>
+  authorizedTenants: []
+<%else -%>
+  authorizedTenants:
+<% @carbon_authorized_tenants.each do |tenant| -%>
+    - "<%= tenant %>"
+<% end -%>
+<% end -%>
+  allowAll: <%= @carbon_allow_all %>
 store:
   cluster:
 <% @store_cluster.each do |node| -%>

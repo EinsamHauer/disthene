@@ -10,6 +10,8 @@ class disthene (
   $carbon_port = '2003',
   $carbon_rollups = ['60s:5356800s','900s:62208000s'],
   $carbon_aggregator_delay = '100',
+  $carbon_authorized_tenants = [],
+  $carbon_allow_all = 'true',
 
   $store_cluster = [$::ipaddress],
   $store_port = '9042',
