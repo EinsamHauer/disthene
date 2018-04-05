@@ -25,7 +25,7 @@ import java.util.concurrent.Executors;
  */
 @Listener(references = References.Strong)
 public class CassandraService {
-    private Logger logger = Logger.getLogger(CassandraService.class);
+    private static final Logger logger = Logger.getLogger(CassandraService.class);
 
     private Cluster cluster;
     private Session session;

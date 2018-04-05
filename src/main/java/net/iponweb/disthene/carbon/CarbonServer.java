@@ -21,7 +21,7 @@ import java.util.HashSet;
 
 public class CarbonServer {
     private static final int MAX_FRAME_LENGTH = 8192 ;
-    private Logger logger = Logger.getLogger(CarbonServer.class);
+    private static final Logger logger = Logger.getLogger(CarbonServer.class);
 
     private DistheneConfiguration configuration;
 

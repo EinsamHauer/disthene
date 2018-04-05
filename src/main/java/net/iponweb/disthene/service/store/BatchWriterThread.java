@@ -20,7 +20,7 @@ class BatchWriterThread extends WriterThread {
     //todo: interval via config?
     private static final long INTERVAL = 60_000;
 
-    private Logger logger = Logger.getLogger(BatchWriterThread.class);
+    private static final Logger logger = Logger.getLogger(BatchWriterThread.class);
 
     private int batchSize;
 

@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class IndexService {
     private static final String SCHEDULER_NAME = "distheneIndexCacheExpire";
 
-    private Logger logger = Logger.getLogger(IndexService.class);
+    private static final Logger logger = Logger.getLogger(IndexService.class);
 
     private IndexConfiguration indexConfiguration;
     private TransportClient client;

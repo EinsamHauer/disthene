@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class StatsService implements StatsServiceMBean {
     private static final String SCHEDULER_NAME = "distheneStatsFlusher";
 
-    private Logger logger = Logger.getLogger(StatsService.class);
+    private static final Logger logger = Logger.getLogger(StatsService.class);
 
     private StatsConfiguration statsConfiguration;
 

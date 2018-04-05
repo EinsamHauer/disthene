@@ -21,7 +21,7 @@ import java.util.concurrent.Executor;
  * @author Andrei Ivanov
  */
 public class SingleWriterThread extends WriterThread {
-    private Logger logger = Logger.getLogger(SingleWriterThread.class);
+    private static final Logger logger = Logger.getLogger(SingleWriterThread.class);
 
     public SingleWriterThread(String name, MBassador<DistheneEvent> bus, Session session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor) {
         super(name, bus, session, tablesRegistry, metrics, executor);

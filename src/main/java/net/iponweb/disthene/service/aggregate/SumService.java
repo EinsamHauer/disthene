@@ -35,7 +35,7 @@ public class SumService {
     private static final int RATE = 60;
     private volatile boolean shuttingDown = false;
 
-    private Logger logger = Logger.getLogger(SumService.class);
+    private static final Logger logger = Logger.getLogger(SumService.class);
 
     private MBassador<DistheneEvent> bus;
     private DistheneConfiguration distheneConfiguration;

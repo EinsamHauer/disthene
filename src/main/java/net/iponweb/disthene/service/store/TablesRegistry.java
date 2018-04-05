@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
  * @author Andrei Ivanov
  */
 public class TablesRegistry {
-    private Logger logger = Logger.getLogger(TablesRegistry.class);
+    private static final Logger logger = Logger.getLogger(TablesRegistry.class);
 
     private static final String TABLE_QUERY = "SELECT COUNT(1) FROM SYSTEM.SCHEMA_COLUMNFAMILIES WHERE KEYSPACE_NAME=? AND COLUMNFAMILY_NAME=?";
     private static final String UPSERT_QUERY = "UPDATE %s.%s USING TTL ? SET data = data + ? WHERE path = ? AND time = ?;";
