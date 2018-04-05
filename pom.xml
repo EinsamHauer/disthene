@@ -4,7 +4,7 @@
     <groupId>net.iponweb.disthene</groupId>
     <artifactId>disthene</artifactId>
     <packaging>jar</packaging>
-    <version>0.1.17.iow</version>
+    <version>0.1.18.iow</version>
     <name>disthene</name>
     <url>http://maven.apache.org</url>
     <dependencies>
@@ -84,6 +84,12 @@
             <artifactId>mbassador</artifactId>
             <version>1.2.1</version>
         </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.11</version>
+        </dependency>
+
     </dependencies>
     <build>
         <plugins>

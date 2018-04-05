@@ -58,7 +58,11 @@ public class CarbonConfiguration {
     }
 
     public void setAuthorizedTenants(List<String> authorizedTenants) {
-        this.authorizedTenants = authorizedTenants;
+        if (authorizedTenants != null) {
+            this.authorizedTenants = authorizedTenants;
+        } else {
+            this.authorizedTenants = new ArrayList<>();
+        }
     }
 
     public boolean isAllowAll() {

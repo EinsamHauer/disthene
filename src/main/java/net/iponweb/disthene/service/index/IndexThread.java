@@ -23,7 +23,7 @@ import java.util.Queue;
  * @author Andrei Ivanov
  */
 public class IndexThread extends Thread {
-    private Logger logger = Logger.getLogger(IndexThread.class);
+    private static final Logger logger = Logger.getLogger(IndexThread.class);
 
     protected volatile boolean shutdown = false;
 

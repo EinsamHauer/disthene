@@ -1,6 +1,5 @@
 package net.iponweb.disthene;
 
-import com.datastax.driver.core.policies.LatencyAwarePolicy;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.bus.common.Properties;
 import net.engio.mbassy.bus.config.BusConfiguration;
@@ -14,6 +13,7 @@ import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.service.aggregate.RollupService;
 import net.iponweb.disthene.service.aggregate.SumService;
+import net.iponweb.disthene.service.auth.TenantService;
 import net.iponweb.disthene.service.blacklist.BlacklistService;
 import net.iponweb.disthene.service.index.IndexService;
 import net.iponweb.disthene.service.metric.MetricService;
@@ -34,6 +34,7 @@ import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -64,6 +65,7 @@ public class Disthene {
     private CassandraService cassandraService;
     private SumService sumService;
     private RollupService rollupService;
+    private TenantService tenantService;
     private CarbonServer carbonServer;
 
     public Disthene(String configLocation, String blacklistLocation, String whitelistLocation, String aggregationConfigLocation) {
@@ -133,8 +135,6 @@ public class Disthene {
                 logger.error("Failed to create MBean: " + e);
             }
 
-
-
             logger.info("Creating ES index service");
             indexService = new IndexService(distheneConfiguration.getIndex(), bus);
 
@@ -153,8 +153,11 @@ public class Disthene {
             logger.info("Creating rollup aggregator");
             rollupService = new RollupService(bus, distheneConfiguration, distheneConfiguration.getCarbon().getRollups());
 
+            logger.info("Creating tenant authentication service");
+            tenantService = new TenantService(new HashSet<>(distheneConfiguration.getCarbon().getAuthorizedTenants()), distheneConfiguration.getCarbon().isAllowAll());
+
             logger.info("Starting carbon");
-            carbonServer = new CarbonServer(distheneConfiguration, bus);
+            carbonServer = new CarbonServer(distheneConfiguration, bus, tenantService);
             carbonServer.run();
 
             // adding signal handlers
@@ -254,6 +257,22 @@ public class Disthene {
                 logger.debug("Reloaded aggregation rules: " + aggregationConfiguration.toString());
             } catch (Exception e) {
                 logger.error("Reloading aggregation rules failed");
+                logger.error(e);
+            }
+
+            logger.info("Reloading allowed tenants");
+            try {
+                Yaml yaml = new Yaml();
+                InputStream in = Files.newInputStream(Paths.get(configLocation));
+                DistheneConfiguration distheneConfiguration = yaml.loadAs(in, DistheneConfiguration.class);
+                in.close();
+
+                tenantService.setRules(new HashSet<>(distheneConfiguration.getCarbon().getAuthorizedTenants()), distheneConfiguration.getCarbon().isAllowAll());
+                logger.debug("Reloaded allowed tenants: {allowAll="
+                        + distheneConfiguration.getCarbon().isAllowAll()
+                        + ", tenants=" + distheneConfiguration.getCarbon().getAuthorizedTenants());
+            } catch (Exception e) {
+                logger.error("Reloading allowed tenants failed");
                 logger.error(e);
             }
 
