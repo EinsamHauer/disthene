@@ -10,6 +10,7 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricReceivedEvent;
+import net.iponweb.disthene.service.auth.TenantService;
 import org.apache.log4j.Logger;
 
 import java.util.Set;
@@ -22,14 +23,12 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
     private MBassador<DistheneEvent> bus;
     private Rollup rollup;
-    private Set<String> authorizedTenants;
-    private boolean allowAll;
+    private TenantService tenantService;
 
-    public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup, Set<String> authorizedTenants, boolean allowAll) {
+    public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup, TenantService tenantService) {
         this.bus = bus;
         this.rollup = rollup;
-        this.authorizedTenants = authorizedTenants;
-        this.allowAll = allowAll;
+        this.tenantService = tenantService;
     }
 
     @Override
@@ -44,7 +43,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
             boolean isValid = true;
 
-            if (!allowAll && !authorizedTenants.contains(metric.getTenant())) {
+            if (!tenantService.isTenantAllowed(metric.getTenant())) {
                 isValid = false;
                 logger.error("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
             }

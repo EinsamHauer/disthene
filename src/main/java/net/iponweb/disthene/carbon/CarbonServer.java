@@ -10,6 +10,7 @@ import io.netty.handler.codec.Delimiters;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.service.auth.TenantService;
 import org.apache.log4j.Logger;
 
 import java.util.HashSet;
@@ -29,9 +30,12 @@ public class CarbonServer {
 
     private MBassador<DistheneEvent> bus;
 
-    public CarbonServer(DistheneConfiguration configuration, MBassador<DistheneEvent> bus) {
+    private TenantService tenantService;
+
+    public CarbonServer(DistheneConfiguration configuration, MBassador<DistheneEvent> bus, TenantService tenantService) {
         this.bus = bus;
         this.configuration = configuration;
+        this.tenantService = tenantService;
     }
 
     public void run() throws InterruptedException {
@@ -47,8 +51,7 @@ public class CarbonServer {
                         p.addLast(new CarbonServerHandler(
                                 bus,
                                 configuration.getCarbon().getBaseRollup(),
-                                new HashSet<>(configuration.getCarbon().getAuthorizedTenants()),
-                                configuration.getCarbon().isAllowAll()));
+                                tenantService));
                     }
 
                     @Override
