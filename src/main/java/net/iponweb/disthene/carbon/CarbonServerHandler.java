@@ -11,6 +11,7 @@ import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricReceivedEvent;
 import net.iponweb.disthene.service.auth.TenantService;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.log4j.Logger;
 
 import java.util.Set;
@@ -19,7 +20,9 @@ import java.util.Set;
  * @author Andrei Ivanov
  */
 public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
-    private Logger logger = Logger.getLogger(CarbonServerHandler.class);
+    private static final Logger logger = Logger.getLogger(CarbonServerHandler.class);
+
+    private static final CharMatcher PRINTABLE_WITHOUT_SPACE = CharMatcher.inRange('\u0021', '\u007e');
 
     private MBassador<DistheneEvent> bus;
     private Rollup rollup;
@@ -48,9 +51,9 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
                 logger.error("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
             }
 
-            if (!CharMatcher.ASCII.matchesAllOf(metric.getPath()) || !CharMatcher.ASCII.matchesAllOf(metric.getTenant())) {
+            if (!PRINTABLE_WITHOUT_SPACE.matchesAllOf(metric.getPath())) {
                 isValid = false;
-                logger.warn("Non ASCII characters received, discarding: " + metric);
+                logger.warn("Non printable characters in metric, discarding: " + metric + " (" + Hex.encodeHexString(metric.getPath().getBytes()) + ")");
             }
 
             if (isValid) {
