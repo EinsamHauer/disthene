@@ -48,7 +48,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
             if (!tenantService.isTenantAllowed(metric.getTenant())) {
                 isValid = false;
-                logger.error("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
+                logger.warn("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
             }
 
             if (!PRINTABLE_WITHOUT_SPACE.matchesAllOf(metric.getPath())) {

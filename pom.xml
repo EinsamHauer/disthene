@@ -4,7 +4,7 @@
     <groupId>net.iponweb.disthene</groupId>
     <artifactId>disthene</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.6</version>
+    <version>1.0.7</version>
     <name>disthene</name>
     <url>http://maven.apache.org</url>
     <dependencies>
