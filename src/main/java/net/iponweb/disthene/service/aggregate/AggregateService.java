@@ -26,7 +26,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * @author 
+ * @author PAAS <paas@cloud.dreamlab.pl>
  */
 @Listener(references= References.Strong)
 public class AggregateService {
@@ -64,13 +64,13 @@ public class AggregateService {
     }
 
     private ConcurrentMap<MetricKey, AverageRecord> getTimestampMap(long timestamp) {
+        /*
+	 Get or create new element of map to hold average values for given timestamp.
+	 */
         ConcurrentMap<MetricKey, AverageRecord> timestampMap = accumulator.get(timestamp);
         if (timestampMap == null) {
-            ConcurrentMap<MetricKey, AverageRecord> newTimestampMap = new ConcurrentHashMap<>();
-            timestampMap = accumulator.putIfAbsent(timestamp, newTimestampMap);
-            if (timestampMap == null) {
-                timestampMap = newTimestampMap;
-            }
+            timestampMap = new ConcurrentHashMap<>();
+            accumulator.putIfAbsent(timestamp, timestampMap);
         }
 
         return timestampMap;
@@ -79,11 +79,8 @@ public class AggregateService {
     private AverageRecord getAverageRecord(ConcurrentMap<MetricKey, AverageRecord> map, MetricKey metricKey) {
         AverageRecord averageRecord = map.get(metricKey);
         if (averageRecord == null) {
-            AverageRecord newAverageRecord = new AverageRecord();
-            averageRecord = map.putIfAbsent(metricKey, newAverageRecord);
-            if (averageRecord == null) {
-                averageRecord = newAverageRecord;
-            }
+            averageRecord = new AverageRecord();
+            map.putIfAbsent(metricKey, averageRecord);
         }
 
         return averageRecord;
@@ -100,8 +97,8 @@ public class AggregateService {
 
     private void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
-
-        while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay())) {
+        double sendAfterTimestamp = DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay();
+        while(accumulator.size() > 0 && (accumulator.firstKey() < sendAfterTimestamp)) {
             logger.debug("Adding base rollup flush for time: " + (new DateTime(accumulator.firstKey() * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
 
             // Get the earliest map
@@ -135,7 +132,7 @@ public class AggregateService {
 
         logger.debug("Flushing rollup metrics (" + metricsToFlush.size() + ")");
         if (rateLimiter != null) {
-            logger.debug("QPS is limited to " + (long) rateLimiter.getRate());
+            logger.debug("QPS is limited to " + rateLimiter.getRate());
         }
 
         for(Metric metric : metricsToFlush) {
