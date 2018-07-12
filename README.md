@@ -108,6 +108,8 @@ carbon:
     - 900s:62208000s
 # seconds to wait before flushing aggregated metrics   
   aggregatorDelay: 90
+# also aggregate the first rollup
+  aggregateBaseRollup: false
 store:
 # C* contact points, port, keyspace and table
   cluster:
