@@ -6,6 +6,7 @@ carbon:
     - <%= rollup %>
 <% end -%>
   aggregatorDelay: <%= @carbon_aggregator_delay %>
+  aggregateBaseRollup: <%= @carbon_aggregate_base_rollup %>
 store:
   cluster:
 <% @store_cluster.each do |node| -%>

@@ -5,6 +5,7 @@ carbon:
     - 60s:5356800s
     - 900s:62208000s
   aggregatorDelay: 90
+  aggregateBaseRollup: false
 store:
   cluster:
     - "cassandra-1"
