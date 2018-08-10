@@ -12,6 +12,7 @@ import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
+import net.iponweb.disthene.service.aggregate.AggregateService;
 import net.iponweb.disthene.service.aggregate.RollupService;
 import net.iponweb.disthene.service.aggregate.SumService;
 import net.iponweb.disthene.service.blacklist.BlacklistService;
@@ -56,6 +57,7 @@ public class Disthene {
     private MBassador<DistheneEvent> bus;
     private BlacklistService blacklistService;
     private MetricService metricService;
+    private AggregateService aggregateService;
     private StatsService statsService;
     private IndexService indexService;
     private CassandraService cassandraService;
@@ -99,7 +101,10 @@ public class Disthene {
             blacklistService = new BlacklistService(blackListConfiguration);
 
             logger.info("Creating metric service");
-            metricService = new MetricService(bus, blacklistService);
+            metricService = new MetricService(bus, blacklistService, distheneConfiguration);
+
+            logger.info("Creating base rollup aggregator");
+            aggregateService = new AggregateService(bus, distheneConfiguration);
 
             logger.info("Creating stats");
             statsService = new StatsService(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
@@ -111,8 +116,6 @@ public class Disthene {
             } catch (Exception e) {
                 logger.error("Failed to create MBean: " + e);
             }
-
-
 
             logger.info("Creating ES index service");
             indexService = new IndexService(distheneConfiguration.getIndex(), bus);
@@ -225,6 +228,9 @@ public class Disthene {
             // We will probably loose some last stats here. But leaving it to run will complicate things
             logger.info("Shutting down stats service");
             statsService.shutdown();
+
+	    logger.info("Shutting down base rollup aggregator");
+            aggregateService.shutdown();
 
             logger.info("Shutting down sum aggregator");
             sumService.shutdown();
