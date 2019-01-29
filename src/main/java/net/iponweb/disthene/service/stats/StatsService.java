@@ -74,22 +74,22 @@ public class StatsService implements StatsServiceMBean {
         return statsRecord;
     }
 
-    @Handler(rejectSubtypes = false)
+    @Handler()
     public void handle(MetricReceivedEvent metricReceivedEvent) {
         getStatsRecord(metricReceivedEvent.getMetric().getTenant()).incMetricsReceived();
     }
 
-    @Handler(rejectSubtypes = false)
+    @Handler()
     public void handle(MetricStoreEvent metricStoreEvent) {
         getStatsRecord(metricStoreEvent.getMetric().getTenant()).incMetricsWritten();
     }
 
-    @Handler(rejectSubtypes = false)
+    @Handler()
     public void handle(StoreSuccessEvent storeSuccessEvent) {
         storeSuccess.addAndGet(storeSuccessEvent.getCount());
     }
 
-    @Handler(rejectSubtypes = false)
+    @Handler()
     public void handle(StoreErrorEvent storeErrorEvent) {
         storeError.addAndGet(storeErrorEvent.getCount());
     }
@@ -136,7 +136,7 @@ public class StatsService implements StatsServiceMBean {
                     statsRecord.getMetricsReceived(),
                     timestamp
             );
-            bus.post(new MetricStoreEvent(metric)).now();
+            bus.post(new MetricReceivedEvent(metric)).now();
             lastMetricsReceivedPerTenant.put(tenant, statsRecord.getMetricsReceived());
 
             metric = new Metric(
@@ -147,7 +147,7 @@ public class StatsService implements StatsServiceMBean {
                     statsRecord.getMetricsWritten(),
                     timestamp
             );
-            bus.post(new MetricStoreEvent(metric)).now();
+            bus.post(new MetricReceivedEvent(metric)).now();
             lastMetricsReceivedPerTenant.put(tenant, statsRecord.getMetricsWritten());
 
             if (statsConfiguration.isLog()) {
@@ -163,7 +163,7 @@ public class StatsService implements StatsServiceMBean {
                 totalReceived,
                 timestamp
         );
-        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricReceivedEvent(metric)).now();
         lastMetricsReceived = totalReceived;
 
         metric = new Metric(
@@ -174,7 +174,7 @@ public class StatsService implements StatsServiceMBean {
                 totalWritten,
                 timestamp
         );
-        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricReceivedEvent(metric)).now();
         lastWriteCount = totalWritten;
 
         metric = new Metric(
@@ -185,7 +185,7 @@ public class StatsService implements StatsServiceMBean {
                 storeSuccess,
                 timestamp
         );
-        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricReceivedEvent(metric)).now();
         lastStoreSuccess = storeSuccess;
 
         metric = new Metric(
@@ -196,7 +196,7 @@ public class StatsService implements StatsServiceMBean {
                 storeError,
                 timestamp
         );
-        bus.post(new MetricStoreEvent(metric)).now();
+        bus.post(new MetricReceivedEvent(metric)).now();
         lastStoreError = storeError;
 
         if (statsConfiguration.isLog()) {
