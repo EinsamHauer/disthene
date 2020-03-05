@@ -14,14 +14,13 @@ import net.iponweb.disthene.service.auth.TenantService;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.log4j.Logger;
 
-import java.util.Set;
-
 /**
  * @author Andrei Ivanov
  */
 public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     private static final Logger logger = Logger.getLogger(CarbonServerHandler.class);
 
+    @SuppressWarnings("UnstableApiUsage")
     private static final CharMatcher PRINTABLE_WITHOUT_SPACE = CharMatcher.inRange('\u0021', '\u007e');
 
     private MBassador<DistheneEvent> bus;
@@ -35,7 +34,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         ByteBuf in = (ByteBuf) msg;
 
         try {
