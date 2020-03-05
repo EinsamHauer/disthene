@@ -70,7 +70,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
         ctx.channel().close();
 
         if (cause instanceof java.io.IOException) {
-            logger.trace(cause);
+            logger.trace("Exception caught in carbon handler", cause);
         } else {
             logger.error("Exception caught in carbon handler", cause);
         }
