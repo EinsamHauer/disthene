@@ -64,4 +64,15 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
         in.release();
     }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        ctx.channel().close();
+
+        if (cause instanceof java.io.IOException) {
+            logger.trace(cause);
+        } else {
+            logger.error("Exception caught in carbon handler", cause);
+        }
+    }
 }
