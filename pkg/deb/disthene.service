@@ -1,0 +1,13 @@
+[Unit]
+Description=Disthene server
+
+[Service]
+Type=simple
+User=disthene
+LimitNOFILE=1000000
+LimitMEMLOCK=infinity
+EnvironmentFile=/etc/default/disthene
+ExecStart=/usr/bin/java $JAVA_OPTS -jar /usr/lib/disthene/disthene.jar $OPTS
+
+[Install]
+WantedBy=multi-user.target

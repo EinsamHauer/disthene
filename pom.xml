@@ -4,7 +4,7 @@
     <groupId>net.iponweb.disthene</groupId>
     <artifactId>disthene</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.9</version>
+    <version>1.0.9+systemd</version>
     <name>disthene</name>
     <url>http://maven.apache.org</url>
     <dependencies>
@@ -171,25 +171,15 @@
                                 </data>
 
                                 <data>
-                                    <src>${basedir}/pkg/deb/init.sh</src>
-                                    <dst>disthene</dst>
+                                    <src>${basedir}/pkg/deb/disthene.service</src>
+                                    <dst>disthene.service</dst>
                                     <type>file</type>
                                     <mapper>
                                         <type>perm</type>
-                                        <prefix>/etc/init.d</prefix>
-                                        <filemode>755</filemode>
+                                        <prefix>/lib/systemd/system/</prefix>
+                                        <filemode>644</filemode>
                                     </mapper>
                                 </data>
-                                <data>
-                                    <src>${basedir}/pkg/deb/disthene</src>
-                                    <type>file</type>
-                                    <mapper>
-                                        <type>perm</type>
-                                        <prefix>/usr/bin</prefix>
-                                        <filemode>755</filemode>
-                                    </mapper>
-                                </data>
-
                                 <data>
                                     <src>${basedir}/config</src>
                                     <type>directory</type>
