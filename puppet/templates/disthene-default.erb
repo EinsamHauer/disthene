@@ -1,25 +1,25 @@
 # JAVA_OPTS
-JAVA_OPTS="-server"
-JAVA_OPTS="-Xms<%= @java_xms %> -Xmx<%= @java_xmx %>"
-JAVA_OPTS="$JAVA_OPTS -XX:+UseStringCache -XX:StringTableSize=<%= @java_string_table_size %>"
-JAVA_OPTS="$JAVA_OPTS <%= @java_extra_options %>"
+JAVA_OPTS="-Xms<%= @java_xms %> -Xmx<%= @java_xmx %> -XX:+UseStringCache -XX:StringTableSize=<%= @java_string_table_size %> <%= @java_extra_options %>"
 
 # Alternative path to config file
 # default is /etc/disthene/disthene.yaml
-# DISTHENE_CONFIG_FILE=
+# OPTS="-c /etc/disthene/disthene.yaml"
 
 # Alternative path to log4j config file
 # default is /etc/disthene/disthene-log4j.xml
-# DISTHENE_LOG_CONFIG_FILE=
+# OPTS="-l /etc/disthene/disthene-log4j.xml"
 
 # Alternative path to blacklist file
 # default is /etc/disthene/blacklist.yaml
-# DISTHENE_BLACKLIST_FILE=
+# OPTS="-b /etc/disthene/blacklist.yaml"
 
-# Alternative path to blacklist file
+# Alternative path to whitelist file
 # default is /etc/disthene/whitelist.yaml
-# DISTHENE_WHITELIST_FILE=
+# OPTS="-w /etc/disthene/whitelist.yaml"
 
 # Alternative path to aggragation config file
 # default is /etc/disthene/aggregator.yaml
-# DISTHENE_AGGREGATION_CONFIG_FILE=
+# OPTS="-a /etc/disthene/aggregator.yaml"
+#
+# Combine to set several alternative paths
+# OPTS="-c /etc/disthene/disthene.yaml -l /etc/disthene/disthene-log4j.xml -b /etc/disthene/blacklist.yaml"
