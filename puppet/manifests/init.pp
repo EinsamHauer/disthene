@@ -143,7 +143,7 @@ class disthene (
   service { 'disthene':
     ensure     => running,
     hasrestart => true,
-    restart    => '/etc/init.d/disthene reload',
+    restart    => '/bin/systemctl reload disthene.service',
     require    => [Package['disthene'],
       File['disthene_config'],
     #Sysctl['net.core.somaxconn']

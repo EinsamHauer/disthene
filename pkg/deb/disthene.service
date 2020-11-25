@@ -1,5 +1,7 @@
 [Unit]
 Description=Disthene server
+StartLimitIntervalSec=180
+StartLimitBurst=3
 
 [Service]
 Type=simple
@@ -8,6 +10,9 @@ LimitNOFILE=1000000
 LimitMEMLOCK=infinity
 EnvironmentFile=/etc/default/disthene
 ExecStart=/usr/bin/java $JAVA_OPTS -jar /usr/lib/disthene/disthene.jar $OPTS
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
