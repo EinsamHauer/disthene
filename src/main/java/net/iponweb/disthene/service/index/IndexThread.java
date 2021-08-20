@@ -1,18 +1,20 @@
 package net.iponweb.disthene.service.index;
 
 import net.iponweb.disthene.bean.Metric;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.MultiGetItemResponse;
-import org.elasticsearch.action.get.MultiGetRequestBuilder;
+import org.elasticsearch.action.get.MultiGetRequest;
 import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -23,34 +25,33 @@ import java.util.Queue;
  * @author Andrei Ivanov
  */
 public class IndexThread extends Thread {
-    private static final Logger logger = Logger.getLogger(IndexThread.class);
+    private static final Logger logger = LogManager.getLogger(IndexThread.class);
 
     protected volatile boolean shutdown = false;
 
-    private TransportClient client;
+    private final RestHighLevelClient client;
     protected Queue<Metric> metrics;
-    private String index;
-    private String type;
-    private int batchSize;
-    private int flushInterval;
+    private final String index;
+    private final int batchSize;
+    private final int flushInterval;
     private long lastFlushTimestamp = System.currentTimeMillis() / 1000L;
 
-    private MetricMultiGetRequestBuilder request;
-    private BulkProcessor bulkProcessor;
+    private MetricMultiGetRequest request;
+    private final BulkProcessor bulkProcessor;
 
-    public IndexThread(String name, TransportClient client, Queue<Metric> metrics, String index, String type, int batchSize, int flushInterval) {
+    public IndexThread(String name, RestHighLevelClient client, Queue<Metric> metrics, String index, int batchSize, int flushInterval) {
         super(name);
         this.client = client;
         this.metrics = metrics;
         this.index = index;
-        this.type = type;
         this.batchSize = batchSize;
         this.flushInterval = flushInterval;
 
-        request = new MetricMultiGetRequestBuilder(client, index, type);
+        request = new MetricMultiGetRequest(index);
 
         bulkProcessor = BulkProcessor.builder(
-                client,
+                (request, bulkListener) ->
+                        client.bulkAsync(request, RequestOptions.DEFAULT, bulkListener),
                 new BulkProcessor.Listener() {
                     @Override
                     public void beforeBulk(long executionId, BulkRequest request) {
@@ -65,7 +66,9 @@ public class IndexThread extends Thread {
                     public void afterBulk(long executionId, BulkRequest request, Throwable failure) {
                         logger.error(failure);
                     }
-                })
+                },
+                "bulk-processor-name"
+        )
                 .setBulkActions(batchSize)
                 .setFlushInterval(TimeValue.timeValueSeconds(flushInterval))
                 .setConcurrentRequests(1)
@@ -88,11 +91,15 @@ public class IndexThread extends Thread {
         }
 
         if (request.size() > 0) {
-            flush();
+            try {
+                flush();
+            } catch (Exception e) {
+                logger.error("Encountered error in busy loop: ", e);
+            }
         }
     }
 
-    private void addToBatch(Metric metric) {
+    private void addToBatch(Metric metric) throws IOException {
         request.add(metric);
 
         if (request.size() >= batchSize || (lastFlushTimestamp < System.currentTimeMillis() / 1000L - flushInterval)) {
@@ -101,10 +108,10 @@ public class IndexThread extends Thread {
         }
     }
 
-    private void flush() {
-        MultiGetResponse multiGetItemResponse = request.execute().actionGet();
+    private void flush() throws IOException {
+        MultiGetResponse multiGetResponse = client.mget(request, RequestOptions.DEFAULT);
 
-        for(MultiGetItemResponse response : multiGetItemResponse.getResponses()) {
+        for (MultiGetItemResponse response : multiGetResponse.getResponses()) {
             if (response.isFailed()) {
                 logger.error("Get failed: " + response.getFailure().getMessage());
             }
@@ -120,7 +127,7 @@ public class IndexThread extends Thread {
                     }
                     sb.append(parts[i]);
                     try {
-                        bulkProcessor.add(new IndexRequest(index, type, metric.getTenant() + "_" + sb.toString()).source(
+                        bulkProcessor.add(new IndexRequest(index).id(metric.getTenant() + "_" + sb.toString()).source(
                                 XContentFactory.jsonBuilder().startObject()
                                         .field("tenant", metric.getTenant())
                                         .field("path", sb.toString())
@@ -138,33 +145,30 @@ public class IndexThread extends Thread {
 
         }
 
-        request = new MetricMultiGetRequestBuilder(client, index, type);
+        request = new MetricMultiGetRequest(index);
     }
 
     public void shutdown() {
         shutdown = true;
     }
 
-    private class MetricMultiGetRequestBuilder extends MultiGetRequestBuilder {
+    private static class MetricMultiGetRequest extends MultiGetRequest {
 
-        private String index;
-        private String type;
+        private final String index;
         Map<String, Metric> metrics = new HashMap<>();
 
 
-        public MetricMultiGetRequestBuilder(Client client, String index, String type) {
-            super(client);
+        public MetricMultiGetRequest(String index) {
             this.index = index;
-            this.type = type;
         }
 
-        public MultiGetRequestBuilder add(Metric metric) {
+        public MultiGetRequest add(Metric metric) {
             metrics.put(metric.getId(), metric);
-            return super.add(index, type, metric.getId());
+            return super.add(new MultiGetRequest.Item(index, metric.getId()).fetchSourceContext(FetchSourceContext.DO_NOT_FETCH_SOURCE));
         }
 
         public int size() {
-            return  metrics.size();
+            return metrics.size();
         }
     }
 }

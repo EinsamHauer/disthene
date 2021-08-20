@@ -12,20 +12,22 @@ import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricReceivedEvent;
 import net.iponweb.disthene.service.auth.TenantService;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * @author Andrei Ivanov
  */
 public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
-    private static final Logger logger = Logger.getLogger(CarbonServerHandler.class);
+
+    private static final Logger logger = LogManager.getLogger(CarbonServerHandler.class);
 
     @SuppressWarnings("UnstableApiUsage")
     private static final CharMatcher PRINTABLE_WITHOUT_SPACE = CharMatcher.inRange('\u0021', '\u007e');
 
-    private MBassador<DistheneEvent> bus;
-    private Rollup rollup;
-    private TenantService tenantService;
+    private final MBassador<DistheneEvent> bus;
+    private final Rollup rollup;
+    private final TenantService tenantService;
 
     public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup, TenantService tenantService) {
         this.bus = bus;
@@ -50,6 +52,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
                 logger.warn("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
             }
 
+            //noinspection UnstableApiUsage
             if (!PRINTABLE_WITHOUT_SPACE.matchesAllOf(metric.getPath())) {
                 isValid = false;
                 logger.warn("Non printable characters in metric, discarding: " + metric + " (" + Hex.encodeHexString(metric.getPath().getBytes()) + ")");

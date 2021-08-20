@@ -1,17 +1,14 @@
 package net.iponweb.disthene.service.store;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
-import com.datastax.driver.core.Session;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.StoreErrorEvent;
 import net.iponweb.disthene.events.StoreSuccessEvent;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Collections;
 import java.util.Queue;
@@ -21,9 +18,9 @@ import java.util.concurrent.Executor;
  * @author Andrei Ivanov
  */
 public class SingleWriterThread extends WriterThread {
-    private static final Logger logger = Logger.getLogger(SingleWriterThread.class);
+    private static final Logger logger = LogManager.getLogger(SingleWriterThread.class);
 
-    public SingleWriterThread(String name, MBassador<DistheneEvent> bus, Session session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor) {
+    public SingleWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor) {
         super(name, bus, session, tablesRegistry, metrics, executor);
     }
 
@@ -49,30 +46,20 @@ public class SingleWriterThread extends WriterThread {
             return;
         }
 
-        ResultSetFuture future = session.executeAsync(
+        session.executeAsync(
                 statement.bind(
-                metric.getRollup() * metric.getPeriod(),
-                Collections.singletonList(metric.getValue()),
-                metric.getPath(),
-                metric.getTimestamp()
-        ));
-
-        Futures.addCallback(future,
-                new FutureCallback<ResultSet>() {
-                    @Override
-                    public void onSuccess(ResultSet result) {
-                        bus.post(new StoreSuccessEvent(1)).now();
-                    }
-
-                    @SuppressWarnings("NullableProblems")
-                    @Override
-                    public void onFailure(Throwable t) {
-                        bus.post(new StoreErrorEvent(1)).now();
-                        logger.error(t);
-                    }
-                },
-                executor
-        );
+                        metric.getRollup() * metric.getPeriod(),
+                        Collections.singletonList(metric.getValue()),
+                        metric.getPath(),
+                        metric.getTimestamp()
+                )).whenComplete((version, error) -> {
+            if (error != null) {
+                bus.post(new StoreErrorEvent(1)).now();
+                logger.error(error);
+            } else {
+                bus.post(new StoreSuccessEvent(1)).now();
+            }
+        });
     }
 
 }

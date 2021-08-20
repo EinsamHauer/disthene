@@ -13,7 +13,8 @@ import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -33,14 +34,14 @@ public class RollupService {
     private static final int RATE = 60;
     private volatile boolean shuttingDown = false;
 
-    private static final Logger logger = Logger.getLogger(RollupService.class);
+    private static final Logger logger = LogManager.getLogger(RollupService.class);
 
-    private MBassador<DistheneEvent> bus;
-    private DistheneConfiguration distheneConfiguration;
+    private final MBassador<DistheneEvent> bus;
+    private final DistheneConfiguration distheneConfiguration;
     private Rollup maxRollup;
-    private List<Rollup> rollups;
+    private final List<Rollup> rollups;
 
-    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
     private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AverageRecord>> accumulator = new ConcurrentSkipListMap<>();
 
@@ -56,15 +57,11 @@ public class RollupService {
             }
         }
 
-        scheduler.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                flush();
-            }
-        }, 60 - ((System.currentTimeMillis() / 1000L) % 60), RATE, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::flush, 60 - ((System.currentTimeMillis() / 1000L) % 60), RATE, TimeUnit.SECONDS);
     }
 
-    @Handler(rejectSubtypes = false)
+    @SuppressWarnings("unused")
+    @Handler()
     public void handle(MetricStoreEvent metricStoreEvent) {
         if (rollups.size() > 0 && maxRollup.getRollup() > metricStoreEvent.getMetric().getRollup()) {
             aggregate(metricStoreEvent.getMetric());
@@ -113,7 +110,7 @@ public class RollupService {
     private void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
-        while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2)) {
+        while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2L)) {
             logger.debug("Adding rollup flush for time: " + (new DateTime(accumulator.firstKey() * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
 
             // Get the earliest map
@@ -129,6 +126,7 @@ public class RollupService {
         }
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     private RateLimiter getFlushRateLimiter(int currentBatch) {
         /*
         The idea is that we'd like to be able to process ALL the contents of accumulator in 1/2 time till next rollup time.
@@ -146,11 +144,13 @@ public class RollupService {
         if (deadline - timestamp <= 0) return null;
 
         // 100 is an arbitrary small number here
-        double rate = Math.max(100, 2 * currentBatch / (deadline - timestamp));
+        double rate = Math.max(100, 2L * currentBatch / (deadline - timestamp));
 
+        //noinspection UnstableApiUsage
         return RateLimiter.create(rate);
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     private void doFlush(Collection<Metric> metricsToFlush, RateLimiter rateLimiter) {
         // We'd like to feed metrics in a more gentle manner here but not allowing the queue to grow.
 
@@ -188,9 +188,9 @@ public class RollupService {
         return ((long) Math.ceil(timestamp / (double) rollup.getRollup())) * rollup.getRollup();
     }
 
-    private class AverageRecord {
-        private AtomicDouble value = new AtomicDouble(0);
-        private AtomicInteger count = new AtomicInteger(0);
+    private static class AverageRecord {
+        private final AtomicDouble value = new AtomicDouble(0);
+        private final AtomicInteger count = new AtomicInteger(0);
 
         void addValue(double value) {
             this.value.addAndGet(value);

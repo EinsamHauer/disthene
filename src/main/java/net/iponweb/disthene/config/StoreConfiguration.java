@@ -1,12 +1,12 @@
 package net.iponweb.disthene.config;
 
-import net.iponweb.disthene.util.CassandraLoadBalancingPolicies;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author Andrei Ivanov
  */
+@SuppressWarnings("unused")
 public class StoreConfiguration {
     private List<String> cluster = new ArrayList<>();
     private String keyspace;
@@ -21,8 +21,6 @@ public class StoreConfiguration {
     private boolean batch;
     private int batchSize;
     private int pool;
-    private String loadBalancingPolicyName = CassandraLoadBalancingPolicies.tokenDcAwareRoundRobinPolicy;
-    private String protocolVersion = "V2";
     private String tenantTableTemplate = "metric_%s_%d"; //%s - tenant, %d rollup
     private String tenantKeyspace = null;
     private String tenantTableCreateTemplate = "CREATE TABLE IF NOT EXISTS %s.%s (\n" +
@@ -32,13 +30,13 @@ public class StoreConfiguration {
             "  PRIMARY KEY ((path), time)\n" +
             ") WITH CLUSTERING ORDER BY (time ASC)\n" +
             "  AND bloom_filter_fp_chance = 0.01\n" +
-            "  AND caching = 'KEYS_ONLY'\n" +
+            "  AND caching = {'keys': 'ALL'}\n" +
             "  AND compaction = {'min_threshold': '2', 'unchecked_tombstone_compaction': 'true', 'tombstone_compaction_interval': '86400', 'min_sstable_size': '104857600', 'tombstone_threshold': '0.1', 'bucket_low': '0.5', 'bucket_high': '1.5', 'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy'}\n" +
             "  AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}\n" +
-            "  AND dclocal_read_repair_chance = 0.1\n" +
+//            "  AND dclocal_read_repair_chance = 0.1\n" +
             "  AND default_time_to_live = 0\n" +
-            "  AND gc_grace_seconds = 43200\n" +
-            "  AND read_repair_chance = 0.1;\n";
+            "  AND gc_grace_seconds = 43200\n";// +
+//            "  AND read_repair_chance = 0.1;\n";
 
     public String getUserName() {
         return userName;
@@ -144,22 +142,6 @@ public class StoreConfiguration {
         this.columnFamily = columnFamily;
     }
 
-    public String getLoadBalancingPolicyName() {
-        return loadBalancingPolicyName;
-    }
-
-    public void setLoadBalancingPolicyName(String policy) {
-        this.loadBalancingPolicyName = policy;
-    }
-
-    public String getProtocolVersion() {
-        return protocolVersion;
-    }
-
-    public void setProtocolVersion(String protocolVersion) {
-        this.protocolVersion = protocolVersion;
-    }
-
     public String getTenantTableTemplate() {
         return tenantTableTemplate;
     }
@@ -200,8 +182,6 @@ public class StoreConfiguration {
                 ", batch=" + batch +
                 ", batchSize=" + batchSize +
                 ", pool=" + pool +
-                ", loadBalancingPolicyName='" + loadBalancingPolicyName + '\'' +
-                ", protocolVersion='" + protocolVersion + '\'' +
                 ", tenantTableTemplate='" + tenantTableTemplate + '\'' +
                 ", tenantKeyspace='" + tenantKeyspace + '\'' +
                 ", tenantTableCreateTemplate='" + tenantTableCreateTemplate + '\'' +

@@ -1,7 +1,6 @@
 package net.iponweb.disthene.service.store;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.events.DistheneEvent;
@@ -17,7 +16,7 @@ public abstract class WriterThread extends Thread {
     protected volatile boolean shutdown = false;
 
     protected MBassador<DistheneEvent> bus;
-    protected Session session;
+    protected CqlSession session;
 
     protected TablesRegistry tablesRegistry;
 
@@ -25,7 +24,7 @@ public abstract class WriterThread extends Thread {
 
     protected Executor executor;
 
-    public WriterThread(String name, MBassador<DistheneEvent> bus, Session session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor) {
+    public WriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor) {
         super(name);
         this.bus = bus;
         this.session = session;

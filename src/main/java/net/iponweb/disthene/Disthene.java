@@ -5,7 +5,6 @@ import net.engio.mbassy.bus.common.Properties;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
 import net.engio.mbassy.bus.error.IPublicationErrorHandler;
-import net.engio.mbassy.bus.error.PublicationError;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
@@ -20,7 +19,8 @@ import net.iponweb.disthene.service.metric.MetricService;
 import net.iponweb.disthene.service.stats.StatsService;
 import net.iponweb.disthene.service.store.CassandraService;
 import org.apache.commons.cli.*;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
@@ -52,14 +52,13 @@ public class Disthene {
     private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
-    private String configLocation;
-    private String blacklistLocation;
-    private String whitelistLocation;
-    private String aggregationConfigLocation;
+    private final String configLocation;
+    private final String blacklistLocation;
+    private final String whitelistLocation;
+    private final String aggregationConfigLocation;
 
     private MBassador<DistheneEvent> bus;
     private BlacklistService blacklistService;
-    private MetricService metricService;
     private StatsService statsService;
     private IndexService indexService;
     private CassandraService cassandraService;
@@ -89,12 +88,7 @@ public class Disthene {
                     .addFeature(Feature.SyncPubSub.Default())
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
                     .addFeature(dispatch)
-                    .setProperty(Properties.Handler.PublicationError, new IPublicationErrorHandler() {
-                        @Override
-                        public void handleError(PublicationError error) {
-                            logger.error(error);
-                        }
-                    })
+                    .setProperty(Properties.Handler.PublicationError, (IPublicationErrorHandler) error -> logger.error(error))
             );
 
             logger.info("Loading blacklists & whitelists");
@@ -122,7 +116,8 @@ public class Disthene {
             blacklistService = new BlacklistService(blackListConfiguration);
 
             logger.info("Creating metric service");
-            metricService = new MetricService(bus, blacklistService);
+            @SuppressWarnings("unused")
+            MetricService metricService = new MetricService(bus, blacklistService);
 
             logger.info("Creating stats");
             statsService = new StatsService(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
@@ -163,9 +158,17 @@ public class Disthene {
             carbonServer.run();
 
             // adding signal handlers
-            Signal.handle(new Signal("HUP"), new SighupSignalHandler());
+            try {
+                Signal.handle(new Signal("HUP"), new SighupSignalHandler());
+            } catch (IllegalArgumentException e) {
+                logger.warn("HUP signal is not available. Will not handle it");
+            }
 
-            Signal.handle(new Signal("TERM"), new SigtermSignalHandler());
+            try {
+                Signal.handle(new Signal("TERM"), new SigtermSignalHandler());
+            } catch (IllegalArgumentException e) {
+                logger.warn("TERM signal is not available. Will not handle it");
+            }
         } catch (IOException e) {
             logger.error(e);
         } catch (InterruptedException e) {
@@ -185,8 +188,8 @@ public class Disthene {
 
         try {
             CommandLine commandLine = parser.parse(options, args);
-            System.getProperties().setProperty("log4j.configuration", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
-            logger = Logger.getLogger(Disthene.class);
+            System.getProperties().setProperty("log4j.configurationFile", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
+            logger = LogManager.getLogger(Disthene.class);
 
             new Disthene(commandLine.getOptionValue("c", DEFAULT_CONFIG_LOCATION),
                     commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION),
@@ -200,9 +203,10 @@ public class Disthene {
         } catch (Exception e) {
             if (logger != null) {
                 logger.fatal("Start failed", e);
+            } else {
+                System.out.println("Start failed");
+                e.printStackTrace();
             }
-            System.out.println("Start failed");
-            e.printStackTrace();
         }
 
     }

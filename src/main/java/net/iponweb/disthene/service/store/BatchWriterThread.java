@@ -1,14 +1,16 @@
 package net.iponweb.disthene.service.store;
 
-import com.datastax.driver.core.*;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.config.DriverExecutionProfile;
+import com.datastax.oss.driver.api.core.cql.*;
+import com.datastax.oss.driver.api.core.metadata.Node;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.StoreErrorEvent;
 import net.iponweb.disthene.events.StoreSuccessEvent;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.Executor;
@@ -20,15 +22,15 @@ class BatchWriterThread extends WriterThread {
     //todo: interval via config?
     private static final long INTERVAL = 60_000;
 
-    private static final Logger logger = Logger.getLogger(BatchWriterThread.class);
+    private static final Logger logger = LogManager.getLogger(BatchWriterThread.class);
 
-    private int batchSize;
+    private final int batchSize;
 
-    private List<Statement> statements = new LinkedList<>();
+    private final List<BoundStatement> statements = new LinkedList<>();
 
     private long lastFlushTimestamp = System.currentTimeMillis();
 
-    BatchWriterThread(String name, MBassador<DistheneEvent> bus, Session session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor, int batchSize) {
+    BatchWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor, int batchSize) {
         super(name, bus, session, tablesRegistry, metrics, executor);
         this.batchSize = batchSize;
     }
@@ -61,10 +63,10 @@ class BatchWriterThread extends WriterThread {
 
         statements.add(
                 statement.bind(
-                            metric.getRollup() * metric.getPeriod(),
-                            Collections.singletonList(metric.getValue()),
-                            metric.getPath(),
-                            metric.getTimestamp()
+                        metric.getRollup() * metric.getPeriod(),
+                        Collections.singletonList(metric.getValue()),
+                        metric.getPath(),
+                        metric.getTimestamp()
                 )
         );
 
@@ -75,57 +77,36 @@ class BatchWriterThread extends WriterThread {
     }
 
     private void flush() {
-        List<List<Statement>> batches = splitByToken();
+        List<List<BatchableStatement<?>>> batches = splitByToken();
 
-        for (List<Statement> batchStatements : batches) {
-            BatchStatement batch = new BatchStatement(BatchStatement.Type.UNLOGGED);
+        for (List<BatchableStatement<?>> batchStatements : batches) {
+            BatchStatement batch = BatchStatement.newInstance(BatchType.UNLOGGED, batchStatements);
             final int batchSize = batchStatements.size();
 
-            for (Statement s : batchStatements) {
-                batch.add(s);
-            }
-
-            ResultSetFuture future = session.executeAsync(batch);
-            Futures.addCallback(future,
-                    new FutureCallback<ResultSet>() {
-                        @Override
-                        public void onSuccess(ResultSet result) {
+            session
+                    .executeAsync(batch)
+                    .whenComplete((version, error) -> {
+                        if (error != null) {
+                            bus.post(new StoreErrorEvent(batchSize)).now();
+                            logger.error(error);
+                        } else {
                             bus.post(new StoreSuccessEvent(batchSize)).now();
                         }
-
-                        @Override
-                        public void onFailure(Throwable t) {
-                            bus.post(new StoreErrorEvent(batchSize)).now();
-                            logger.error(t);
-                        }
-                    },
-                    executor
-            );
+                    });
         }
 
         statements.clear();
-
     }
 
-    private List<List<Statement>> splitByToken() {
-        Map<Set<Host>,List<Statement>> batches = new HashMap<>();
-        for (Statement statement : statements) {
-            Set<Host> hosts = new HashSet<>();
-
-            Iterator<Host> it = session.getCluster().getConfiguration().getPolicies().
-                    getLoadBalancingPolicy().newQueryPlan(statement.getKeyspace(), statement);
+    private List<List<BatchableStatement<?>>> splitByToken() {
+        Map<Optional<Node>, List<BatchableStatement<?>>> batches = new HashMap<>();
+        for (BoundStatement statement : statements) {
+            Queue<Node> nodes = session.getContext().getLoadBalancingPolicy(DriverExecutionProfile.DEFAULT_NAME).newQueryPlan(statement, session);
 
             // We are using TokenAwarePolicy without shuffling. Let's group by primary replica only then
-            if (it.hasNext()) {
-                hosts.add(it.next());
-            }
+            Optional<Node> primaryNode = nodes.isEmpty() ? Optional.empty() : Optional.of(nodes.poll());
 
-            List<Statement> tokenBatch = batches.get(hosts);
-            if (tokenBatch == null) {
-                tokenBatch = new ArrayList<>();
-                batches.put(hosts, tokenBatch);
-            }
-            tokenBatch.add(statement);
+            batches.computeIfAbsent(primaryNode, node -> new ArrayList<>()).add(statement);
         }
         return new ArrayList<>(batches.values());
     }
