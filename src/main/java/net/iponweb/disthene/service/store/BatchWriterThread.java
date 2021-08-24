@@ -13,6 +13,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 
 /**
@@ -30,27 +31,25 @@ class BatchWriterThread extends WriterThread {
 
     private long lastFlushTimestamp = System.currentTimeMillis();
 
-    BatchWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor, int batchSize) {
+    BatchWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, BlockingQueue<Metric> metrics, Executor executor, int batchSize) {
         super(name, bus, session, tablesRegistry, metrics, executor);
         this.batchSize = batchSize;
     }
 
     @Override
     public void run() {
-        while (!shutdown) {
-            Metric metric = metrics.poll();
-            if (metric != null) {
+        try {
+            while (!shutdown) {
+                Metric metric = metrics.take();
                 addToBatch(metric);
-            } else {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ignored) {
-                }
             }
-        }
 
-        if (statements.size() > 0) {
-            flush();
+            if (statements.size() > 0) {
+                flush();
+            }
+        } catch (InterruptedException e) {
+            logger.error("Thread interrupted", e);
+            this.interrupt();
         }
     }
 

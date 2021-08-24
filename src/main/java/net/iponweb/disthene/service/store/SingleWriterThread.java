@@ -11,7 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Collections;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 
 /**
@@ -20,22 +20,20 @@ import java.util.concurrent.Executor;
 public class SingleWriterThread extends WriterThread {
     private static final Logger logger = LogManager.getLogger(SingleWriterThread.class);
 
-    public SingleWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, Queue<Metric> metrics, Executor executor) {
+    public SingleWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, BlockingQueue<Metric> metrics, Executor executor) {
         super(name, bus, session, tablesRegistry, metrics, executor);
     }
 
     @Override
     public void run() {
-        while (!shutdown) {
-            Metric metric = metrics.poll();
-            if (metric != null) {
+        try {
+            while (!shutdown) {
+                Metric metric = metrics.take();
                 store(metric);
-            } else {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ignored) {
-                }
             }
+        } catch (InterruptedException e) {
+            logger.error("Thread interrupted", e);
+            this.interrupt();
         }
     }
 

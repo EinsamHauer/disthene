@@ -37,7 +37,7 @@ public class IndexService {
 
     // tenant -> path -> dummy
     private ConcurrentMap<String, ConcurrentMap<String, AtomicLong>> cache = new ConcurrentHashMap<>();
-    private final Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
+    private final BlockingQueue<Metric> metrics = new LinkedBlockingQueue<>();
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 

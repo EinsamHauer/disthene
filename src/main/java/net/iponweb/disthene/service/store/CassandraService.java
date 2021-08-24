@@ -22,8 +22,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
 /**
@@ -35,7 +37,7 @@ public class CassandraService {
 
     private final CqlSession session;
 
-    private final Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
+    private final BlockingQueue<Metric> metrics = new LinkedBlockingQueue<>();
     private final List<WriterThread> writerThreads = new ArrayList<>();
 
     public CassandraService(StoreConfiguration storeConfiguration, MBassador<DistheneEvent> bus) {

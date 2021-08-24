@@ -19,7 +19,7 @@ import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * @author Andrei Ivanov
@@ -30,7 +30,7 @@ public class IndexThread extends Thread {
     protected volatile boolean shutdown = false;
 
     private final RestHighLevelClient client;
-    protected Queue<Metric> metrics;
+    protected BlockingQueue<Metric> metrics;
     private final String index;
     private final int batchSize;
     private final int flushInterval;
@@ -39,7 +39,7 @@ public class IndexThread extends Thread {
     private MetricMultiGetRequest request;
     private final BulkProcessor bulkProcessor;
 
-    public IndexThread(String name, RestHighLevelClient client, Queue<Metric> metrics, String index, int batchSize, int flushInterval) {
+    public IndexThread(String name, RestHighLevelClient client, BlockingQueue<Metric> metrics, String index, int batchSize, int flushInterval) {
         super(name);
         this.client = client;
         this.metrics = metrics;
@@ -79,12 +79,8 @@ public class IndexThread extends Thread {
     public void run() {
         while (!shutdown) {
             try {
-                Metric metric = metrics.poll();
-                if (metric != null) {
-                    addToBatch(metric);
-                } else {
-                    Thread.sleep(100);
-                }
+                Metric metric = metrics.take();
+                addToBatch(metric);
             } catch (Exception e) {
                 logger.error("Encountered error in busy loop: ", e);
             }
@@ -150,6 +146,7 @@ public class IndexThread extends Thread {
 
     public void shutdown() {
         shutdown = true;
+        this.interrupt();
     }
 
     private static class MetricMultiGetRequest extends MultiGetRequest {
