@@ -7,8 +7,8 @@ import net.iponweb.disthene.config.Rollup;
  */
 public class Metric {
 
-    private MetricKey key;
-    private double value;
+    private final MetricKey key;
+    private final double value;
 
     public Metric(String input, Rollup rollup) {
         String[] splitInput = input.split("\\s");
@@ -60,10 +60,6 @@ public class Metric {
 
     public double getValue() {
         return value;
-    }
-
-    public void setValue(double value) {
-        this.value = value;
     }
 
     public long getTimestamp() {

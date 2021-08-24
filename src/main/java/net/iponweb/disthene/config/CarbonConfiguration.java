@@ -2,6 +2,7 @@ package net.iponweb.disthene.config;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author Andrei Ivanov
@@ -58,11 +59,7 @@ public class CarbonConfiguration {
     }
 
     public void setAuthorizedTenants(List<String> authorizedTenants) {
-        if (authorizedTenants != null) {
-            this.authorizedTenants = authorizedTenants;
-        } else {
-            this.authorizedTenants = new ArrayList<>();
-        }
+        this.authorizedTenants = Objects.requireNonNullElseGet(authorizedTenants, ArrayList::new);
     }
 
     public boolean isAllowAll() {

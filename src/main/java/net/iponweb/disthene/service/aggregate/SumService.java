@@ -101,7 +101,6 @@ public class SumService {
         for(AggregationRule rule : rules) {
             Matcher m = rule.getSource().matcher(metric.getPath());
             if (m.matches()) {
-//                String destinationPath = rule.getDestination().replace("<data>", m.group("data"));
                 String destinationPath = rule.getPrefix() + m.group("data");
                 MetricKey destinationKey = new MetricKey(metric.getTenant(), destinationPath, metric.getRollup(), metric.getPeriod(), metric.getTimestamp());
                 getMetricValue(timestampMap, destinationKey).addAndGet(metric.getValue());

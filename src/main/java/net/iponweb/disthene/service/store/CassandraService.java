@@ -46,6 +46,7 @@ public class CassandraService {
                         .withStringList(DefaultDriverOption.CONTACT_POINTS, getContactPoints(storeConfiguration))
                         .withInt(DefaultDriverOption.CONNECTION_MAX_REQUESTS, storeConfiguration.getMaxRequests())
                         .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(storeConfiguration.getReadTimeout()))
+                        .withDuration(DefaultDriverOption.CONNECTION_CONNECT_TIMEOUT, Duration.ofSeconds(storeConfiguration.getConnectTimeout()))
                         .withString(DefaultDriverOption.REQUEST_CONSISTENCY, "LOCAL_ONE")
                         .withClass(DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, DcInferringLoadBalancingPolicy.class)
                 .build();

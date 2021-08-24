@@ -162,9 +162,9 @@ public class IndexThread extends Thread {
             this.index = index;
         }
 
-        public MultiGetRequest add(Metric metric) {
+        public void add(Metric metric) {
             metrics.put(metric.getId(), metric);
-            return super.add(new MultiGetRequest.Item(index, metric.getId()).fetchSourceContext(FetchSourceContext.DO_NOT_FETCH_SOURCE));
+            super.add(new MultiGetRequest.Item(index, metric.getId()).fetchSourceContext(FetchSourceContext.DO_NOT_FETCH_SOURCE));
         }
 
         public int size() {

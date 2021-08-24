@@ -1,6 +1,5 @@
 package net.iponweb.disthene.config;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,8 +8,8 @@ import java.util.Map;
  */
 public class BlackListConfiguration {
 
-    private Map<String, List<String>> blackListRules;
-    private Map<String, List<String>> whiteListRules;
+    private final Map<String, List<String>> blackListRules;
+    private final Map<String, List<String>> whiteListRules;
 
     public BlackListConfiguration(Map<String, List<String>> blackListRules, Map<String, List<String>> whiteListRules) {
         this.blackListRules = blackListRules;
@@ -21,16 +20,8 @@ public class BlackListConfiguration {
         return blackListRules;
     }
 
-    public void setBlackListRules(Map<String, List<String>> blackListRules) {
-        this.blackListRules = blackListRules;
-    }
-
     public Map<String, List<String>> getWhiteListRules() {
         return whiteListRules;
-    }
-
-    public void setWhiteListRules(Map<String, List<String>> whiteListRules) {
-        this.whiteListRules = whiteListRules;
     }
 
     @Override
