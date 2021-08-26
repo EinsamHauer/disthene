@@ -10,7 +10,6 @@ public class IndexConfiguration {
 
     private String name;
     private String index;
-    private String type;
     private boolean cache;
     private long expire;
     private List<String> cluster = new ArrayList<>();
@@ -49,14 +48,6 @@ public class IndexConfiguration {
         this.port = port;
     }
 
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
     public IndexBulkConfiguration getBulk() {
         return bulk;
     }
@@ -86,7 +77,6 @@ public class IndexConfiguration {
         return "IndexConfiguration{" +
                 "name='" + name + '\'' +
                 ", index='" + index + '\'' +
-                ", type='" + type + '\'' +
                 ", cache=" + cache +
                 ", expire=" + expire +
                 ", cluster=" + cluster +
