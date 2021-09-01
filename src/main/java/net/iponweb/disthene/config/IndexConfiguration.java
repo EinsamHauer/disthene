@@ -8,21 +8,12 @@ import java.util.List;
  */
 public class IndexConfiguration {
 
-    private String name;
     private String index;
     private boolean cache;
     private long expire;
     private List<String> cluster = new ArrayList<>();
     private int port;
     private IndexBulkConfiguration bulk;
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
 
     public String getIndex() {
         return index;
@@ -75,8 +66,7 @@ public class IndexConfiguration {
     @Override
     public String toString() {
         return "IndexConfiguration{" +
-                "name='" + name + '\'' +
-                ", index='" + index + '\'' +
+                "index='" + index + '\'' +
                 ", cache=" + cache +
                 ", expire=" + expire +
                 ", cluster=" + cluster +

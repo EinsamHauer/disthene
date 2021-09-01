@@ -25,7 +25,6 @@ store:
   batchSize: 500
   pool: 2
 index:
-  name: "disthene"
   cluster:
     - "es-1"
     - "es-2"

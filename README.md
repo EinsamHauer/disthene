@@ -95,8 +95,7 @@ store:
 # number of threads submitting requests to C*  
   pool: 2
 index:
-# ES cluster name, contact points, native port, index name & type
-  name: "disthene"
+# ES contact points, native port, index name & type
   cluster:
     - "es-1"
     - "es-2"
