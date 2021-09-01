@@ -1,9 +1,14 @@
 package net.iponweb.disthene.service.store;
 
+import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.ProtocolVersion;
 import com.datastax.oss.driver.api.core.config.DriverExecutionProfile;
 import com.datastax.oss.driver.api.core.cql.*;
 import com.datastax.oss.driver.api.core.metadata.Node;
+import com.datastax.oss.driver.api.core.metadata.TokenMap;
+import com.datastax.oss.driver.api.core.metadata.token.Token;
+import com.datastax.oss.driver.api.core.type.codec.TypeCodecs;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.events.DistheneEvent;
@@ -31,9 +36,12 @@ class BatchWriterThread extends WriterThread {
 
     private long lastFlushTimestamp = System.currentTimeMillis();
 
+    private final TokenMap tokenMap;
+
     BatchWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, BlockingQueue<Metric> metrics, Executor executor, int batchSize) {
         super(name, bus, session, tablesRegistry, metrics, executor);
         this.batchSize = batchSize;
+        this.tokenMap = session.getMetadata().getTokenMap().orElse(null);
     }
 
     @Override
@@ -60,13 +68,14 @@ class BatchWriterThread extends WriterThread {
             return;
         }
 
+        Token token = tokenMap != null ? tokenMap.newToken(TypeCodecs.TEXT.encode(metric.getPath(), ProtocolVersion.DEFAULT)) : null;
         statements.add(
                 statement.bind(
                         metric.getRollup() * metric.getPeriod(),
                         Collections.singletonList(metric.getValue()),
                         metric.getPath(),
                         metric.getTimestamp()
-                )
+                ).setRoutingToken(token)
         );
 
         if (statements.size() >= batchSize || (lastFlushTimestamp < System.currentTimeMillis() - INTERVAL)) {
@@ -102,12 +111,11 @@ class BatchWriterThread extends WriterThread {
         for (BoundStatement statement : statements) {
             Queue<Node> nodes = session.getContext().getLoadBalancingPolicy(DriverExecutionProfile.DEFAULT_NAME).newQueryPlan(statement, session);
 
-            // We are using TokenAwarePolicy without shuffling. Let's group by primary replica only then
             Optional<Node> primaryNode = nodes.isEmpty() ? Optional.empty() : Optional.of(nodes.poll());
 
             batches.computeIfAbsent(primaryNode, node -> new ArrayList<>()).add(statement);
         }
+
         return new ArrayList<>(batches.values());
     }
-
 }

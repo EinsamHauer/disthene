@@ -1,6 +1,7 @@
 package net.iponweb.disthene.service.store;
 
 import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.metadata.Metadata;
@@ -21,9 +22,7 @@ import org.apache.logging.log4j.Logger;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
@@ -45,17 +44,23 @@ public class CassandraService {
 
         DriverConfigLoader loader =
                 DriverConfigLoader.programmaticBuilder()
+                        .withString(DefaultDriverOption.PROTOCOL_COMPRESSION, "lz4")
                         .withStringList(DefaultDriverOption.CONTACT_POINTS, getContactPoints(storeConfiguration))
                         .withInt(DefaultDriverOption.CONNECTION_MAX_REQUESTS, storeConfiguration.getMaxRequests())
                         .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(storeConfiguration.getReadTimeout()))
                         .withDuration(DefaultDriverOption.CONNECTION_CONNECT_TIMEOUT, Duration.ofSeconds(storeConfiguration.getConnectTimeout()))
-                        .withString(DefaultDriverOption.REQUEST_CONSISTENCY, "LOCAL_ONE")
+                        .withString(DefaultDriverOption.REQUEST_CONSISTENCY, "ONE")
                         .withClass(DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, DcInferringLoadBalancingPolicy.class)
-                .build();
+                        .build();
 
-        session = CqlSession.builder()
-                .withConfigLoader(loader)
-                .build();
+        CqlSessionBuilder builder = CqlSession.builder()
+                .withConfigLoader(loader);
+
+        if ( storeConfiguration.getUserName() != null && storeConfiguration.getUserPassword() != null ) {
+            builder.withAuthCredentials(storeConfiguration.getUserName(), storeConfiguration.getUserPassword());
+        }
+
+        session = builder.build();
 
         Metadata metadata = session.getMetadata();
         logger.debug("Connected to cluster: " + metadata.getClusterName());
