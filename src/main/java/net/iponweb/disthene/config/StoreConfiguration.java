@@ -10,7 +10,6 @@ import java.util.List;
 public class StoreConfiguration {
     private List<String> cluster = new ArrayList<>();
     private String keyspace;
-    private String columnFamily;
     private String userName;
     private String userPassword;
     private int port;
@@ -131,14 +130,6 @@ public class StoreConfiguration {
         this.pool = pool;
     }
 
-    public String getColumnFamily() {
-        return columnFamily;
-    }
-
-    public void setColumnFamily(String columnFamily) {
-        this.columnFamily = columnFamily;
-    }
-
     public String getTableTemplate() {
         return tableTemplate;
     }
@@ -160,7 +151,6 @@ public class StoreConfiguration {
         return "StoreConfiguration{" +
                 "cluster=" + cluster +
                 ", keyspace='" + keyspace + '\'' +
-                ", columnFamily='" + columnFamily + '\'' +
                 ", userName='" + userName + '\'' +
                 ", userPassword='" + userPassword + '\'' +
                 ", port=" + port +

@@ -82,7 +82,6 @@ store:
     - "cassandra-2"
   port: 9042
   keyspace: 'metric'
-  columnFamily: 'metric'
 # maximum connections per host , timeouts in seconds, max requests per host - these are literally used in C* java driver settings
   maxConnections: 2048
   readTimeout: 10

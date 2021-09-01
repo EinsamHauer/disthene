@@ -16,7 +16,6 @@ store:
   userName: 'username'
   userPassword: 'password'
   keyspace: 'metric'
-  columnFamily: 'metric'
   maxConnections: 2048
   readTimeout: 10
   connectTimeout: 10
