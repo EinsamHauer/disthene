@@ -37,7 +37,7 @@ public class TablesRegistry {
     public TablesRegistry(CqlSession session, StoreConfiguration storeConfiguration) {
         this.session = session;
         this.storeConfiguration = storeConfiguration;
-        this.tableTemplate = storeConfiguration.getTenantTableTemplate();
+        this.tableTemplate = storeConfiguration.getTableTemplate();
 
         queryStatement = session.prepare(TABLE_QUERY);
     }
@@ -62,14 +62,14 @@ public class TablesRegistry {
                             logger.error(String.format("Couldn't create table %s", table));
                         } else {
                             logger.debug(String.format("Created table %s. Preparing statement.", table));
-                            tables.put(table, session.prepare(String.format(UPSERT_QUERY, storeConfiguration.getTenantKeyspace(), table)));
+                            tables.put(table, session.prepare(String.format(UPSERT_QUERY, storeConfiguration.getKeyspace(), table)));
                         }
                     } catch (Exception e) {
                         logger.error(String.format("Couldn't create table %s", table), e);
                     }
                 } else {
                     logger.debug(String.format("Found table %s. Preparing statement", table));
-                    tables.put(table, session.prepare(String.format(UPSERT_QUERY, storeConfiguration.getTenantKeyspace(), table)));
+                    tables.put(table, session.prepare(String.format(UPSERT_QUERY, storeConfiguration.getKeyspace(), table)));
                 }
             }
         }
@@ -78,14 +78,14 @@ public class TablesRegistry {
     }
 
     private String getCreateTableQuery(String table) {
-        return String.format(storeConfiguration.getTenantTableCreateTemplate(),
-                storeConfiguration.getTenantKeyspace(),
+        return String.format(storeConfiguration.getTableCreateTemplate(),
+                storeConfiguration.getKeyspace(),
                 table
                 );
     }
 
     private boolean checkTable(String table) {
-        ResultSet resultSet = session.execute(queryStatement.bind(storeConfiguration.getTenantKeyspace(), table));
+        ResultSet resultSet = session.execute(queryStatement.bind(storeConfiguration.getKeyspace(), table));
         return Objects.requireNonNull(resultSet.one()).getLong(0) > 0;
     }
 

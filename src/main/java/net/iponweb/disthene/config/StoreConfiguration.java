@@ -21,9 +21,8 @@ public class StoreConfiguration {
     private boolean batch;
     private int batchSize;
     private int pool;
-    private String tenantTableTemplate = "metric_%s_%d"; //%s - tenant, %d rollup
-    private String tenantKeyspace = null;
-    private String tenantTableCreateTemplate = "CREATE TABLE IF NOT EXISTS %s.%s (\n" +
+    private String tableTemplate = "metric_%s_%d"; //%s - tenant, %d rollup
+    private String tableCreateTemplate = "CREATE TABLE IF NOT EXISTS %s.%s (\n" +
             "  path text,\n" +
             "  time bigint,\n" +
             "  data list<double>,\n" +
@@ -140,28 +139,20 @@ public class StoreConfiguration {
         this.columnFamily = columnFamily;
     }
 
-    public String getTenantTableTemplate() {
-        return tenantTableTemplate;
+    public String getTableTemplate() {
+        return tableTemplate;
     }
 
-    public void setTenantTableTemplate(String tenantTableTemplate) {
-        this.tenantTableTemplate = tenantTableTemplate;
+    public void setTableTemplate(String tableTemplate) {
+        this.tableTemplate = tableTemplate;
     }
 
-    public String getTenantKeyspace() {
-        return tenantKeyspace != null ? tenantKeyspace : keyspace;
+    public String getTableCreateTemplate() {
+        return tableCreateTemplate;
     }
 
-    public void setTenantKeyspace(String tenantKeyspace) {
-        this.tenantKeyspace = tenantKeyspace;
-    }
-
-    public String getTenantTableCreateTemplate() {
-        return tenantTableCreateTemplate;
-    }
-
-    public void setTenantTableCreateTemplate(String tenantTableCreateTemplate) {
-        this.tenantTableCreateTemplate = tenantTableCreateTemplate;
+    public void setTableCreateTemplate(String tableCreateTemplate) {
+        this.tableCreateTemplate = tableCreateTemplate;
     }
 
     @Override
@@ -180,9 +171,8 @@ public class StoreConfiguration {
                 ", batch=" + batch +
                 ", batchSize=" + batchSize +
                 ", pool=" + pool +
-                ", tenantTableTemplate='" + tenantTableTemplate + '\'' +
-                ", tenantKeyspace='" + tenantKeyspace + '\'' +
-                ", tenantTableCreateTemplate='" + tenantTableCreateTemplate + '\'' +
+                ", tenantTableTemplate='" + tableTemplate + '\'' +
+                ", tenantTableCreateTemplate='" + tableCreateTemplate + '\'' +
                 '}';
     }
 }

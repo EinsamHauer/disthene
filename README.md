@@ -42,7 +42,7 @@ There are a couple of things you will need in runtime, just the same set as for 
 * Elasticsearch (tested with 7.13.4)
 
 Disthene will automatically create C* tables for each tenant and rollup. Keyspace is configured in disthene.yaml. 
-Also, table options can be modified using tenantTableCreateTemplate configuration option.
+Also, table options can be modified using tableCreateTemplate configuration option.
 
 Your mileage may vary but generally (as graphite like systems are closer to write only/read never type) one would benefit from changing
 ```
