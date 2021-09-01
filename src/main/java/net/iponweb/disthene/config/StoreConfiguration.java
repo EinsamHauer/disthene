@@ -33,10 +33,8 @@ public class StoreConfiguration {
             "  AND caching = {'keys': 'ALL'}\n" +
             "  AND compaction = {'min_threshold': '2', 'unchecked_tombstone_compaction': 'true', 'tombstone_compaction_interval': '86400', 'min_sstable_size': '104857600', 'tombstone_threshold': '0.1', 'bucket_low': '0.5', 'bucket_high': '1.5', 'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy'}\n" +
             "  AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}\n" +
-//            "  AND dclocal_read_repair_chance = 0.1\n" +
             "  AND default_time_to_live = 0\n" +
-            "  AND gc_grace_seconds = 43200\n";// +
-//            "  AND read_repair_chance = 0.1;\n";
+            "  AND gc_grace_seconds = 43200\n";
 
     public String getUserName() {
         return userName;

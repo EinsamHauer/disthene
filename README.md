@@ -34,49 +34,15 @@ will most probably do the trick.
 
 ## Running
 
-First of all, it's strongly recommended to run it with Java 8. Even though this software is fully compatible with Java 7. 
-The main reason for that is a bug in Java ([JDK-7032154](http://bugs.java.com/view_bug.do?bug_id=7032154)) prior to version 8
-Moreover, it's strongly recommended to have some GC tuning. For a start here is a set of some universal options:
-* -XX:+UseConcMarkSweepGC
-* -XX:+CMSParallelRemarkEnabled
-* -XX:+UseCMSInitiatingOccupancyOnly
-* -XX:CMSInitiatingOccupancyFraction=75
-* -XX:+ScavengeBeforeFullGC
-* -XX:+CMSScavengeBeforeRemark
+Disthene is intended to be compiled and run with Java 11.
  
 There are a couple of things you will need in runtime, just the same set as for **cyanite**
 
-* Cassandra
-* Elasticsearch
+* Cassandra (tested with 4.0)
+* Elasticsearch (tested with 7.13.4)
 
-Cassandra schema is identical to that of **cyanite**:
-
-```
-CREATE TABLE metric (
-  period int,
-  rollup int,
-  tenant text,
-  path text,
-  time bigint,
-  data list<double>,
-  PRIMARY KEY ((tenant, period, rollup, path), time)
-) WITH
-  bloom_filter_fp_chance=0.010000 AND
-  caching='KEYS_ONLY' AND
-  comment='' AND
-  dclocal_read_repair_chance=0.000000 AND
-  gc_grace_seconds=864000 AND
-  index_interval=128 AND
-  read_repair_chance=0.100000 AND
-  replicate_on_write='true' AND
-  populate_io_cache_on_flush='false' AND
-  default_time_to_live=0 AND
-  speculative_retry='NONE' AND
-  memtable_flush_period_in_ms=0 AND
-  compaction={'class': 'SizeTieredCompactionStrategy'} AND
-  compression={'sstable_compression': 'LZ4Compressor'};
-
-```
+Disthene will automatically create C* tables for each tenant and rollup. Keyspace is configured in disthene.yaml. 
+Also, table options can be modified using tenantTableCreateTemplate configuration option.
 
 Your mileage may vary but generally (as graphite like systems are closer to write only/read never type) one would benefit from changing
 ```
@@ -136,7 +102,6 @@ index:
     - "es-2"
   port: 9300
   index: "disthene"
-  type: "path"
 # cache paths on disthene side?
   cache: true
 # if cached is used, expire it after seconds below. That is, if we haven't seen metric name on 'expire' seconds - remove it from cache
@@ -182,7 +147,7 @@ this project is useless without their work on **cyanite**, **graphite-api**, **g
 
 The MIT License (MIT)
 
-Copyright (C) 2015 Andrei Ivanov
+Copyright (C) 2021 Andrei Ivanov
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
