@@ -1,10 +1,8 @@
 package net.iponweb.disthene;
 
 import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.bus.common.Properties;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
-import net.engio.mbassy.bus.error.IPublicationErrorHandler;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
@@ -88,7 +86,7 @@ public class Disthene {
                     .addFeature(Feature.SyncPubSub.Default())
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
                     .addFeature(dispatch)
-                    .setProperty(Properties.Handler.PublicationError, (IPublicationErrorHandler) error -> logger.error(error))
+                    .addPublicationErrorHandler(error -> logger.error(error))
             );
 
             logger.info("Loading blacklists & whitelists");
@@ -97,16 +95,14 @@ public class Disthene {
 
             if (new File(blacklistLocation).exists()) {
                 in = Files.newInputStream(Paths.get(blacklistLocation));
-                //noinspection unchecked
-                Map<String, List<String>> map = (Map<String, List<String>>) yaml.load(in);
+                Map<String, List<String>> map = yaml.load(in);
                 if (map != null) blacklistRules = map;
                 in.close();
             }
 
             if (new File(whitelistLocation).exists()) {
                 in = Files.newInputStream(Paths.get(whitelistLocation));
-                //noinspection unchecked
-                Map<String, List<String>> map = (Map<String, List<String>>) yaml.load(in);
+                Map<String, List<String>> map = yaml.load(in);
                 if (map != null) whitelistRules = map;
                 in.close();
             }
@@ -130,8 +126,6 @@ public class Disthene {
                 logger.error("Failed to create MBean: " + e);
             }
 
-
-
             logger.info("Creating ES index service");
             indexService = new IndexService(distheneConfiguration.getIndex(), bus);
 
@@ -140,8 +134,7 @@ public class Disthene {
 
             logger.info("Loading aggregation rules");
             in = Files.newInputStream(Paths.get(aggregationConfigLocation));
-            @SuppressWarnings("unchecked")
-            AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
+            AggregationConfiguration aggregationConfiguration = new AggregationConfiguration(yaml.load(in));
             in.close();
             logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
             logger.info("Creating sum aggregator");
@@ -184,7 +177,7 @@ public class Disthene {
         options.addOption("w", "whitelist", true, "whitelist location");
         options.addOption("a", "agg-config", true, "aggregation config location");
 
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
 
         try {
             CommandLine commandLine = parser.parse(options, args);
@@ -226,16 +219,14 @@ public class Disthene {
 
                 if (new File(blacklistLocation).exists()) {
                     InputStream in = Files.newInputStream(Paths.get(blacklistLocation));
-                    //noinspection unchecked
-                    Map<String, List<String>> map = (Map<String, List<String>>) yaml.load(in);
+                    Map<String, List<String>> map = yaml.load(in);
                     if (map != null) blacklistRules = map;
                     in.close();
                 }
 
                 if (new File(whitelistLocation).exists()) {
                     InputStream in = Files.newInputStream(Paths.get(whitelistLocation));
-                    //noinspection unchecked
-                    Map<String, List<String>> map = (Map<String, List<String>>) yaml.load(in);
+                    Map<String, List<String>> map = yaml.load(in);
                     if (map != null) whitelistRules = map;
                     in.close();
                 }
@@ -255,8 +246,7 @@ public class Disthene {
             try {
                 Yaml yaml = new Yaml();
                 InputStream in = Files.newInputStream(Paths.get(aggregationConfigLocation));
-                @SuppressWarnings("unchecked")
-                AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
+                AggregationConfiguration aggregationConfiguration = new AggregationConfiguration(yaml.load(in));
                 in.close();
 
                 sumService.setAggregationConfiguration(aggregationConfiguration);

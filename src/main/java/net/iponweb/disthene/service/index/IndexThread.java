@@ -30,7 +30,7 @@ public class IndexThread extends Thread {
     protected volatile boolean shutdown = false;
 
     private final RestHighLevelClient client;
-    protected BlockingQueue<Metric> metrics;
+    protected final BlockingQueue<Metric> metrics;
     private final String index;
     private final int batchSize;
     private final int flushInterval;
@@ -152,7 +152,7 @@ public class IndexThread extends Thread {
     private static class MetricMultiGetRequest extends MultiGetRequest {
 
         private final String index;
-        Map<String, Metric> metrics = new HashMap<>();
+        final Map<String, Metric> metrics = new HashMap<>();
 
 
         public MetricMultiGetRequest(String index) {

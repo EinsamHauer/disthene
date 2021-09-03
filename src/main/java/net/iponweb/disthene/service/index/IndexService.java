@@ -18,7 +18,6 @@ import org.elasticsearch.client.RestHighLevelClient;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 

@@ -5,7 +5,6 @@ import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.events.DistheneEvent;
 
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 
@@ -16,14 +15,14 @@ public abstract class WriterThread extends Thread {
 
     protected volatile boolean shutdown = false;
 
-    protected MBassador<DistheneEvent> bus;
-    protected CqlSession session;
+    protected final MBassador<DistheneEvent> bus;
+    protected final CqlSession session;
 
-    protected TablesRegistry tablesRegistry;
+    protected final TablesRegistry tablesRegistry;
 
-    protected BlockingQueue<Metric> metrics;
+    protected final BlockingQueue<Metric> metrics;
 
-    protected Executor executor;
+    protected final Executor executor;
 
     public WriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, BlockingQueue<Metric> metrics, Executor executor) {
         super(name);

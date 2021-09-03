@@ -1,6 +1,5 @@
 package net.iponweb.disthene.service.store;
 
-import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.ProtocolVersion;
 import com.datastax.oss.driver.api.core.config.DriverExecutionProfile;
