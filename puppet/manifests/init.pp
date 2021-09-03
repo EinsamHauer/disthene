@@ -16,7 +16,6 @@ class disthene (
   $store_cluster = [$::ipaddress],
   $store_port = '9042',
   $store_keyspace = 'metric',
-  $store_column_family = 'metric',
   $store_max_connections = '2048',
   $store_read_timeout = '5',
   $store_connect_timeout = '5',
@@ -24,11 +23,8 @@ class disthene (
   $store_batch = 'true',
   $store_batch_size = '200',
   $store_pool = '2',
-  $store_load_balancing_policy = "TokenDcAwareRoundRobinPolicy",
-  $store_protocol_version = "V2",
-  $store_tenant_keyspace = "metric",
-  $store_tenant_table_template = "metric_%s_%d",
-  $store_tenant_table_create_template = "CREATE TABLE IF NOT EXISTS %s.%s (
+  $store_table_template = "metric_%s_%d",
+  $store_table_create_template = "CREATE TABLE IF NOT EXISTS %s.%s (
   path text,
   time bigint,
   data list<double>,
@@ -45,9 +41,8 @@ class disthene (
 
   $index_name = 'disthene',
   $index_cluster = [$::ipaddress],
-  $index_port = 9300,
+  $index_port = 9200,
   $index_index = 'disthene_paths',
-  $index_type = 'path',
   $index_cache = 'true',
   $index_expire = '3600',
   $index_bulk_actions = '10000',
