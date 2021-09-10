@@ -22,7 +22,6 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LogManager.getLogger(CarbonServerHandler.class);
 
-    @SuppressWarnings("UnstableApiUsage")
     private static final CharMatcher PRINTABLE_WITHOUT_SPACE = CharMatcher.inRange('\u0021', '\u007e');
 
     private final MBassador<DistheneEvent> bus;
@@ -52,7 +51,6 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
                 logger.warn("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
             }
 
-            //noinspection UnstableApiUsage
             if (!PRINTABLE_WITHOUT_SPACE.matchesAllOf(metric.getPath())) {
                 isValid = false;
                 logger.warn("Non printable characters in metric, discarding: " + metric + " (" + Hex.encodeHexString(metric.getPath().getBytes()) + ")");
