@@ -12,25 +12,26 @@ import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
+import net.iponweb.disthene.events.StoreErrorEvent;
+import net.iponweb.disthene.events.StoreSuccessEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 /**
  * @author Andrei Ivanov
  */
-@Listener(references= References.Strong)
+@Listener(references = References.Strong)
 public class RollupService {
-    private static final String SCHEDULER_NAME = "distheneRollupAggregatorFlusher";
+    private static final String SCHEDULER_NAME = "distheneRollupAggregatorFlusherScheduler";
+    private static final String FLUSHER_NAME = "distheneRollupAggregatorFlusher";
     private static final int RATE = 60;
     private volatile boolean shuttingDown = false;
 
@@ -42,6 +43,7 @@ public class RollupService {
     private final List<Rollup> rollups;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+    private final ExecutorService flusher = Executors.newCachedThreadPool(new NamedThreadFactory(FLUSHER_NAME));
 
     private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AverageRecord>> accumulator = new ConcurrentSkipListMap<>();
 
@@ -51,7 +53,7 @@ public class RollupService {
         this.bus = bus;
         bus.subscribe(this);
 
-        for(Rollup rollup : rollups) {
+        for (Rollup rollup : rollups) {
             if (maxRollup == null || maxRollup.getRollup() < rollup.getRollup()) {
                 maxRollup = rollup;
             }
@@ -95,7 +97,7 @@ public class RollupService {
     }
 
     private void aggregate(Metric metric) {
-        for(Rollup rollup : rollups) {
+        for (Rollup rollup : rollups) {
             long timestamp = getRollupTimestamp(metric.getTimestamp(), rollup);
             ConcurrentMap<MetricKey, AverageRecord> timestampMap = getTimestampMap(timestamp);
             MetricKey destinationMetricKey = new MetricKey(
@@ -110,19 +112,40 @@ public class RollupService {
     private void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
-        while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2L)) {
-            logger.debug("Adding rollup flush for time: " + (new DateTime(accumulator.firstKey() * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
+        // Get timestamps to flush
+        Set<Long> timestampsToFlush = new HashSet<>(accumulator.headMap(DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2L).keySet());
 
-            // Get the earliest map
-            ConcurrentMap<MetricKey, AverageRecord> timestampMap = accumulator.pollFirstEntry().getValue();
+        logger.debug("There are " + timestampsToFlush.size() + " timestamps to flush");
 
-            for(Map.Entry<MetricKey, AverageRecord> entry : timestampMap.entrySet()) {
-                metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().getAverage()));
+        for (Long timestamp : timestampsToFlush) {
+            ConcurrentMap<MetricKey, AverageRecord> timestampMap = accumulator.remove(timestamp);
+
+            // double check just in case
+            if (timestampMap != null) {
+                logger.debug("Adding rollup flush for time: " + (new DateTime(timestamp * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
+                logger.debug("Will flush " + timestampMap.size() + " metrics");
+
+                for (Map.Entry<MetricKey, AverageRecord> entry : timestampMap.entrySet()) {
+                    metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().getAverage()));
+                }
+                logger.debug("Done adding rollup flush for time: " + (new DateTime(timestamp * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
             }
         }
 
+        logger.debug("Flushing total of " + metricsToFlush.size() + " metrics");
+
+        // do the flush asynchronously
         if (metricsToFlush.size() > 0) {
-            doFlush(metricsToFlush, getFlushRateLimiter(metricsToFlush.size()));
+            CompletableFuture.supplyAsync((Supplier<Void>) () -> {
+                doFlush(metricsToFlush, getFlushRateLimiter(metricsToFlush.size()));
+                return null;
+            }, flusher).whenComplete((o, error) -> {
+                if (error != null) {
+                    logger.error(error);
+                } else {
+                    logger.debug("Done flushing total of " + metricsToFlush.size() + " metrics");
+                }
+            });
         }
     }
 
@@ -159,7 +182,7 @@ public class RollupService {
             logger.debug("QPS is limited to " + (long) rateLimiter.getRate());
         }
 
-        for(Metric metric : metricsToFlush) {
+        for (Metric metric : metricsToFlush) {
             if (!shuttingDown && rateLimiter != null) {
                 rateLimiter.acquire();
             }
@@ -175,8 +198,8 @@ public class RollupService {
 
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
-        for(Map.Entry<Long, ConcurrentMap<MetricKey, AverageRecord>> entry : accumulator.entrySet()) {
-            for(Map.Entry<MetricKey, AverageRecord> innerEntry : entry.getValue().entrySet()) {
+        for (Map.Entry<Long, ConcurrentMap<MetricKey, AverageRecord>> entry : accumulator.entrySet()) {
+            for (Map.Entry<MetricKey, AverageRecord> innerEntry : entry.getValue().entrySet()) {
                 metricsToFlush.add(new Metric(innerEntry.getKey(), innerEntry.getValue().getAverage()));
             }
         }

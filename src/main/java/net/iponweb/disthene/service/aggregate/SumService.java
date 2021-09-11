@@ -24,6 +24,7 @@ import org.joda.time.DateTimeZone;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
 /**
@@ -32,7 +33,8 @@ import java.util.regex.Matcher;
 @Listener(references= References.Strong)
 // todo: handle names other than <data>
 public class SumService {
-    private static final String SCHEDULER_NAME = "distheneSumAggregatorFlusher";
+    private static final String SCHEDULER_NAME = "distheneSumAggregatorFlusherScheduler";
+    private static final String FLUSHER_NAME = "distheneRollupAggregatorFlusher";
     private static final int RATE = 60;
     private volatile boolean shuttingDown = false;
 
@@ -45,6 +47,7 @@ public class SumService {
     private final ConcurrentNavigableMap<Long, ConcurrentMap<MetricKey, AtomicDouble>> accumulator = new ConcurrentSkipListMap<>();
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+    private final ExecutorService flusher = Executors.newCachedThreadPool(new NamedThreadFactory(FLUSHER_NAME));
 
     public SumService(MBassador<DistheneEvent> bus, DistheneConfiguration distheneConfiguration, AggregationConfiguration aggregationConfiguration, BlacklistService blacklistService) {
         this.bus = bus;
@@ -112,16 +115,39 @@ public class SumService {
     private void flush() {
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
-        while(accumulator.size() > 0 && (accumulator.firstKey() < DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay())) {
-            ConcurrentMap<MetricKey, AtomicDouble> timestampMap = accumulator.pollFirstEntry().getValue();
+        // Get timestamps to flush
+        Set<Long> timestampsToFlush = new HashSet<>(accumulator.headMap(DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2L).keySet());
+        logger.debug("There are " + timestampsToFlush.size() + " timestamps to flush");
 
-            for(Map.Entry<MetricKey, AtomicDouble> entry : timestampMap.entrySet()) {
-                metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().get()));
+        for (Long timestamp : timestampsToFlush) {
+            ConcurrentMap<MetricKey, AtomicDouble> timestampMap = accumulator.remove(timestamp);
+
+            // double check just in case
+            if (timestampMap != null) {
+                logger.debug("Adding sum flush for time: " + (new DateTime(timestamp * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
+                logger.debug("Will flush " + timestampMap.size() + " metrics");
+
+                for (Map.Entry<MetricKey, AtomicDouble> entry : timestampMap.entrySet()) {
+                    metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().get()));
+                }
+                logger.debug("Done adding sum flush for time: " + (new DateTime(timestamp * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
             }
         }
 
+        logger.debug("Flushing total of " + metricsToFlush.size() + " metrics");
+
+        // do the flush asynchronously
         if (metricsToFlush.size() > 0) {
-            doFlush(metricsToFlush, getFlushRateLimiter(metricsToFlush.size()));
+            CompletableFuture.supplyAsync((Supplier<Void>) () -> {
+                doFlush(metricsToFlush, getFlushRateLimiter(metricsToFlush.size()));
+                return null;
+            }, flusher).whenComplete((o, error) -> {
+                if (error != null) {
+                    logger.error(error);
+                } else {
+                    logger.debug("Done flushing total of " + metricsToFlush.size() + " metrics");
+                }
+            });
         }
     }
 
