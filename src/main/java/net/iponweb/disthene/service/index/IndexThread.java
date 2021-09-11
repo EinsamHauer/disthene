@@ -82,7 +82,7 @@ public class IndexThread extends Thread {
                 Metric metric = metrics.take();
                 addToBatch(metric);
             } catch (Exception e) {
-                logger.error("Encountered error in busy loop: ", e);
+                logger.warn("Encountered error in busy loop: ", e);
             }
         }
 
@@ -90,7 +90,7 @@ public class IndexThread extends Thread {
             try {
                 flush();
             } catch (Exception e) {
-                logger.error("Encountered error in busy loop: ", e);
+                logger.warn("Encountered error in busy loop: ", e);
             }
         }
     }
