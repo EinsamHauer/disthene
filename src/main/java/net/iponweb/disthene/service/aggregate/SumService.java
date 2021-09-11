@@ -116,7 +116,7 @@ public class SumService {
         Collection<Metric> metricsToFlush = new ArrayList<>();
 
         // Get timestamps to flush
-        Set<Long> timestampsToFlush = new HashSet<>(accumulator.headMap(DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2L).keySet());
+        Set<Long> timestampsToFlush = new HashSet<>(accumulator.headMap(DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay()).keySet());
         logger.debug("There are " + timestampsToFlush.size() + " timestamps to flush");
 
         for (Long timestamp : timestampsToFlush) {
