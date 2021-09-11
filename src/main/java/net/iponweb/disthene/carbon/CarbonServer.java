@@ -10,10 +10,12 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.Delimiters;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.service.auth.TenantService;
+import net.iponweb.disthene.service.stats.StatsService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -54,11 +56,12 @@ public class CarbonServer {
         b.group(bossGroup, workerGroup)
                 .channel(Epoll.isAvailable() ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, 100)
+                .childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) {
                         ChannelPipeline p = ch.pipeline();
-                        p.addLast(new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, false, Delimiters.lineDelimiter()));
+                        p.addLast(new LineBasedFrameDecoder(MAX_FRAME_LENGTH, true, true));
                         p.addLast(new CarbonServerHandler(
                                 bus,
                                 configuration.getCarbon().getBaseRollup(),

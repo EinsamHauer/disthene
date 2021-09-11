@@ -42,8 +42,6 @@ import java.util.Map;
 public class Disthene {
     private static Logger logger;
 
-    public static Feature.AsynchronousMessageDispatch dispatch;
-
     private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yaml";
     private static final String DEFAULT_BLACKLIST_LOCATION = "/etc/disthene/blacklist.yaml";
     private static final String DEFAULT_WHITELIST_LOCATION = "/etc/disthene/whitelist.yaml";
@@ -80,12 +78,11 @@ public class Disthene {
             in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
-            dispatch = Feature.AsynchronousMessageDispatch.Default();
             logger.info("Creating dispatcher");
             bus = new MBassador<>(new BusConfiguration()
                     .addFeature(Feature.SyncPubSub.Default())
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
-                    .addFeature(dispatch)
+                    .addFeature(Feature.AsynchronousMessageDispatch.Default())
                     .addPublicationErrorHandler(error -> logger.error(error))
             );
 

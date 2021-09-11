@@ -115,27 +115,27 @@ public class RollupService {
         // Get timestamps to flush
         Set<Long> timestampsToFlush = new HashSet<>(accumulator.headMap(DateTime.now(DateTimeZone.UTC).getMillis() / 1000 - distheneConfiguration.getCarbon().getAggregatorDelay() * 2L).keySet());
 
-        logger.debug("There are " + timestampsToFlush.size() + " timestamps to flush");
+        logger.trace("There are " + timestampsToFlush.size() + " timestamps to flush");
 
         for (Long timestamp : timestampsToFlush) {
             ConcurrentMap<MetricKey, AverageRecord> timestampMap = accumulator.remove(timestamp);
 
             // double check just in case
             if (timestampMap != null) {
-                logger.debug("Adding rollup flush for time: " + (new DateTime(timestamp * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
-                logger.debug("Will flush " + timestampMap.size() + " metrics");
+                logger.trace("Adding rollup flush for time: " + (new DateTime(timestamp * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
+                logger.trace("Will flush " + timestampMap.size() + " metrics");
 
                 for (Map.Entry<MetricKey, AverageRecord> entry : timestampMap.entrySet()) {
                     metricsToFlush.add(new Metric(entry.getKey(), entry.getValue().getAverage()));
                 }
-                logger.debug("Done adding rollup flush for time: " + (new DateTime(timestamp * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
+                logger.trace("Done adding rollup flush for time: " + (new DateTime(timestamp * 1000)) + " (current time is " + DateTime.now(DateTimeZone.UTC) + ")");
             }
         }
 
-        logger.debug("Flushing total of " + metricsToFlush.size() + " metrics");
-
         // do the flush asynchronously
         if (metricsToFlush.size() > 0) {
+            logger.trace("Flushing total of " + metricsToFlush.size() + " metrics");
+
             CompletableFuture.supplyAsync((Supplier<Void>) () -> {
                 doFlush(metricsToFlush, getFlushRateLimiter(metricsToFlush.size()));
                 return null;
@@ -143,7 +143,7 @@ public class RollupService {
                 if (error != null) {
                     logger.error(error);
                 } else {
-                    logger.debug("Done flushing total of " + metricsToFlush.size() + " metrics");
+                    logger.trace("Done flushing total of " + metricsToFlush.size() + " metrics");
                 }
             });
         }
