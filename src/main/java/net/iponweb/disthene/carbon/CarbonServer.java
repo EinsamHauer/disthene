@@ -41,7 +41,6 @@ public class CarbonServer {
         this.configuration = configuration;
         this.tenantService = tenantService;
 
-
         if (Epoll.isAvailable()) {
             bossGroup = new EpollEventLoopGroup(1);
             workerGroup = new EpollEventLoopGroup();

@@ -100,6 +100,9 @@
                         <manifest>
                             <mainClass>net.iponweb.disthene.Disthene</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <Multi-Release>true</Multi-Release>
+                        </manifestEntries>
                     </archive>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
