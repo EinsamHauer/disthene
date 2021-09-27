@@ -40,11 +40,17 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
         try {
             final Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
-            if ((System.currentTimeMillis() / 1000L) - metric.getTimestamp() > 3600) {
-                logger.warn("Metric is from distant past (older than 1 hour): " + metric);
-            }
+            long metricAge = (System.currentTimeMillis() / 1000L) - metric.getTimestamp();
 
             boolean isValid = true;
+
+            if (metricAge > 3600) {
+                if (metricAge > 7200) {
+                    logger.warn("Metric is from distant past (older than 2 hours). Discarding metric: " + metric);
+                } else {
+                    logger.warn("Metric is from distant past (older than 1 hour): " + metric);
+                }
+            }
 
             if (!tenantService.isTenantAllowed(metric.getTenant())) {
                 isValid = false;
