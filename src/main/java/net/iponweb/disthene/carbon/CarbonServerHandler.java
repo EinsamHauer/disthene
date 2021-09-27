@@ -23,9 +23,9 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
     @SuppressWarnings("UnstableApiUsage")
     private static final CharMatcher PRINTABLE_WITHOUT_SPACE = CharMatcher.inRange('\u0021', '\u007e');
 
-    private MBassador<DistheneEvent> bus;
-    private Rollup rollup;
-    private TenantService tenantService;
+    private final MBassador<DistheneEvent> bus;
+    private final Rollup rollup;
+    private final TenantService tenantService;
 
     public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup, TenantService tenantService) {
         this.bus = bus;
@@ -39,17 +39,24 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
         try {
             final Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
-            if ((System.currentTimeMillis() / 1000L) - metric.getTimestamp() > 3600) {
-                logger.warn("Metric is from distant past (older than 1 hour): " + metric);
-            }
+            long metricAge = (System.currentTimeMillis() / 1000L) - metric.getTimestamp();
 
             boolean isValid = true;
+
+            if (metricAge > 3600) {
+                if (metricAge > 7200) {
+                    logger.warn("Metric is from distant past (older than 2 hours). Discarding metric: " + metric);
+                } else {
+                    logger.warn("Metric is from distant past (older than 1 hour): " + metric);
+                }
+            }
 
             if (!tenantService.isTenantAllowed(metric.getTenant())) {
                 isValid = false;
                 logger.warn("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
             }
 
+            //noinspection UnstableApiUsage
             if (!PRINTABLE_WITHOUT_SPACE.matchesAllOf(metric.getPath())) {
                 isValid = false;
                 logger.warn("Non printable characters in metric, discarding: " + metric + " (" + Hex.encodeHexString(metric.getPath().getBytes()) + ")");
