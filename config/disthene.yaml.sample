@@ -17,9 +17,10 @@ store:
   userPassword: 'password'
   keyspace: 'metric'
   maxConnections: 2048
+  maxConcurrentRequests: 1024
+  maxQueueSize: 1000000
   readTimeout: 10
   connectTimeout: 10
-  maxRequests: 128
   batch: true
   batchSize: 500
   pool: 2

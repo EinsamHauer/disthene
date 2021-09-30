@@ -16,7 +16,8 @@ public class StoreConfiguration {
     private int maxConnections;
     private int readTimeout;
     private int connectTimeout;
-    private int maxRequests;
+    private int maxConcurrentRequests = 1024;
+    private int maxQueueSize = 1024*1024;
     private boolean batch;
     private int batchSize;
     private int pool;
@@ -98,12 +99,20 @@ public class StoreConfiguration {
         this.connectTimeout = connectTimeout;
     }
 
-    public int getMaxRequests() {
-        return maxRequests;
+    public int getMaxConcurrentRequests() {
+        return maxConcurrentRequests;
     }
 
-    public void setMaxRequests(int maxRequests) {
-        this.maxRequests = maxRequests;
+    public void setMaxConcurrentRequests(int maxConcurrentRequests) {
+        this.maxConcurrentRequests = maxConcurrentRequests;
+    }
+
+    public int getMaxQueueSize() {
+        return maxQueueSize;
+    }
+
+    public void setMaxQueueSize(int maxQueueSize) {
+        this.maxQueueSize = maxQueueSize;
     }
 
     public boolean isBatch() {
@@ -157,12 +166,13 @@ public class StoreConfiguration {
                 ", maxConnections=" + maxConnections +
                 ", readTimeout=" + readTimeout +
                 ", connectTimeout=" + connectTimeout +
-                ", maxRequests=" + maxRequests +
+                ", maxConcurrentRequests=" + maxConcurrentRequests +
+                ", maxQueueSize=" + maxQueueSize +
                 ", batch=" + batch +
                 ", batchSize=" + batchSize +
                 ", pool=" + pool +
-                ", tenantTableTemplate='" + tableTemplate + '\'' +
-                ", tenantTableCreateTemplate='" + tableCreateTemplate + '\'' +
+                ", tableTemplate='" + tableTemplate + '\'' +
+                ", tableCreateTemplate='" + tableCreateTemplate + '\'' +
                 '}';
     }
 }
