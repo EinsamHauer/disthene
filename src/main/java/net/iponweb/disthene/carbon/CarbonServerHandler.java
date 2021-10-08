@@ -15,6 +15,8 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.net.InetSocketAddress;
+
 /**
  * @author Andrei Ivanov
  */
@@ -77,7 +79,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
         ctx.channel().close();
 
         if (cause instanceof java.io.IOException) {
-            logger.debug("Exception caught in carbon handler", cause);
+            logger.trace("Exception caught in carbon handler (connection from " + ((InetSocketAddress)ctx.channel().remoteAddress()).getAddress().getHostAddress() + ")", cause);
         } else {
             logger.error("Exception caught in carbon handler", cause);
         }
