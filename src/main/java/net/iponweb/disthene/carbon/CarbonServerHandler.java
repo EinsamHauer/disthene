@@ -14,6 +14,8 @@ import net.iponweb.disthene.service.auth.TenantService;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.log4j.Logger;
 
+import java.net.InetSocketAddress;
+
 /**
  * @author Andrei Ivanov
  */
@@ -53,7 +55,7 @@ public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
 
             if (!tenantService.isTenantAllowed(metric.getTenant())) {
                 isValid = false;
-                logger.warn("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
+                logger.warn("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric + ". Source ip: " + ((InetSocketAddress)ctx.channel().remoteAddress()).getAddress());
             }
 
             //noinspection UnstableApiUsage
