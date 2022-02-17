@@ -32,7 +32,7 @@ public class SingleWriterThread extends WriterThread {
                 store(metric);
             }
         } catch (InterruptedException e) {
-            logger.error("Thread interrupted", e);
+            if (!shutdown) logger.error("Thread interrupted", e);
             this.interrupt();
         }
     }
@@ -44,20 +44,39 @@ public class SingleWriterThread extends WriterThread {
             return;
         }
 
-        session.executeAsync(
-                statement.bind(
-                        metric.getRollup() * metric.getPeriod(),
-                        Collections.singletonList(metric.getValue()),
-                        metric.getPath(),
-                        metric.getTimestamp()
-                )).whenComplete((version, error) -> {
-            if (error != null) {
-                bus.post(new StoreErrorEvent(1)).now();
-                logger.error(error);
-            } else {
-                bus.post(new StoreSuccessEvent(1)).now();
-            }
-        });
+        requestsInFlight.incrementAndGet();
+        session
+                .executeAsync(
+                        statement.bind(
+                                metric.getRollup() * metric.getPeriod(),
+                                Collections.singletonList(metric.getValue()),
+                                metric.getPath(),
+                                metric.getTimestamp()
+                        )).whenComplete((version, error) -> {
+                    requestsInFlight.decrementAndGet();
+                    if (error != null) {
+                        bus.post(new StoreErrorEvent(1)).now();
+                        logger.error(error);
+                    } else {
+                        bus.post(new StoreSuccessEvent(1)).now();
+                    }
+                });
     }
 
+    @Override
+    public void shutdown() {
+        shutdown = true;
+
+        while (requestsInFlight.get() > 0) {
+            logger.info("Requests in flight: " + requestsInFlight.get());
+            try {
+                //noinspection BusyWait
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                logger.error("Wait interrupted", e);
+            }
+        }
+
+        this.interrupt();
+    }
 }

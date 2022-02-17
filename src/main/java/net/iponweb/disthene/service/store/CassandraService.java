@@ -23,9 +23,7 @@ import org.apache.logging.log4j.Logger;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -57,6 +55,7 @@ public class CassandraService {
                         .withClass(DefaultDriverOption.REQUEST_THROTTLER_CLASS, ConcurrencyLimitingRequestThrottler.class)
                         .withInt(DefaultDriverOption.REQUEST_THROTTLER_MAX_CONCURRENT_REQUESTS, storeConfiguration.getMaxConcurrentRequests())
                         .withInt(DefaultDriverOption.REQUEST_THROTTLER_MAX_QUEUE_SIZE, storeConfiguration.getMaxQueueSize())
+                        .withClass(DefaultDriverOption.RETRY_POLICY_CLASS, CustomRetryPolicy.class)
                         .build();
 
         CqlSessionBuilder builder = CqlSession.builder()
@@ -115,9 +114,10 @@ public class CassandraService {
         return storeConfiguration.getCluster().stream().map(s -> s + ":" + storeConfiguration.getPort()).collect(Collectors.toList());
     }
 
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused"})
     @Handler
     public void handle(MetricStoreEvent metricStoreEvent) {
+        //noinspection ResultOfMethodCallIgnored
         metrics.offer(metricStoreEvent.getMetric());
     }
 
@@ -128,6 +128,7 @@ public class CassandraService {
 
         logger.info("Closing C* session");
         session.close();
+        logger.info("C* session closed");
     }
 }
 

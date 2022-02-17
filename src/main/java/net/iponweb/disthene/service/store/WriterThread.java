@@ -7,6 +7,7 @@ import net.iponweb.disthene.events.DistheneEvent;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Andrei Ivanov
@@ -23,6 +24,8 @@ public abstract class WriterThread extends Thread {
     protected final BlockingQueue<Metric> metrics;
 
     protected final Executor executor;
+
+    protected final AtomicInteger requestsInFlight = new AtomicInteger(0);
 
     public WriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, TablesRegistry tablesRegistry, BlockingQueue<Metric> metrics, Executor executor) {
         super(name);

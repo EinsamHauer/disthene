@@ -12,7 +12,7 @@ There are a couple of things which seem to be an absolute must and which were mi
 * aggregation: ability to sum similar metrics from several servers
 * blacklisting: ability to omit storing metrics which match a certain pattern. Makes not much sense by itself but is quite handy when you have previous item
 * caching incoming paths: this may really reduce the load on Elasticsearch cluster
-* some minimal set of own metrics (received count, write count, etc)
+* some minimal set of own metrics (received count, write count, etc.)
 * true multitenancy
 
 The other thing is performance. **Disthene** is being developed with one major requirement in mind - performance. 
@@ -123,7 +123,7 @@ stats:
 Configuration is straight forward as per log4j
 
 ##### Blacklist configuration in blacklist.yaml
-This is a list of regular expressions per tenant. Matching metrics will NOT be store but they still WILL be aggregated (see below)
+This is a list of regular expressions per tenant. Matching metrics will NOT be store, but they still WILL be aggregated (see below)
 
 ##### Whitelist configuration in whitelist.yaml
 This is a list of regular expressions per tenant. Matching metrics will override blacklist rules.

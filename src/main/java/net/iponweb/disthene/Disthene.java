@@ -105,7 +105,7 @@ public class Disthene {
             }
 
             BlackListConfiguration blackListConfiguration = new BlackListConfiguration(blacklistRules, whitelistRules);
-            logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
+            logger.debug("Running with the following blacklist: " + blackListConfiguration);
             blacklistService = new BlacklistService(blackListConfiguration);
 
             logger.info("Creating metric service");
@@ -133,7 +133,7 @@ public class Disthene {
             in = Files.newInputStream(Paths.get(aggregationConfigLocation));
             AggregationConfiguration aggregationConfiguration = new AggregationConfiguration(yaml.load(in));
             in.close();
-            logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
+            logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration);
             logger.info("Creating sum aggregator");
             sumService = new SumService(bus, distheneConfiguration, aggregationConfiguration, blacklistService);
 
@@ -233,7 +233,7 @@ public class Disthene {
 
                 blacklistService.setRules(blackListConfiguration);
 
-                logger.debug("Reloaded blacklist: " + blackListConfiguration.toString());
+                logger.debug("Reloaded blacklist: " + blackListConfiguration);
             } catch (Exception e) {
                 logger.error("Reloading blacklists failed");
                 logger.error(e);
@@ -247,7 +247,7 @@ public class Disthene {
                 in.close();
 
                 sumService.setAggregationConfiguration(aggregationConfiguration);
-                logger.debug("Reloaded aggregation rules: " + aggregationConfiguration.toString());
+                logger.debug("Reloaded aggregation rules: " + aggregationConfiguration);
             } catch (Exception e) {
                 logger.error("Reloading aggregation rules failed");
                 logger.error(e);
@@ -281,7 +281,7 @@ public class Disthene {
             logger.info("Shutting down carbon server");
             carbonServer.shutdown();
 
-            // We will probably loose some last stats here. But leaving it to run will complicate things
+            // We will probably lose some last stats here. But leaving it to run will complicate things
             logger.info("Shutting down stats service");
             statsService.shutdown();
 

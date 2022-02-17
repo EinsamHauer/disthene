@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Andrei Ivanov
@@ -82,16 +83,14 @@ public class IndexThread extends Thread {
                 Metric metric = metrics.take();
                 addToBatch(metric);
             } catch (Exception e) {
-                logger.warn("Encountered error in busy loop: ", e);
+                if (!shutdown) logger.error("Encountered error in busy loop: ", e);
             }
         }
 
-        if (request.size() > 0) {
-            try {
-                flush();
-            } catch (Exception e) {
-                logger.warn("Encountered error in busy loop: ", e);
-            }
+        try {
+            flush();
+        } catch (Exception e) {
+            logger.error("Encountered error in busy loop: ", e);
         }
     }
 
@@ -104,7 +103,9 @@ public class IndexThread extends Thread {
         }
     }
 
-    private void flush() throws IOException {
+    private  synchronized void flush() throws IOException {
+        if (request.size() <= 0) return;
+
         MultiGetResponse multiGetResponse = client.mget(request, RequestOptions.DEFAULT);
 
         for (MultiGetItemResponse response : multiGetResponse.getResponses()) {
@@ -123,7 +124,7 @@ public class IndexThread extends Thread {
                     }
                     sb.append(parts[i]);
                     try {
-                        bulkProcessor.add(new IndexRequest(index).id(metric.getTenant() + "_" + sb.toString()).source(
+                        bulkProcessor.add(new IndexRequest(index).id(metric.getTenant() + "_" + sb).source(
                                 XContentFactory.jsonBuilder().startObject()
                                         .field("tenant", metric.getTenant())
                                         .field("path", sb.toString())
@@ -146,6 +147,21 @@ public class IndexThread extends Thread {
 
     public void shutdown() {
         shutdown = true;
+
+        logger.info("Flushing leftovers");
+        try {
+            flush();
+            logger.info("Finished flushing leftovers");
+        } catch (IOException e) {
+            logger.error("Flush failed", e);
+        }
+
+        logger.info("Waiting for bulk processor to complete");
+        try {
+            bulkProcessor.awaitClose(1, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            logger.error("AwaitClose interrupted", e);
+        }
         this.interrupt();
     }
 
@@ -153,7 +169,6 @@ public class IndexThread extends Thread {
 
         private final String index;
         final Map<String, Metric> metrics = new HashMap<>();
-
 
         public MetricMultiGetRequest(String index) {
             this.index = index;

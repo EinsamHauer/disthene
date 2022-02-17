@@ -84,6 +84,7 @@ public class IndexService {
         if (indexConfiguration.isCache()) {
             handleWithCache(metricStoreEvent.getMetric());
         } else {
+            //noinspection ResultOfMethodCallIgnored
             metrics.offer(metricStoreEvent.getMetric());
         }
     }
@@ -93,6 +94,7 @@ public class IndexService {
         Long lastSeen = tenantPaths.put(metric.getPath(), System.currentTimeMillis() / 1000L);
 
         if (lastSeen == null) {
+            //noinspection ResultOfMethodCallIgnored
             metrics.offer(metric);
         }
     }
@@ -126,11 +128,6 @@ public class IndexService {
     public void shutdown() {
         scheduler.shutdown();
         indexThread.shutdown();
-        logger.info("Sleeping for 10 seconds to allow leftovers to be written");
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException ignored) {
-        }
         logger.info("Closing ES client");
 
         try {
