@@ -17,29 +17,26 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author Andrei Ivanov
  */
-@Listener(references= References.Strong)
+@Listener(references = References.Strong)
 public class IndexService {
     private static final String SCHEDULER_NAME = "distheneIndexCacheExpire";
 
     private static final Logger logger = Logger.getLogger(IndexService.class);
 
-    private IndexConfiguration indexConfiguration;
-    private TransportClient client;
-    private IndexThread indexThread;
+    private final IndexConfiguration indexConfiguration;
+    private final TransportClient client;
+    private final IndexThread indexThread;
 
     // tenant -> path -> dummy
-    private ConcurrentMap<String, ConcurrentMap<String, AtomicLong>> cache = new ConcurrentHashMap<>();
-    private Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
+    private ConcurrentMap<String, ConcurrentMap<String, Long>> cache = new ConcurrentHashMap<>();
+    private final BlockingQueue<Metric> metrics = new LinkedBlockingQueue<>();
 
-    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
-
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
     public IndexService(IndexConfiguration indexConfiguration, MBassador<DistheneEvent> bus) {
         this.indexConfiguration = indexConfiguration;
@@ -76,10 +73,10 @@ public class IndexService {
         }
     }
 
-    private ConcurrentMap<String, AtomicLong> getTenantPaths(String tenant) {
-        ConcurrentMap<String, AtomicLong> tenantPaths = cache.get(tenant);
+    private ConcurrentMap<String, Long> getTenantPaths(String tenant) {
+        ConcurrentMap<String, Long> tenantPaths = cache.get(tenant);
         if (tenantPaths == null) {
-            ConcurrentMap<String, AtomicLong> newTenantPaths = new ConcurrentHashMap<>();
+            ConcurrentMap<String, Long> newTenantPaths = new ConcurrentHashMap<>();
             tenantPaths = cache.putIfAbsent(tenant, newTenantPaths);
             if (tenantPaths == null) {
                 tenantPaths = newTenantPaths;
@@ -89,28 +86,24 @@ public class IndexService {
         return tenantPaths;
     }
 
-    @Handler(rejectSubtypes = false)
+    @SuppressWarnings("unused")
+    @Handler()
     public void handle(MetricStoreEvent metricStoreEvent) {
         if (indexConfiguration.isCache()) {
             handleWithCache(metricStoreEvent.getMetric());
         } else {
+            //noinspection ResultOfMethodCallIgnored
             metrics.offer(metricStoreEvent.getMetric());
         }
     }
 
     private void handleWithCache(Metric metric) {
-        ConcurrentMap<String, AtomicLong> tenantPaths = getTenantPaths(metric.getTenant());
-        AtomicLong lastSeen = tenantPaths.get(metric.getPath());
+        ConcurrentMap<String, Long> tenantPaths = getTenantPaths(metric.getTenant());
+        Long lastSeen = tenantPaths.put(metric.getPath(), System.currentTimeMillis() / 1000L);
 
         if (lastSeen == null) {
-            lastSeen = tenantPaths.putIfAbsent(metric.getPath(), new AtomicLong(System.currentTimeMillis() / 1000L));
-            if (lastSeen == null) {
-                metrics.offer(metric);
-            } else {
-                lastSeen.getAndSet(System.currentTimeMillis() / 1000L);
-            }
-        } else {
-            lastSeen.getAndSet(System.currentTimeMillis() / 1000L);
+            //noinspection ResultOfMethodCallIgnored
+            metrics.offer(metric);
         }
     }
 
@@ -121,14 +114,13 @@ public class IndexService {
         int pathsRemoved = 0;
         int pathsTotal = 0;
 
-        for(ConcurrentMap<String, AtomicLong> tenantMap : cache.values()) {
-            for(Iterator<Map.Entry<String, AtomicLong>> iterator = tenantMap.entrySet().iterator(); iterator.hasNext();) {
-                Map.Entry<String, AtomicLong> entry = iterator.next();
-                if (entry.getValue().get() < currentTimestamp - indexConfiguration.getExpire()) {
+        for (ConcurrentMap<String, Long> tenantMap : cache.values()) {
+            for (Iterator<Map.Entry<String, Long>> iterator = tenantMap.entrySet().iterator(); iterator.hasNext(); ) {
+                Map.Entry<String, Long> entry = iterator.next();
+                if (entry.getValue() < currentTimestamp - indexConfiguration.getExpire()) {
                     iterator.remove();
                     pathsRemoved++;
                 }
-
                 pathsTotal++;
             }
         }

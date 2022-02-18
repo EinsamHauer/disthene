@@ -17,7 +17,7 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * @author Andrei Ivanov
@@ -27,18 +27,18 @@ public class IndexThread extends Thread {
 
     protected volatile boolean shutdown = false;
 
-    private TransportClient client;
-    protected Queue<Metric> metrics;
-    private String index;
-    private String type;
-    private int batchSize;
-    private int flushInterval;
+    private final TransportClient client;
+    protected BlockingQueue<Metric> metrics;
+    private final String index;
+    private final String type;
+    private final int batchSize;
+    private final int flushInterval;
     private long lastFlushTimestamp = System.currentTimeMillis() / 1000L;
 
     private MetricMultiGetRequestBuilder request;
-    private BulkProcessor bulkProcessor;
+    private final BulkProcessor bulkProcessor;
 
-    public IndexThread(String name, TransportClient client, Queue<Metric> metrics, String index, String type, int batchSize, int flushInterval) {
+    public IndexThread(String name, TransportClient client, BlockingQueue<Metric> metrics, String index, String type, int batchSize, int flushInterval) {
         super(name);
         this.client = client;
         this.metrics = metrics;
@@ -76,19 +76,17 @@ public class IndexThread extends Thread {
     public void run() {
         while (!shutdown) {
             try {
-                Metric metric = metrics.poll();
-                if (metric != null) {
-                    addToBatch(metric);
-                } else {
-                    Thread.sleep(100);
-                }
+                Metric metric = metrics.take();
+                addToBatch(metric);
             } catch (Exception e) {
-                logger.error("Encountered error in busy loop: ", e);
+                if (!shutdown) logger.error("Encountered error in busy loop: ", e);
             }
         }
 
-        if (request.size() > 0) {
+        try {
             flush();
+        } catch (Exception e) {
+            logger.error("Encountered error in busy loop: ", e);
         }
     }
 
@@ -102,6 +100,8 @@ public class IndexThread extends Thread {
     }
 
     private void flush() {
+        if (request.size() <= 0) return;
+
         MultiGetResponse multiGetItemResponse = request.execute().actionGet();
 
         for(MultiGetItemResponse response : multiGetItemResponse.getResponses()) {
@@ -120,7 +120,7 @@ public class IndexThread extends Thread {
                     }
                     sb.append(parts[i]);
                     try {
-                        bulkProcessor.add(new IndexRequest(index, type, metric.getTenant() + "_" + sb.toString()).source(
+                        bulkProcessor.add(new IndexRequest(index, type, metric.getTenant() + "_" + sb).source(
                                 XContentFactory.jsonBuilder().startObject()
                                         .field("tenant", metric.getTenant())
                                         .field("path", sb.toString())
@@ -133,9 +133,7 @@ public class IndexThread extends Thread {
                     }
 
                 }
-
             }
-
         }
 
         request = new MetricMultiGetRequestBuilder(client, index, type);
@@ -145,10 +143,10 @@ public class IndexThread extends Thread {
         shutdown = true;
     }
 
-    private class MetricMultiGetRequestBuilder extends MultiGetRequestBuilder {
+    private static class MetricMultiGetRequestBuilder extends MultiGetRequestBuilder {
 
-        private String index;
-        private String type;
+        private final String index;
+        private final String type;
         Map<String, Metric> metrics = new HashMap<>();
 
 
