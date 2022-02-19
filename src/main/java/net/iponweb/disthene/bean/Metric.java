@@ -7,7 +7,7 @@ import net.iponweb.disthene.config.Rollup;
  */
 public class Metric {
 
-    private MetricKey key;
+    private final MetricKey key;
     private double value;
 
     public Metric(String input, Rollup rollup) {

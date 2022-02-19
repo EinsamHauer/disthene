@@ -27,24 +27,24 @@ public class StatsService implements StatsServiceMBean {
 
     private static final Logger logger = Logger.getLogger(StatsService.class);
 
-    private StatsConfiguration statsConfiguration;
+    private final StatsConfiguration statsConfiguration;
 
-    private MBassador<DistheneEvent> bus;
-    private Rollup rollup;
-    private AtomicLong storeSuccess = new AtomicLong(0);
-    private AtomicLong storeError = new AtomicLong(0);
-    private ConcurrentMap<String, StatsRecord> stats = new ConcurrentHashMap<>();
+    private final MBassador<DistheneEvent> bus;
+    private final Rollup rollup;
+    private final AtomicLong storeSuccess = new AtomicLong(0);
+    private final AtomicLong storeError = new AtomicLong(0);
+    private final ConcurrentMap<String, StatsRecord> stats = new ConcurrentHashMap<>();
 
     // MBean
     private long lastStoreSuccess = 0;
     private long lastStoreError = 0;
     private long lastMetricsReceived = 0;
     private long lastWriteCount = 0;
-    private Map<String, Long> lastMetricsReceivedPerTenant = new HashMap<>();
-    private Map<String, Long> lastWriteCountPerTenant = new HashMap<>();
+    private final Map<String, Long> lastMetricsReceivedPerTenant = new HashMap<>();
+    private final Map<String, Long> lastWriteCountPerTenant = new HashMap<>();
 
 
-    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
     public StatsService(MBassador<DistheneEvent> bus, StatsConfiguration statsConfiguration, Rollup rollup) {
         this.statsConfiguration = statsConfiguration;
@@ -52,13 +52,7 @@ public class StatsService implements StatsServiceMBean {
         this.rollup = rollup;
         bus.subscribe(this);
 
-        scheduler.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                flush();
-            }
-        }, 60 - ((System.currentTimeMillis() / 1000L) % 60), statsConfiguration.getInterval(), TimeUnit.SECONDS);
-
+        scheduler.scheduleAtFixedRate(this::flush, 60 - ((System.currentTimeMillis() / 1000L) % 60), statsConfiguration.getInterval(), TimeUnit.SECONDS);
     }
 
     private StatsRecord getStatsRecord(String tenant) {
@@ -74,21 +68,25 @@ public class StatsService implements StatsServiceMBean {
         return statsRecord;
     }
 
+    @SuppressWarnings("unused")
     @Handler()
     public void handle(MetricReceivedEvent metricReceivedEvent) {
         getStatsRecord(metricReceivedEvent.getMetric().getTenant()).incMetricsReceived();
     }
 
+    @SuppressWarnings("unused")
     @Handler()
     public void handle(MetricStoreEvent metricStoreEvent) {
         getStatsRecord(metricStoreEvent.getMetric().getTenant()).incMetricsWritten();
     }
 
+    @SuppressWarnings("unused")
     @Handler()
     public void handle(StoreSuccessEvent storeSuccessEvent) {
         storeSuccess.addAndGet(storeSuccessEvent.getCount());
     }
 
+    @SuppressWarnings("unused")
     @Handler()
     public void handle(StoreErrorEvent storeErrorEvent) {
         storeError.addAndGet(storeErrorEvent.getCount());
@@ -245,7 +243,7 @@ public class StatsService implements StatsServiceMBean {
         return lastWriteCountPerTenant;
     }
 
-    private class StatsRecord {
+    private static class StatsRecord {
         private AtomicLong metricsReceived = new AtomicLong(0);
         private AtomicLong metricsWritten = new AtomicLong(0);
 

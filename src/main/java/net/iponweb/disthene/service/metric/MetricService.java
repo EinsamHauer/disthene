@@ -15,8 +15,8 @@ import net.iponweb.disthene.events.MetricStoreEvent;
 @Listener(references= References.Strong)
 public class MetricService {
 
-    private MBassador<DistheneEvent> bus;
-    private BlacklistService blacklistService;
+    private final MBassador<DistheneEvent> bus;
+    private final BlacklistService blacklistService;
 
     public MetricService(MBassador<DistheneEvent> bus, BlacklistService blacklistService) {
         this.bus = bus;
@@ -24,7 +24,8 @@ public class MetricService {
         bus.subscribe(this);
     }
 
-    @Handler(rejectSubtypes = false)
+    @SuppressWarnings("unused")
+    @Handler()
     public void handle(MetricReceivedEvent metricReceivedEvent) {
         if (!blacklistService.isBlackListed(metricReceivedEvent.getMetric())) {
             bus.post(new MetricStoreEvent(metricReceivedEvent.getMetric())).now();

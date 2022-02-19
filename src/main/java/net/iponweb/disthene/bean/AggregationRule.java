@@ -9,7 +9,7 @@ public class AggregationRule {
 
     private Pattern source;
     private String destination;
-    private String prefix;
+    private final String prefix;
 
     public AggregationRule(String sourceDefinition, String destination) {
         this.destination = destination;

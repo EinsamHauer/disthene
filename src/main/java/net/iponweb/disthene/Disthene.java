@@ -5,7 +5,6 @@ import net.engio.mbassy.bus.common.Properties;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
 import net.engio.mbassy.bus.error.IPublicationErrorHandler;
-import net.engio.mbassy.bus.error.PublicationError;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
@@ -52,10 +51,10 @@ public class Disthene {
     private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
-    private String configLocation;
-    private String blacklistLocation;
-    private String whitelistLocation;
-    private String aggregationConfigLocation;
+    private final String configLocation;
+    private final String blacklistLocation;
+    private final String whitelistLocation;
+    private final String aggregationConfigLocation;
 
     private MBassador<DistheneEvent> bus;
     private BlacklistService blacklistService;
@@ -89,12 +88,7 @@ public class Disthene {
                     .addFeature(Feature.SyncPubSub.Default())
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
                     .addFeature(dispatch)
-                    .setProperty(Properties.Handler.PublicationError, new IPublicationErrorHandler() {
-                        @Override
-                        public void handleError(PublicationError error) {
-                            logger.error(error);
-                        }
-                    })
+                    .setProperty(Properties.Handler.PublicationError, (IPublicationErrorHandler) error -> logger.error(error))
             );
 
             logger.info("Loading blacklists & whitelists");
@@ -118,7 +112,7 @@ public class Disthene {
             }
 
             BlackListConfiguration blackListConfiguration = new BlackListConfiguration(blacklistRules, whitelistRules);
-            logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
+            logger.debug("Running with the following blacklist: " + blackListConfiguration);
             blacklistService = new BlacklistService(blackListConfiguration);
 
             logger.info("Creating metric service");
@@ -148,7 +142,7 @@ public class Disthene {
             @SuppressWarnings("unchecked")
             AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
             in.close();
-            logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
+            logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration);
             logger.info("Creating sum aggregator");
             sumService = new SumService(bus, distheneConfiguration, aggregationConfiguration, blacklistService);
 
@@ -241,7 +235,7 @@ public class Disthene {
 
                 blacklistService.setRules(blackListConfiguration);
 
-                logger.debug("Reloaded blacklist: " + blackListConfiguration.toString());
+                logger.debug("Reloaded blacklist: " + blackListConfiguration);
             } catch (Exception e) {
                 logger.error("Reloading blacklists failed");
                 logger.error(e);
@@ -256,7 +250,7 @@ public class Disthene {
                 in.close();
 
                 sumService.setAggregationConfiguration(aggregationConfiguration);
-                logger.debug("Reloaded aggregation rules: " + aggregationConfiguration.toString());
+                logger.debug("Reloaded aggregation rules: " + aggregationConfiguration);
             } catch (Exception e) {
                 logger.error("Reloading aggregation rules failed");
                 logger.error(e);

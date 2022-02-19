@@ -22,9 +22,9 @@ class BatchWriterThread extends WriterThread {
 
     private static final Logger logger = Logger.getLogger(BatchWriterThread.class);
 
-    private int batchSize;
+    private final int batchSize;
 
-    private List<Statement> statements = new LinkedList<>();
+    private final List<Statement> statements = new LinkedList<>();
 
     private long lastFlushTimestamp = System.currentTimeMillis();
 
@@ -74,6 +74,7 @@ class BatchWriterThread extends WriterThread {
         }
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     private void flush() {
         List<List<Statement>> batches = splitByToken();
 
@@ -120,11 +121,7 @@ class BatchWriterThread extends WriterThread {
                 hosts.add(it.next());
             }
 
-            List<Statement> tokenBatch = batches.get(hosts);
-            if (tokenBatch == null) {
-                tokenBatch = new ArrayList<>();
-                batches.put(hosts, tokenBatch);
-            }
+            List<Statement> tokenBatch = batches.computeIfAbsent(hosts, k -> new ArrayList<>());
             tokenBatch.add(statement);
         }
         return new ArrayList<>(batches.values());

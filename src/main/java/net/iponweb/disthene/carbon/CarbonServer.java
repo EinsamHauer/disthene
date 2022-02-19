@@ -13,8 +13,6 @@ import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.service.auth.TenantService;
 import org.apache.log4j.Logger;
 
-import java.util.HashSet;
-
 /**
  * @author Andrei Ivanov
  */
@@ -23,14 +21,14 @@ public class CarbonServer {
     private static final int MAX_FRAME_LENGTH = 8192 ;
     private static final Logger logger = Logger.getLogger(CarbonServer.class);
 
-    private DistheneConfiguration configuration;
+    private final DistheneConfiguration configuration;
 
-    private EventLoopGroup bossGroup = new NioEventLoopGroup();
-    private EventLoopGroup workerGroup = new NioEventLoopGroup();
+    private final EventLoopGroup bossGroup = new NioEventLoopGroup();
+    private final EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-    private MBassador<DistheneEvent> bus;
+    private final MBassador<DistheneEvent> bus;
 
-    private TenantService tenantService;
+    private final TenantService tenantService;
 
     public CarbonServer(DistheneConfiguration configuration, MBassador<DistheneEvent> bus, TenantService tenantService) {
         this.bus = bus;
@@ -45,7 +43,7 @@ public class CarbonServer {
                 .option(ChannelOption.SO_BACKLOG, 100)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
-                    public void initChannel(SocketChannel ch) throws Exception {
+                    public void initChannel(SocketChannel ch) {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(new DelimiterBasedFrameDecoder(MAX_FRAME_LENGTH, false, Delimiters.lineDelimiter()));
                         p.addLast(new CarbonServerHandler(

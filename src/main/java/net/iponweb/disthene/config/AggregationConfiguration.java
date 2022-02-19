@@ -12,12 +12,12 @@ import java.util.Map;
  */
 public class AggregationConfiguration {
 
-    private Map<String, List<AggregationRule>> rules = new HashMap<>();
+    private final Map<String, List<AggregationRule>> rules = new HashMap<>();
 
     public AggregationConfiguration(Map<String, Map<String, String>> rulesDefinition) {
         for(Map.Entry<String, Map<String, String>> entry : rulesDefinition.entrySet()) {
             if (!rules.containsKey(entry.getKey())) {
-                rules.put(entry.getKey(), new ArrayList<AggregationRule>());
+                rules.put(entry.getKey(), new ArrayList<>());
             }
 
             for(Map.Entry<String, String> def : entry.getValue().entrySet()) {

@@ -22,15 +22,13 @@ public class TablesRegistry {
     private static final String UPSERT_QUERY = "UPDATE %s.%s USING TTL ? SET data = data + ? WHERE path = ? AND time = ?;";
 
     private final Map<String, PreparedStatement> tables = new HashMap<>();
-    private Session session;
-    private StoreConfiguration storeConfiguration;
+    private final Session session;
+    private final StoreConfiguration storeConfiguration;
     private final PreparedStatement queryStatement;
 
-    private String tableTemplate;
-    private ConcurrentMap<String, String> tenants = new ConcurrentHashMap<>();
-    private Pattern normalizationPattern = Pattern.compile("[^0-9a-zA-Z_]");
-
-
+    private final String tableTemplate;
+    private final ConcurrentMap<String, String> tenants = new ConcurrentHashMap<>();
+    private final Pattern normalizationPattern = Pattern.compile("[^0-9a-zA-Z_]");
 
     public TablesRegistry(Session session, StoreConfiguration storeConfiguration) {
         this.session = session;

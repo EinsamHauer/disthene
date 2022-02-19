@@ -27,11 +27,11 @@ import java.util.concurrent.Executors;
 public class CassandraService {
     private static final Logger logger = Logger.getLogger(CassandraService.class);
 
-    private Cluster cluster;
-    private Session session;
+    private final Cluster cluster;
+    private final Session session;
 
-    private Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
-    private List<WriterThread> writerThreads = new ArrayList<>();
+    private final Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
+    private final List<WriterThread> writerThreads = new ArrayList<>();
 
     public CassandraService(StoreConfiguration storeConfiguration, MBassador<DistheneEvent> bus) {
         bus.subscribe(this);
@@ -110,7 +110,8 @@ public class CassandraService {
         }
     }
 
-    @Handler(rejectSubtypes = false)
+    @SuppressWarnings("unused")
+    @Handler()
     public void handle(MetricStoreEvent metricStoreEvent) {
         metrics.offer(metricStoreEvent.getMetric());
     }

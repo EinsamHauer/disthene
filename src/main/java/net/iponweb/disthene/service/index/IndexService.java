@@ -64,12 +64,7 @@ public class IndexService {
         indexThread.start();
 
         if (indexConfiguration.isCache()) {
-            scheduler.scheduleAtFixedRate(new Runnable() {
-                @Override
-                public void run() {
-                    expireCache();
-                }
-            }, indexConfiguration.getExpire(), indexConfiguration.getExpire(), TimeUnit.SECONDS);
+            scheduler.scheduleAtFixedRate(this::expireCache, indexConfiguration.getExpire(), indexConfiguration.getExpire(), TimeUnit.SECONDS);
         }
     }
 

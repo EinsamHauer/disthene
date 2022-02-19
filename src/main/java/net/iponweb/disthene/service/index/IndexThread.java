@@ -156,9 +156,9 @@ public class IndexThread extends Thread {
             this.type = type;
         }
 
-        public MultiGetRequestBuilder add(Metric metric) {
+        public void add(Metric metric) {
             metrics.put(metric.getId(), metric);
-            return super.add(index, type, metric.getId());
+            super.add(index, type, metric.getId());
         }
 
         public int size() {

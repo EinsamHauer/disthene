@@ -1,6 +1,5 @@
 package net.iponweb.disthene.service.store;
 
-import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;

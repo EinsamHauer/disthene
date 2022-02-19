@@ -5,7 +5,7 @@ package net.iponweb.disthene.events;
  */
 public class StoreErrorEvent implements DistheneEvent {
 
-    private int count;
+    private final int count;
 
     public StoreErrorEvent(int count) {
         this.count = count;

@@ -42,6 +42,7 @@ public class SingleWriterThread extends WriterThread {
         }
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     private void store(Metric metric) {
         PreparedStatement statement = tablesRegistry.getStatement(metric.getTenant(), metric.getRollup());
         if (statement == null) {
@@ -64,7 +65,6 @@ public class SingleWriterThread extends WriterThread {
                         bus.post(new StoreSuccessEvent(1)).now();
                     }
 
-                    @SuppressWarnings("NullableProblems")
                     @Override
                     public void onFailure(Throwable t) {
                         bus.post(new StoreErrorEvent(1)).now();
