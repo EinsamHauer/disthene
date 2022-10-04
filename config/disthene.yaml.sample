@@ -22,6 +22,7 @@ store:
   readTimeout: 10
   connectTimeout: 10
   batch: true
+  topologyAware: false
   batchSize: 500
   pool: 2
 index:

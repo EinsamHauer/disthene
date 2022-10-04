@@ -19,6 +19,7 @@ public class StoreConfiguration {
     private int maxConcurrentRequests = 1024;
     private int maxQueueSize = 1024*1024;
     private boolean batch;
+    private boolean topologyAware = false;
     private int batchSize;
     private int pool;
     private String tableTemplate = "metric_%s_%d"; //%s - tenant, %d rollup
@@ -123,6 +124,14 @@ public class StoreConfiguration {
         this.batch = batch;
     }
 
+    public boolean isTopologyAware() {
+        return topologyAware;
+    }
+
+    public void setTopologyAware(boolean topologyAware) {
+        this.topologyAware = topologyAware;
+    }
+
     public int getBatchSize() {
         return batchSize;
     }
@@ -169,6 +178,7 @@ public class StoreConfiguration {
                 ", maxConcurrentRequests=" + maxConcurrentRequests +
                 ", maxQueueSize=" + maxQueueSize +
                 ", batch=" + batch +
+                ", topologyAware=" + topologyAware +
                 ", batchSize=" + batchSize +
                 ", pool=" + pool +
                 ", tableTemplate='" + tableTemplate + '\'' +

@@ -78,9 +78,24 @@ public class CassandraService {
         TablesRegistry tablesRegistry = new TablesRegistry(session, storeConfiguration);
 
         // Creating writers
-        if (storeConfiguration.isBatch()) {
+        if (storeConfiguration.isBatch() && !storeConfiguration.isTopologyAware()) {
             for (int i = 0; i < storeConfiguration.getPool(); i++) {
                 WriterThread writerThread = new BatchWriterThread(
+                        "distheneCassandraBatchWriter" + i,
+                        bus,
+                        session,
+                        tablesRegistry,
+                        metrics,
+                        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool()),
+                        storeConfiguration.getBatchSize()
+                );
+
+                writerThreads.add(writerThread);
+                writerThread.start();
+            }
+        } else if (storeConfiguration.isBatch() && storeConfiguration.isTopologyAware()) {
+            for (int i = 0; i < storeConfiguration.getPool(); i++) {
+                WriterThread writerThread = new TopologyAwareBatchWriterThread(
                         "distheneCassandraBatchWriter" + i,
                         bus,
                         session,
