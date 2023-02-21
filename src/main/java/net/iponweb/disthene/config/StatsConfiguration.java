@@ -11,6 +11,7 @@ public class StatsConfiguration {
     private int interval;
     private String tenant;
     private String hostname;
+    private String path;
     private boolean log;
 
     public StatsConfiguration() {
@@ -19,6 +20,7 @@ public class StatsConfiguration {
         } catch (UnknownHostException e) {
             hostname = "unknown";
         }
+        path = "";
     }
 
     public int getInterval() {
@@ -27,6 +29,14 @@ public class StatsConfiguration {
 
     public void setInterval(int interval) {
         this.interval = interval;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
     }
 
     public String getTenant() {
