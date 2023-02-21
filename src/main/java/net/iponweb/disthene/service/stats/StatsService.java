@@ -130,7 +130,7 @@ public class StatsService implements StatsServiceMBean {
 
             Metric metric = new Metric(
                     statsConfiguration.getTenant(),
-                    statsConfiguration.getHostname() + ".disthene.tenants." + tenant + ".metrics_received",
+                    statsConfiguration.getPath() + statsConfiguration.getHostname() + ".disthene.tenants." + tenant + ".metrics_received",
                     rollup.getRollup(),
                     rollup.getPeriod(),
                     statsRecord.getMetricsReceived(),
@@ -141,7 +141,7 @@ public class StatsService implements StatsServiceMBean {
 
             metric = new Metric(
                     statsConfiguration.getTenant(),
-                    statsConfiguration.getHostname() + ".disthene.tenants." + tenant + ".write_count",
+                    statsConfiguration.getPath() + statsConfiguration.getHostname() + ".disthene.tenants." + tenant + ".write_count",
                     rollup.getRollup(),
                     rollup.getPeriod(),
                     statsRecord.getMetricsWritten(),
@@ -157,7 +157,7 @@ public class StatsService implements StatsServiceMBean {
 
         Metric metric = new Metric(
                 statsConfiguration.getTenant(),
-                statsConfiguration.getHostname() + ".disthene.metrics_received",
+                statsConfiguration.getPath() + statsConfiguration.getHostname() + ".disthene.metrics_received",
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 totalReceived,
@@ -168,7 +168,7 @@ public class StatsService implements StatsServiceMBean {
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
-                statsConfiguration.getHostname() + ".disthene.write_count",
+                statsConfiguration.getPath() + statsConfiguration.getHostname() + ".disthene.write_count",
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 totalWritten,
@@ -179,7 +179,7 @@ public class StatsService implements StatsServiceMBean {
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
-                statsConfiguration.getHostname() + ".disthene.store.success",
+                statsConfiguration.getPath() + statsConfiguration.getHostname() + ".disthene.store.success",
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 storeSuccess,
@@ -190,7 +190,7 @@ public class StatsService implements StatsServiceMBean {
 
         metric = new Metric(
                 statsConfiguration.getTenant(),
-                statsConfiguration.getHostname() + ".disthene.store.error",
+                statsConfiguration.getPath() + statsConfiguration.getHostname() + ".disthene.store.error",
                 rollup.getRollup(),
                 rollup.getPeriod(),
                 storeError,
