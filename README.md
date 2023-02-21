@@ -113,8 +113,10 @@ stats:
   interval: 60
 # tenant to use for stats
   tenant: "test"
-# hostname to use
+# (optional) hostname to use if not specified system's hostname will be used
   hostname: "disthene-1a"
+# (optional) path prefix for stats metrics, default to ""
+  pathPrefix: ""
 # output stats to log as well
   log: true
 ```
