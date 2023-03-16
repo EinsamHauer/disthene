@@ -52,6 +52,11 @@ to
 ```
   compression={'sstable_compression': 'DeflateCompressor'};
 ```
+or to
+```
+  compression={'sstable_compression': 'ZstdCompressor'};
+```
+
 This will probably save ~25% on disk storage and quite some IO on reads at the cost of slightly increased CPU.
 
 
