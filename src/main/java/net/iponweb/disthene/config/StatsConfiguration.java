@@ -53,7 +53,8 @@ public class StatsConfiguration {
     }
 
     public void setPathPrefix(String pathPrefix) {
-        this.pathPrefix = pathPrefix;
+        // remove right-trailing dot
+        this.pathPrefix = pathPrefix.endsWith(".") ? pathPrefix.replaceAll("\\.+\\z", "") : pathPrefix;
     }
 
     public boolean isLog() {
@@ -62,6 +63,14 @@ public class StatsConfiguration {
 
     public void setLog(boolean log) {
         this.log = log;
+    }
+
+    public String getPath() {
+        if (pathPrefix.isEmpty()) {
+            return hostname;
+        } else {
+            return pathPrefix + "." + hostname;
+        }
     }
 
     @Override
