@@ -40,4 +40,5 @@ stats:
   interval: 60
   tenant: "test"
   hostname: "disthene-1a"
+  pathPrefix: ""
   log: true
