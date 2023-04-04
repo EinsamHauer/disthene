@@ -1,7 +1,6 @@
 package net.iponweb.disthene.service.index;
 
 import net.iponweb.disthene.bean.Metric;
-import org.apache.log4j.Logger;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -13,6 +12,8 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -23,7 +24,7 @@ import java.util.Queue;
  * @author Andrei Ivanov
  */
 public class IndexThread extends Thread {
-    private Logger logger = Logger.getLogger(IndexThread.class);
+    private static final Logger logger = LogManager.getLogger(IndexThread.class);
 
     protected volatile boolean shutdown = false;
 

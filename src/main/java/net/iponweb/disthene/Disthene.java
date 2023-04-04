@@ -1,12 +1,8 @@
 package net.iponweb.disthene;
 
-import com.datastax.driver.core.policies.LatencyAwarePolicy;
 import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.bus.common.Properties;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
-import net.engio.mbassy.bus.error.IPublicationErrorHandler;
-import net.engio.mbassy.bus.error.PublicationError;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
@@ -44,16 +40,14 @@ import java.util.Map;
 public class Disthene {
     private static Logger logger;
 
-    public static Feature.AsynchronousMessageDispatch dispatch;
-
     private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yaml";
     private static final String DEFAULT_BLACKLIST_LOCATION = "/etc/disthene/blacklist.yaml";
     private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
-    private String configLocation;
-    private String blacklistLocation;
-    private String aggregationConfigLocation;
+    private final String configLocation;
+    private final String blacklistLocation;
+    private final String aggregationConfigLocation;
 
     private MBassador<DistheneEvent> bus;
     private BlacklistService blacklistService;
@@ -80,18 +74,12 @@ public class Disthene {
             in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
-            dispatch = Feature.AsynchronousMessageDispatch.Default();
             logger.info("Creating dispatcher");
             bus = new MBassador<>(new BusConfiguration()
                     .addFeature(Feature.SyncPubSub.Default())
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
-                    .addFeature(dispatch)
-                    .setProperty(Properties.Handler.PublicationError, new IPublicationErrorHandler() {
-                        @Override
-                        public void handleError(PublicationError error) {
-                            logger.error(error);
-                        }
-                    })
+                    .addFeature(Feature.AsynchronousMessageDispatch.Default())
+                    .addPublicationErrorHandler(error -> logger.error(error))
             );
 
             logger.info("Loading blacklists");
@@ -102,7 +90,7 @@ public class Disthene {
             blacklistService = new BlacklistService(blackListConfiguration);
 
             logger.info("Creating metric service");
-            metricService = new MetricService(bus, blacklistService, distheneConfiguration);
+            metricService = new MetricService(bus, blacklistService);
 
             logger.info("Creating base rollup aggregator");
             aggregateService = new AggregateService(bus, distheneConfiguration);

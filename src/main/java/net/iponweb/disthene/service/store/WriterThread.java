@@ -1,6 +1,6 @@
 package net.iponweb.disthene.service.store;
 
-import com.datastax.driver.core.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.datastax.oss.driver.api.core.CqlSession;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;

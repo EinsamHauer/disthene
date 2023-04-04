@@ -30,11 +30,6 @@ public class SingleWriterThread extends WriterThread {
             while (!shutdown) {
                 Metric metric = metrics.take();
                 store(metric);
-            } else {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ignored) {
-                }
             }
         } catch (InterruptedException e) {
             if (!shutdown) logger.error("Thread interrupted", e);

@@ -87,7 +87,7 @@ public class CassandraService {
                         "distheneCassandraBatchWriter" + i,
                         bus,
                         session,
-                        statement,
+                        query,
                         metrics,
                         MoreExecutors.listeningDecorator(Executors.newCachedThreadPool()),
                         storeConfiguration.getBatchSize()
@@ -102,7 +102,7 @@ public class CassandraService {
                         "distheneCassandraSingleWriter" + i,
                         bus,
                         session,
-                        statement,
+                        query,
                         metrics,
                         MoreExecutors.listeningDecorator(Executors.newCachedThreadPool())
                 );
@@ -123,33 +123,13 @@ public class CassandraService {
         metrics.offer(metricStoreEvent.getMetric());
     }
 
-    public void shutdown() {
-        for (WriterThread writerThread : writerThreads) {
-            writerThread.shutdown();
-        }
-
-        logger.info("Closing C* session");
-        logger.info("Waiting for C* queries to be completed");
-        while (getInFlightQueries(session.getState()) > 0) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ignored) {
-            }
-        }
-        session.close();
-        logger.info("Closing C* cluster");
-        cluster.close();
-    }
-
-    private int getInFlightQueries(Session.State state) {
-        int result = 0;
-        Collection<Host> hosts = state.getConnectedHosts();
-        for(Host host : hosts) {
-            result += state.getInFlightQueries(host);
-        }
-
-        return result;
-    }
+    public void shutdown() {                                                                                               
+        for (WriterThread writerThread : writerThreads) {                                                                  
+            writerThread.shutdown();                                                                                       
+        }                                                                                                                  
+                                                                                                                           
+        logger.info("Closing C* session");                                                                                 
+        session.close();                                                                                                   
+        logger.info("C* session closed");                                                                                  
+    }  
 }
-
-
