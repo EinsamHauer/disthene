@@ -5,7 +5,7 @@ package net.iponweb.disthene.events;
  */
 public class StoreSuccessEvent implements DistheneEvent{
 
-    private int count;
+    private final int count;
 
     public StoreSuccessEvent(int count) {
         this.count = count;

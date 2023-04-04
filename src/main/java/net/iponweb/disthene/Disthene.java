@@ -21,7 +21,8 @@ import net.iponweb.disthene.service.metric.MetricService;
 import net.iponweb.disthene.service.stats.StatsService;
 import net.iponweb.disthene.service.store.CassandraService;
 import org.apache.commons.cli.*;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
@@ -139,9 +140,17 @@ public class Disthene {
             carbonServer.run();
 
             // adding signal handlers
-            Signal.handle(new Signal("HUP"), new SighupSignalHandler());
+            try {
+                Signal.handle(new Signal("HUP"), new SighupSignalHandler());
+            } catch (IllegalArgumentException e) {
+                logger.warn("HUP signal is not available. Will not handle it");
+            }
 
-            Signal.handle(new Signal("TERM"), new SigtermSignalHandler());
+            try {
+                Signal.handle(new Signal("TERM"), new SigtermSignalHandler());
+            } catch (IllegalArgumentException e) {
+                logger.warn("TERM signal is not available. Will not handle it");
+            }
         } catch (IOException e) {
             logger.error(e);
         } catch (InterruptedException e) {
@@ -160,8 +169,8 @@ public class Disthene {
 
         try {
             CommandLine commandLine = parser.parse(options, args);
-            System.getProperties().setProperty("log4j.configuration", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
-            logger = Logger.getLogger(Disthene.class);
+            System.getProperties().setProperty("log4j.configurationFile", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
+            logger = LogManager.getLogger(Disthene.class);
 
             new Disthene(commandLine.getOptionValue("c", DEFAULT_CONFIG_LOCATION),
                     commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION),
@@ -172,8 +181,12 @@ public class Disthene {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("Disthene", options);
         } catch (Exception e) {
-            System.out.println("Start failed");
-            e.printStackTrace();
+            if (logger != null) {
+                logger.fatal("Start failed", e);
+            } else {
+                System.out.println("Start failed");
+                e.printStackTrace();
+            }
         }
 
     }
