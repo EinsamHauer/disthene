@@ -13,7 +13,6 @@ public class CarbonConfiguration {
     private List<Rollup> rollups = new ArrayList<>();
     private Rollup baseRollup;
     private int aggregatorDelay;
-    private boolean aggregateBaseRollup;
 
     public String getBind() {
         return bind;
@@ -39,14 +38,6 @@ public class CarbonConfiguration {
         this.aggregatorDelay = aggregatorDelay;
     }
 
-    public boolean getAggregateBaseRollup() {
-        return aggregateBaseRollup;
-    }
-
-    public void setAggregateBaseRollup(boolean aggregateBaseRollup) {
-        this.aggregateBaseRollup = aggregateBaseRollup;
-    }
-
     public List<Rollup> getRollups() {
         return rollups;
     }
@@ -68,7 +59,6 @@ public class CarbonConfiguration {
                 ", rollups=" + rollups +
                 ", baseRollup=" + baseRollup +
                 ", aggregatorDelay=" + aggregatorDelay +
-                ", aggregateBaseRollup=" + aggregateBaseRollup +
                 '}';
     }
 }

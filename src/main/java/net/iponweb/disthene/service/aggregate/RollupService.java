@@ -13,7 +13,8 @@ import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -33,12 +34,12 @@ public class RollupService {
     private static final int RATE = 60;
     private volatile boolean shuttingDown = false;
 
-    private Logger logger = Logger.getLogger(RollupService.class);
+    private static final Logger logger = LogManager.getLogger(RollupService.class);
 
-    private MBassador<DistheneEvent> bus;
-    private DistheneConfiguration distheneConfiguration;
+    private final MBassador<DistheneEvent> bus;
+    private final DistheneConfiguration distheneConfiguration;
     private Rollup maxRollup;
-    private List<Rollup> rollups;
+    private final List<Rollup> rollups;
 
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
@@ -98,7 +99,7 @@ public class RollupService {
     }
 
     private void aggregate(Metric metric) {
-        for(Rollup rollup : rollups) {
+        for (Rollup rollup : rollups) {
             long timestamp = getRollupTimestamp(metric.getTimestamp(), rollup);
             ConcurrentMap<MetricKey, AverageRecord> timestampMap = getTimestampMap(timestamp);
             MetricKey destinationMetricKey = new MetricKey(

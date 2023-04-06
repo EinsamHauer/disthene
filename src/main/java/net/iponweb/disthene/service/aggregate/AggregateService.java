@@ -14,7 +14,8 @@ import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricAggregateEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -34,7 +35,7 @@ public class AggregateService {
     private static final int RATE = 10;
     private volatile boolean shuttingDown = false;
 
-    private Logger logger = Logger.getLogger(AggregateService.class);
+    private static final Logger logger = LogManager.getLogger(AggregateService.class);
 
     private MBassador<DistheneEvent> bus;
     private DistheneConfiguration distheneConfiguration;
