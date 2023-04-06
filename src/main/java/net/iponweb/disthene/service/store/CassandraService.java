@@ -94,7 +94,7 @@ public class CassandraService {
 
                 writerThreads.add(writerThread);
                 writerThread.start();
-        else if (storeConfiguration.isBatch()) {
+        } else if (storeConfiguration.isBatch()) {
             for (int i = 0; i < storeConfiguration.getPool(); i++) {
                 WriterThread writerThread = new BatchWriterThread(
                         "distheneCassandraBatchWriter" + i,
