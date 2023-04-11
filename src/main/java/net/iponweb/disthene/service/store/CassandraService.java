@@ -81,15 +81,14 @@ public class CassandraService {
         }
 
         // Creating writers
-        if (storeConfiguration.getBatch() < 0) {
+        if (storeConfiguration.getBatchSize() < 0) {
                 NullWriterThread writerThread = new NullWriterThread(
-                        "distheneCassandraBatchWriter" + i,
+                        "distheneNullWriter",
                         bus,
                         session,
                         query,
                         metrics,
-                        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool()),
-                        storeConfiguration.getBatchSize()
+                        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool())
                 );
 
                 writerThreads.add(writerThread);

@@ -20,7 +20,7 @@ import java.util.concurrent.Executor;
 public class NullWriterThread extends WriterThread {
     private static final Logger logger = LogManager.getLogger(SingleWriterThread.class);
 
-    public SingleWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, String query, BlockingQueue<Metric> metrics, Executor executor) {
+    public NullWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, String query, BlockingQueue<Metric> metrics, Executor executor) {
         super(name, bus, session, query, metrics, executor);
     }
 
