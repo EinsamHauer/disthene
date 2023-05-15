@@ -135,13 +135,13 @@ public class CassandraService {
         metrics.offer(metricStoreEvent.getMetric());
     }
 
-    public void shutdown() {                                                                                               
-        for (WriterThread writerThread : writerThreads) {                                                                  
-            writerThread.shutdown();                                                                                       
-        }                                                                                                                  
-                                                                                                                           
-        logger.info("Closing C* session");                                                                                 
-        session.close();                                                                                                   
-        logger.info("C* session closed");                                                                                  
-    }  
+    public void shutdown() {
+        for (WriterThread writerThread : writerThreads) {
+            writerThread.shutdown();
+        }
+
+        logger.info("Closing C* session");
+        session.close();
+        logger.info("C* session closed");
+    }
 }

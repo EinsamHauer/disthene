@@ -9,12 +9,14 @@ import net.iponweb.disthene.config.IndexConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.client.opensearch.OpenSearchClient;
+import org.opensearch.client.transport.aws.AwsSdk2Transport;
+import org.opensearch.client.transport.aws.AwsSdk2TransportOptions;
+import software.amazon.awssdk.http.SdkHttpClient;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.regions.Region;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -25,21 +27,19 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * @author Andrei Ivanov
  */
-@Listener(references= References.Strong)
+@Listener(references = References.Strong)
 public class IndexService {
     private static final String SCHEDULER_NAME = "distheneIndexCacheExpire";
 
     private static final Logger logger = LogManager.getLogger(IndexService.class);
 
-    private IndexConfiguration indexConfiguration;
-    private TransportClient client;
-    private IndexThread indexThread;
-
+    private final IndexConfiguration indexConfiguration;
+    private final IndexThread indexThread;
+    private final Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
+    private final OpenSearchClient client;
     // tenant -> path -> dummy
     private ConcurrentMap<String, ConcurrentMap<String, AtomicLong>> cache = new ConcurrentHashMap<>();
-    private Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
-
-    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
 
     public IndexService(IndexConfiguration indexConfiguration, MBassador<DistheneEvent> bus) {
@@ -47,13 +47,17 @@ public class IndexService {
 
         bus.subscribe(this);
 
-        Settings settings = ImmutableSettings.settingsBuilder()
-                .put("cluster.name", indexConfiguration.getName())
-                .build();
-        client = new TransportClient(settings);
-        for (String node : indexConfiguration.getCluster()) {
-            client.addTransportAddress(new InetSocketTransportAddress(node, indexConfiguration.getPort()));
-        }
+        String host = indexConfiguration.getCluster().get(0);
+        SdkHttpClient httpClient = ApacheHttpClient.builder().build();
+        client = new OpenSearchClient(
+                new AwsSdk2Transport(
+                        httpClient,
+                        host, // OpenSearch endpoint, without https://
+                        "es",
+                        Region.EU_CENTRAL_1,
+                        AwsSdk2TransportOptions.builder().build()
+                )
+        );
 
         indexThread = new IndexThread(
                 "distheneIndexThread",
@@ -122,8 +126,8 @@ public class IndexService {
         int pathsRemoved = 0;
         int pathsTotal = 0;
 
-        for(ConcurrentMap<String, AtomicLong> tenantMap : cache.values()) {
-            for(Iterator<Map.Entry<String, AtomicLong>> iterator = tenantMap.entrySet().iterator(); iterator.hasNext();) {
+        for (ConcurrentMap<String, AtomicLong> tenantMap : cache.values()) {
+            for (Iterator<Map.Entry<String, AtomicLong>> iterator = tenantMap.entrySet().iterator(); iterator.hasNext(); ) {
                 Map.Entry<String, AtomicLong> entry = iterator.next();
                 if (entry.getValue().get() < currentTimestamp - indexConfiguration.getExpire()) {
                     iterator.remove();
@@ -150,6 +154,6 @@ public class IndexService {
         } catch (InterruptedException ignored) {
         }
         logger.info("Closing ES client");
-        client.close();
+        //client.close();
     }
 }
