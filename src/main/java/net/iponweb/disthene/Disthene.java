@@ -1,8 +1,12 @@
 package net.iponweb.disthene;
 
+import com.datastax.driver.core.policies.LatencyAwarePolicy;
 import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.bus.common.Properties;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
+import net.engio.mbassy.bus.error.IPublicationErrorHandler;
+import net.engio.mbassy.bus.error.PublicationError;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
@@ -17,8 +21,7 @@ import net.iponweb.disthene.service.metric.MetricService;
 import net.iponweb.disthene.service.stats.StatsService;
 import net.iponweb.disthene.service.store.CassandraService;
 import org.apache.commons.cli.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
@@ -40,14 +43,16 @@ import java.util.Map;
 public class Disthene {
     private static Logger logger;
 
+    public static Feature.AsynchronousMessageDispatch dispatch;
+
     private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yaml";
     private static final String DEFAULT_BLACKLIST_LOCATION = "/etc/disthene/blacklist.yaml";
     private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
-    private final String configLocation;
-    private final String blacklistLocation;
-    private final String aggregationConfigLocation;
+    private String configLocation;
+    private String blacklistLocation;
+    private String aggregationConfigLocation;
 
     private MBassador<DistheneEvent> bus;
     private BlacklistService blacklistService;
@@ -74,12 +79,18 @@ public class Disthene {
             in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
+            dispatch = Feature.AsynchronousMessageDispatch.Default();
             logger.info("Creating dispatcher");
             bus = new MBassador<>(new BusConfiguration()
                     .addFeature(Feature.SyncPubSub.Default())
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
-                    .addFeature(Feature.AsynchronousMessageDispatch.Default())
-                    .addPublicationErrorHandler(error -> logger.error(error))
+                    .addFeature(dispatch)
+                    .setProperty(Properties.Handler.PublicationError, new IPublicationErrorHandler() {
+                        @Override
+                        public void handleError(PublicationError error) {
+                            logger.error(error);
+                        }
+                    })
             );
 
             logger.info("Loading blacklists");
@@ -90,7 +101,7 @@ public class Disthene {
             blacklistService = new BlacklistService(blackListConfiguration);
 
             logger.info("Creating metric service");
-            metricService = new MetricService(bus, blacklistService);
+            metricService = new MetricService(bus, blacklistService, distheneConfiguration);
 
             logger.info("Creating base rollup aggregator");
             aggregateService = new AggregateService(bus, distheneConfiguration);
@@ -128,17 +139,9 @@ public class Disthene {
             carbonServer.run();
 
             // adding signal handlers
-            try {
-                Signal.handle(new Signal("HUP"), new SighupSignalHandler());
-            } catch (IllegalArgumentException e) {
-                logger.warn("HUP signal is not available. Will not handle it");
-            }
+            Signal.handle(new Signal("HUP"), new SighupSignalHandler());
 
-            try {
-                Signal.handle(new Signal("TERM"), new SigtermSignalHandler());
-            } catch (IllegalArgumentException e) {
-                logger.warn("TERM signal is not available. Will not handle it");
-            }
+            Signal.handle(new Signal("TERM"), new SigtermSignalHandler());
         } catch (IOException e) {
             logger.error(e);
         } catch (InterruptedException e) {
@@ -157,8 +160,8 @@ public class Disthene {
 
         try {
             CommandLine commandLine = parser.parse(options, args);
-            System.getProperties().setProperty("log4j.configurationFile", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
-            logger = LogManager.getLogger(Disthene.class);
+            System.getProperties().setProperty("log4j.configuration", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
+            logger = Logger.getLogger(Disthene.class);
 
             new Disthene(commandLine.getOptionValue("c", DEFAULT_CONFIG_LOCATION),
                     commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION),
@@ -169,12 +172,8 @@ public class Disthene {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("Disthene", options);
         } catch (Exception e) {
-            if (logger != null) {
-                logger.fatal("Start failed", e);
-            } else {
-                System.out.println("Start failed");
-                e.printStackTrace();
-            }
+            System.out.println("Start failed");
+            e.printStackTrace();
         }
 
     }

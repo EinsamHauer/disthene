@@ -1,12 +1,12 @@
 package net.iponweb.disthene.config;
 
+import net.iponweb.disthene.util.CassandraLoadBalancingPolicies;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author Andrei Ivanov
  */
-@SuppressWarnings("unused")
 public class StoreConfiguration {
     private List<String> cluster = new ArrayList<>();
     private String keyspace;
@@ -17,12 +17,12 @@ public class StoreConfiguration {
     private int maxConnections;
     private int readTimeout;
     private int connectTimeout;
-    private int maxConcurrentRequests = 1024;
-    private int maxQueueSize = 1024*1024;
+    private int maxRequests;
     private boolean batch;
-    private boolean topologyAware = false;
     private int batchSize;
     private int pool;
+    private String loadBalancingPolicyName = CassandraLoadBalancingPolicies.tokenDcAwareRoundRobinPolicy;
+    private String protocolVersion = "V2";
 
     public String getUserName() {
         return userName;
@@ -88,20 +88,12 @@ public class StoreConfiguration {
         this.connectTimeout = connectTimeout;
     }
 
-    public int getMaxConcurrentRequests() {
-        return maxConcurrentRequests;
+    public int getMaxRequests() {
+        return maxRequests;
     }
 
-    public void setMaxConcurrentRequests(int maxConcurrentRequests) {
-        this.maxConcurrentRequests = maxConcurrentRequests;
-    }
-
-    public int getMaxQueueSize() {
-        return maxQueueSize;
-    }
-
-    public void setMaxQueueSize(int maxQueueSize) {
-        this.maxQueueSize = maxQueueSize;
+    public void setMaxRequests(int maxRequests) {
+        this.maxRequests = maxRequests;
     }
 
     public boolean isBatch() {
@@ -110,14 +102,6 @@ public class StoreConfiguration {
 
     public void setBatch(boolean batch) {
         this.batch = batch;
-    }
-
-    public boolean isTopologyAware() {
-        return topologyAware;
-    }
-
-    public void setTopologyAware(boolean topologyAware) {
-        this.topologyAware = topologyAware;
     }
 
     public int getBatchSize() {
@@ -144,6 +128,22 @@ public class StoreConfiguration {
         this.columnFamily = columnFamily;
     }
 
+    public String getLoadBalancingPolicyName() {
+        return loadBalancingPolicyName;
+    }
+
+    public void setLoadBalancingPolicyName(String policy) {
+        this.loadBalancingPolicyName = policy;
+    }
+
+    public String getProtocolVersion() {
+        return protocolVersion;
+    }
+
+    public void setProtocolVersion(String protocolVersion) {
+        this.protocolVersion = protocolVersion;
+    }
+
     @Override
     public String toString() {
         return "StoreConfiguration{" +
@@ -156,12 +156,12 @@ public class StoreConfiguration {
                 ", maxConnections=" + maxConnections +
                 ", readTimeout=" + readTimeout +
                 ", connectTimeout=" + connectTimeout +
-                ", maxConcurrentRequests=" + maxConcurrentRequests +
-                ", maxQueueSize=" + maxQueueSize +
+                ", maxRequests=" + maxRequests +
                 ", batch=" + batch +
-                ", topologyAware=" + topologyAware +
                 ", batchSize=" + batchSize +
                 ", pool=" + pool +
+                ", loadBalancingPolicyName='" + loadBalancingPolicyName + '\'' +
+                ", protocolVersion='" + protocolVersion + '\'' +
                 '}';
     }
 }

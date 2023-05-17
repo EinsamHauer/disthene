@@ -1,14 +1,13 @@
 package net.iponweb.disthene.service.store;
 
-import com.datastax.oss.driver.api.core.cql.PreparedStatement;
-import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.Session;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.events.DistheneEvent;
 
-import java.util.concurrent.BlockingQueue;
+import java.util.Queue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Andrei Ivanov
@@ -17,28 +16,24 @@ public abstract class WriterThread extends Thread {
 
     protected volatile boolean shutdown = false;
 
-    protected final MBassador<DistheneEvent> bus;
-    protected final CqlSession session;
+    protected MBassador<DistheneEvent> bus;
+    protected Session session;
+    protected PreparedStatement statement;
 
-    protected String query;
+    protected Queue<Metric> metrics;
 
-    protected final BlockingQueue<Metric> metrics;
+    protected Executor executor;
 
-    protected final Executor executor;
-
-    protected final AtomicInteger requestsInFlight = new AtomicInteger(0);
-
-    public WriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, String query, BlockingQueue<Metric> metrics, Executor executor) {
+    public WriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor) {
         super(name);
         this.bus = bus;
         this.session = session;
-        this.query = query;
+        this.statement = statement;
         this.metrics = metrics;
         this.executor = executor;
     }
 
     public void shutdown() {
         shutdown = true;
-        this.interrupt();
     }
 }

@@ -3,28 +3,32 @@ carbon:
   port: 2003
   rollups:
     - 60s:5356800s
+    - 900s:62208000s
   aggregatorDelay: 90
+  aggregateBaseRollup: false
 store:
   cluster:
-    - "localhost"
+    - "cassandra-1"
+    - "cassandra-2"
   port: 9042
-  userName: user
-  userPassword: pass
-  keyspace: metric
-  columnFamily: metrics
+  userName: 'username'
+  userPassword: 'password'
+  keyspace: 'metric'
+  columnFamily: 'metric'
   maxConnections: 2048
-  maxConcurrentRequests: 1024
-  maxQueueSize: 1000000
   readTimeout: 10
   connectTimeout: 10
+  maxRequests: 128
   batch: true
-  topologyAware: false
   batchSize: 500
   pool: 2
+  loadBalancingPolicyName: 'TokenDcAwareRoundRobinPolicy'
+  protocolVersion: "V2"
 index:
   name: "disthene"
   cluster:
-    - localhost
+    - "es-1"
+    - "es-2"
   port: 9300
   index: "disthene"
   type: "path"
@@ -35,6 +39,6 @@ index:
     interval: 5
 stats:
   interval: 60
-  tenant: "NONE"
-  pathPrefix: "" 
+  tenant: "test"
+  hostname: "disthene-1a"
   log: true

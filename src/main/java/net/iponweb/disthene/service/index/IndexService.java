@@ -9,8 +9,7 @@ import net.iponweb.disthene.config.IndexConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricStoreEvent;
 import net.iponweb.disthene.util.NamedThreadFactory;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.log4j.Logger;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.transport.aws.AwsSdk2Transport;
 import org.opensearch.client.transport.aws.AwsSdk2TransportOptions;
@@ -31,15 +30,17 @@ import java.util.concurrent.atomic.AtomicLong;
 public class IndexService {
     private static final String SCHEDULER_NAME = "distheneIndexCacheExpire";
 
-    private static final Logger logger = LogManager.getLogger(IndexService.class);
+    private Logger logger = Logger.getLogger(IndexService.class);
 
-    private final IndexConfiguration indexConfiguration;
-    private final IndexThread indexThread;
-    private final Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
-    private final OpenSearchClient client;
+    private IndexConfiguration indexConfiguration;
+    private IndexThread indexThread;
+    private OpenSearchClient client;
+    private SdkHttpClient httpClient;
     // tenant -> path -> dummy
     private ConcurrentMap<String, ConcurrentMap<String, AtomicLong>> cache = new ConcurrentHashMap<>();
+    private Queue<Metric> metrics = new ConcurrentLinkedQueue<>();
+
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new NamedThreadFactory(SCHEDULER_NAME));
 
 
     public IndexService(IndexConfiguration indexConfiguration, MBassador<DistheneEvent> bus) {
@@ -48,7 +49,7 @@ public class IndexService {
         bus.subscribe(this);
 
         String host = indexConfiguration.getCluster().get(0);
-        SdkHttpClient httpClient = ApacheHttpClient.builder().build();
+        httpClient = ApacheHttpClient.builder().build();
         client = new OpenSearchClient(
                 new AwsSdk2Transport(
                         httpClient,
@@ -154,6 +155,6 @@ public class IndexService {
         } catch (InterruptedException ignored) {
         }
         logger.info("Closing ES client");
-        //client.close();
+        httpClient.close();
     }
 }

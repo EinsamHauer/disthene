@@ -1,22 +1,16 @@
 package net.iponweb.disthene.service.store;
 
-import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.cql.BatchStatement;
-import com.datastax.oss.driver.api.core.cql.BatchType;
-import com.datastax.oss.driver.api.core.cql.BatchableStatement;
-import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.driver.core.*;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import net.engio.mbassy.bus.MBassador;
 import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.StoreErrorEvent;
 import net.iponweb.disthene.events.StoreSuccessEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.log4j.Logger;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
+import java.util.*;
 import java.util.concurrent.Executor;
 
 /**
@@ -26,44 +20,47 @@ class BatchWriterThread extends WriterThread {
     //todo: interval via config?
     private static final long INTERVAL = 60_000;
 
-    private static final Logger logger = LogManager.getLogger(BatchWriterThread.class);
+    private Logger logger = Logger.getLogger(BatchWriterThread.class);
 
-    private final int batchSize;
+    private int batchSize;
 
-    private final List<BatchableStatement<?>> statements = new LinkedList<>();
+    private List<Statement> statements = new LinkedList<>();
 
     private long lastFlushTimestamp = System.currentTimeMillis();
 
-    BatchWriterThread(String name, MBassador<DistheneEvent> bus, CqlSession session, String query, BlockingQueue<Metric> metrics, Executor executor, int batchSize) {
-        super(name, bus, session, query, metrics, executor);
+    BatchWriterThread(String name, MBassador<DistheneEvent> bus, Session session, PreparedStatement statement, Queue<Metric> metrics, Executor executor, int batchSize) {
+        super(name, bus, session, statement, metrics, executor);
         this.batchSize = batchSize;
     }
 
     @Override
     public void run() {
-        try {
-            while (!shutdown) {
-                Metric metric = metrics.take();
+        while (!shutdown) {
+            Metric metric = metrics.poll();
+            if (metric != null) {
                 addToBatch(metric);
+            } else {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {
+                }
             }
+        }
 
-            if (statements.size() > 0) {
-                flush();
-            }
-        } catch (InterruptedException e) {
-            if (!shutdown) logger.error("Thread interrupted", e);
-            this.interrupt();
+        if (statements.size() > 0) {
+            flush();
         }
     }
 
     private void addToBatch(Metric metric) {
-        PreparedStatement statement = session.prepare(query);
-        statements.add(
-                statement.bind(
-                        metric.getRollup() * metric.getPeriod(),
-                        Collections.singletonList(metric.getValue()),
-                        metric.getPath(),
-                        metric.getTimestamp()
+        statements.add(statement.bind(
+                            metric.getRollup() * metric.getPeriod(),
+                            Collections.singletonList(metric.getValue()),
+                            metric.getTenant(),
+                            metric.getRollup(),
+                            metric.getPeriod(),
+                            metric.getPath(),
+                            metric.getTimestamp()
                 )
         );
 
@@ -73,42 +70,60 @@ class BatchWriterThread extends WriterThread {
         }
     }
 
-    private synchronized void flush() {
-        BatchStatement batch = BatchStatement.newInstance(BatchType.UNLOGGED, statements);
+    private void flush() {
+        List<List<Statement>> batches = splitByToken();
 
-        requestsInFlight.incrementAndGet();
-        session
-                .executeAsync(batch)
-                .whenComplete((version, error) -> {
-                    requestsInFlight.decrementAndGet();
-                    if (error != null) {
-                        bus.post(new StoreErrorEvent(statements.size())).now();
-                        logger.error(error);
-                    } else {
-                        bus.post(new StoreSuccessEvent(statements.size())).now();
-                    }
-                });
+        for (List<Statement> batchStatements : batches) {
+            BatchStatement batch = new BatchStatement(BatchStatement.Type.UNLOGGED);
+            final int batchSize = batchStatements.size();
 
-        statements.clear();
-    }
-
-    @Override
-    public void shutdown() {
-        shutdown = true;
-
-        logger.info("Flushing leftovers");
-        flush();
-
-        while (requestsInFlight.get() > 0) {
-            logger.info("Requests in flight: " + requestsInFlight.get());
-            try {
-                //noinspection BusyWait
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                logger.error("Wait interrupted", e);
+            for (Statement s : batchStatements) {
+                batch.add(s);
             }
+
+            ResultSetFuture future = session.executeAsync(batch);
+            Futures.addCallback(future,
+                    new FutureCallback<ResultSet>() {
+                        @Override
+                        public void onSuccess(ResultSet result) {
+                            bus.post(new StoreSuccessEvent(batchSize)).now();
+                        }
+
+                        @Override
+                        public void onFailure(Throwable t) {
+                            bus.post(new StoreErrorEvent(batchSize)).now();
+                            logger.error(t);
+                        }
+                    },
+                    executor
+            );
         }
 
-        this.interrupt();
+        statements.clear();
+
     }
+
+    private List<List<Statement>> splitByToken() {
+        Map<Set<Host>,List<Statement>> batches = new HashMap<>();
+        for (Statement statement : statements) {
+            Set<Host> hosts = new HashSet<>();
+
+            Iterator<Host> it = session.getCluster().getConfiguration().getPolicies().
+                    getLoadBalancingPolicy().newQueryPlan(statement.getKeyspace(), statement);
+
+            // We are using TokenAwarePolicy without shuffling. Let's group by primary replica only then
+            if (it.hasNext()) {
+                hosts.add(it.next());
+            }
+
+            List<Statement> tokenBatch = batches.get(hosts);
+            if (tokenBatch == null) {
+                tokenBatch = new ArrayList<>();
+                batches.put(hosts, tokenBatch);
+            }
+            tokenBatch.add(statement);
+        }
+        return new ArrayList<>(batches.values());
+    }
+
 }

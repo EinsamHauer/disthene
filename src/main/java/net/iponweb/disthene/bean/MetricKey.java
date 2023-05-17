@@ -4,11 +4,11 @@ package net.iponweb.disthene.bean;
  * @author Andrei Ivanov
  */
 public class MetricKey {
-    private final String tenant;
-    private final String path;
-    private final int rollup;
-    private final int period;
-    private final long timestamp;
+    private String tenant;
+    private String path;
+    private int rollup;
+    private int period;
+    private long timestamp;
 
     public MetricKey(String tenant, String path, int rollup, int period, long timestamp) {
         this.tenant = tenant;

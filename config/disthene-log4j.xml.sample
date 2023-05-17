@@ -1,22 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration>
-    <Appenders>
-        <Console name="console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d %-5p [%t] %C{2} (%F:%L) - %m%n"/>
-        </Console>
-    </Appenders>
-    <Loggers>
+<!DOCTYPE log4j:configuration PUBLIC "-//APACHE//DTD LOG4J 1.2//EN" "C:\Work\Various\Vaadin\my\occ\src\main\resources\log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
 
-        <Logger name="io.netty" level="info"/>
+    <!-- Appenders -->
+    <appender name="console" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%p %d{dd.MM.yyyy HH:mm:ss,SSS} [%t] %c %x - %m%n"/>
+        </layout>
+    </appender>
 
-        <Logger name="org.elasticsearch" level="info"/>
+    <appender name="FILE" class="org.apache.log4j.RollingFileAppender">
 
-        <Logger name="net.iponweb.disthene" level="debug"/>
+        <param name="file" value="/var/log/disthene/disthene.log"/>
+        <param name="maxFileSize" value="20MB"/>
+        <param name="maxBackupIndex" value="50"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%p %d{dd.MM.yyyy HH:mm:ss,SSS} [%t] %c %x - %m%n"/>
+        </layout>
+    </appender>
 
-        <Logger name="com.datastax.oss" level="warn"/>
+    <logger name="io.netty">
+        <level value="info"/>
+    </logger>
 
-        <Root level="info">
-            <AppenderRef ref="console"/>
-        </Root>
-    </Loggers>
-</Configuration>
+    <logger name="net.iponweb.disthene">
+        <level value="debug"/>
+    </logger>
+
+    <logger name="org.elasticsearch">
+        <level value="info"/>
+    </logger>
+
+    <!-- Root Logger -->
+    <root>
+        <priority value="info"/>
+        <appender-ref ref="console"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</log4j:configuration>

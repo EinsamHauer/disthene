@@ -1,8 +1,7 @@
 package net.iponweb.disthene.service.index;
 
 import net.iponweb.disthene.bean.Metric;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.log4j.Logger;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.Refresh;
 import org.opensearch.client.opensearch.core.BulkRequest;
@@ -16,17 +15,20 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.TreeMap;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * @author Andrei Ivanov
  */
 public class IndexThread extends Thread {
-    private static final Logger logger = LogManager.getLogger(IndexThread.class);
-    private final OpenSearchClient client;
-    private final String index;
-    private final String type;
-    private final int batchSize;
-    private final int flushInterval;
+    private Logger logger = Logger.getLogger(IndexThread.class);
+    private OpenSearchClient client;
+    private String index;
+    private String type;
+    private int batchSize;
+    private int flushInterval;
     protected volatile boolean shutdown = false;
     protected Queue<Metric> metrics;
     ArrayList<Metric> requests = new ArrayList<Metric>();
@@ -85,8 +87,9 @@ public class IndexThread extends Thread {
                 record.put("path", path);
                 record.put("depth", i + 1);
                 record.put("leaf", (i == parts.length - 1));
+
                 ops.add(new BulkOperation.Builder().index(
-                        IndexOperation.of(io -> io.index(index).id(path).document(record))
+                        IndexOperation.of(io -> io.index(index).id(hashPath(path)).document(record))
                 ).build());
             }
 
@@ -104,6 +107,19 @@ public class IndexThread extends Thread {
             logger.error(e);
         }
         requests = new ArrayList<Metric>();
+    }
+
+    private String hashPath(String path) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] messageDigest = md.digest(path.getBytes());
+            BigInteger signum = new BigInteger(1, messageDigest);
+            String hash = signum.toString(16);
+            return hash;
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("MD5: ", e);
+            return "ERR";
+        }
     }
 
     public void shutdown() {
