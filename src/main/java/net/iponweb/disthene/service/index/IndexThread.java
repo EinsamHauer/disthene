@@ -86,6 +86,7 @@ public class IndexThread extends Thread {
                 final Map<String, Object> record = new TreeMap<>();
                 record.put("path", path);
                 record.put("depth", i + 1);
+                record.put("tenant", m.getTenant());
                 record.put("leaf", (i == parts.length - 1));
 
                 ops.add(new BulkOperation.Builder().index(
