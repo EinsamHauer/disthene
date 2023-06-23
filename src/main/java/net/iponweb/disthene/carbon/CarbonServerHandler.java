@@ -10,41 +10,78 @@ import net.iponweb.disthene.bean.Metric;
 import net.iponweb.disthene.config.Rollup;
 import net.iponweb.disthene.events.DistheneEvent;
 import net.iponweb.disthene.events.MetricReceivedEvent;
-import org.apache.log4j.Logger;
+import net.iponweb.disthene.service.auth.TenantService;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.net.InetSocketAddress;
 
 /**
  * @author Andrei Ivanov
  */
 public class CarbonServerHandler extends ChannelInboundHandlerAdapter {
-    private Logger logger = Logger.getLogger(CarbonServerHandler.class);
 
-    private MBassador<DistheneEvent> bus;
-    private Rollup rollup;
+    private static final Logger logger = LogManager.getLogger(CarbonServerHandler.class);
 
-    public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup) {
+    private static final CharMatcher PRINTABLE_WITHOUT_SPACE = CharMatcher.inRange('\u0021', '\u007e');
+
+    private final MBassador<DistheneEvent> bus;
+    private final Rollup rollup;
+    private final TenantService tenantService;
+
+    public CarbonServerHandler(MBassador<DistheneEvent> bus, Rollup rollup, TenantService tenantService) {
         this.bus = bus;
         this.rollup = rollup;
+        this.tenantService = tenantService;
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         ByteBuf in = (ByteBuf) msg;
 
         try {
             final Metric metric = new Metric(in.toString(CharsetUtil.UTF_8).trim(), rollup);
-            if ((System.currentTimeMillis() / 1000L) - metric.getTimestamp() > 3600) {
-                logger.warn("Metric is from distant past (older than 1 hour): " + metric);
+            long metricAge = (System.currentTimeMillis() / 1000L) - metric.getTimestamp();
+
+            boolean isValid = true;
+
+            if (metricAge > 3600) {
+                if (metricAge > 7200) {
+                    logger.warn("Metric is from distant past (older than 2 hours). Discarding metric: " + metric);
+                } else {
+                    logger.warn("Metric is from distant past (older than 1 hour): " + metric);
+                }
             }
 
-            if (CharMatcher.ASCII.matchesAllOf(metric.getPath()) && CharMatcher.ASCII.matchesAllOf(metric.getTenant())) {
+            if (!tenantService.isTenantAllowed(metric.getTenant())) {
+                isValid = false;
+                logger.warn("Unauthorized tenant: " + metric.getTenant() + ". Discarding metric: " + metric);
+            }
+
+            if (!PRINTABLE_WITHOUT_SPACE.matchesAllOf(metric.getPath())) {
+                isValid = false;
+                logger.warn("Non printable characters in metric, discarding: " + metric + " (" + Hex.encodeHexString(metric.getPath().getBytes()) + ")");
+            }
+
+            if (isValid) {
                 bus.post(new MetricReceivedEvent(metric)).now();
-            } else {
-                logger.warn("Non ASCII characters received, discarding: " + metric);
             }
         } catch (Exception e) {
             logger.trace(e);
         }
 
         in.release();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        ctx.channel().close();
+
+        if (cause instanceof java.io.IOException) {
+            logger.trace("Exception caught in carbon handler (connection from " + ((InetSocketAddress)ctx.channel().remoteAddress()).getAddress().getHostAddress() + ")", cause);
+        } else {
+            logger.error("Exception caught in carbon handler", cause);
+        }
     }
 }

@@ -2,6 +2,7 @@ package net.iponweb.disthene.config;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author Andrei Ivanov
@@ -13,7 +14,8 @@ public class CarbonConfiguration {
     private List<Rollup> rollups = new ArrayList<>();
     private Rollup baseRollup;
     private int aggregatorDelay;
-    private boolean aggregateBaseRollup;
+    private List<String> authorizedTenants = new ArrayList<>();
+    private boolean allowAll = true;
 
     public String getBind() {
         return bind;
@@ -39,14 +41,6 @@ public class CarbonConfiguration {
         this.aggregatorDelay = aggregatorDelay;
     }
 
-    public boolean getAggregateBaseRollup() {
-        return aggregateBaseRollup;
-    }
-
-    public void setAggregateBaseRollup(boolean aggregateBaseRollup) {
-        this.aggregateBaseRollup = aggregateBaseRollup;
-    }
-
     public List<Rollup> getRollups() {
         return rollups;
     }
@@ -60,6 +54,22 @@ public class CarbonConfiguration {
         return baseRollup;
     }
 
+    public List<String> getAuthorizedTenants() {
+        return authorizedTenants;
+    }
+
+    public void setAuthorizedTenants(List<String> authorizedTenants) {
+        this.authorizedTenants = Objects.requireNonNullElseGet(authorizedTenants, ArrayList::new);
+    }
+
+    public boolean isAllowAll() {
+        return allowAll;
+    }
+
+    public void setAllowAll(boolean allowAll) {
+        this.allowAll = allowAll;
+    }
+
     @Override
     public String toString() {
         return "CarbonConfiguration{" +
@@ -68,7 +78,8 @@ public class CarbonConfiguration {
                 ", rollups=" + rollups +
                 ", baseRollup=" + baseRollup +
                 ", aggregatorDelay=" + aggregatorDelay +
-                ", aggregateBaseRollup=" + aggregateBaseRollup +
+                ", authorizedTenants=" + authorizedTenants +
+                ", allowAll=" + allowAll +
                 '}';
     }
 }

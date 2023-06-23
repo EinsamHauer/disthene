@@ -12,7 +12,7 @@ There are a couple of things which seem to be an absolute must and which were mi
 * aggregation: ability to sum similar metrics from several servers
 * blacklisting: ability to omit storing metrics which match a certain pattern. Makes not much sense by itself but is quite handy when you have previous item
 * caching incoming paths: this may really reduce the load on Elasticsearch cluster
-* some minimal set of own metrics (received count, write count, etc)
+* some minimal set of own metrics (received count, write count, etc.)
 * true multitenancy
 
 The other thing is performance. **Disthene** is being developed with one major requirement in mind - performance. 
@@ -34,49 +34,15 @@ will most probably do the trick.
 
 ## Running
 
-First of all, it's strongly recommended to run it with Java 8. Even though this software is fully compatible with Java 7. 
-The main reason for that is a bug in Java ([JDK-7032154](http://bugs.java.com/view_bug.do?bug_id=7032154)) prior to version 8
-Moreover, it's strongly recommended to have some GC tuning. For a start here is a set of some universal options:
-* -XX:+UseConcMarkSweepGC
-* -XX:+CMSParallelRemarkEnabled
-* -XX:+UseCMSInitiatingOccupancyOnly
-* -XX:CMSInitiatingOccupancyFraction=75
-* -XX:+ScavengeBeforeFullGC
-* -XX:+CMSScavengeBeforeRemark
+Disthene is intended to be compiled and run with Java 11.
  
 There are a couple of things you will need in runtime, just the same set as for **cyanite**
 
-* Cassandra
-* Elasticsearch
+* Cassandra (tested with 4.0)
+* Elasticsearch (tested with 7.13.4)
 
-Cassandra schema is identical to that of **cyanite**:
-
-```
-CREATE TABLE metric (
-  period int,
-  rollup int,
-  tenant text,
-  path text,
-  time bigint,
-  data list<double>,
-  PRIMARY KEY ((tenant, period, rollup, path), time)
-) WITH
-  bloom_filter_fp_chance=0.010000 AND
-  caching='KEYS_ONLY' AND
-  comment='' AND
-  dclocal_read_repair_chance=0.000000 AND
-  gc_grace_seconds=864000 AND
-  index_interval=128 AND
-  read_repair_chance=0.100000 AND
-  replicate_on_write='true' AND
-  populate_io_cache_on_flush='false' AND
-  default_time_to_live=0 AND
-  speculative_retry='NONE' AND
-  memtable_flush_period_in_ms=0 AND
-  compaction={'class': 'SizeTieredCompactionStrategy'} AND
-  compression={'sstable_compression': 'LZ4Compressor'};
-
-```
+Disthene will automatically create C* tables for each tenant and rollup. Keyspace is configured in disthene.yaml. 
+Also, table options can be modified using tableCreateTemplate configuration option.
 
 Your mileage may vary but generally (as graphite like systems are closer to write only/read never type) one would benefit from changing
 ```
@@ -86,6 +52,11 @@ to
 ```
   compression={'sstable_compression': 'DeflateCompressor'};
 ```
+or to
+```
+  compression={'sstable_compression': 'ZstdCompressor'};
+```
+
 This will probably save ~25% on disk storage and quite some IO on reads at the cost of slightly increased CPU.
 
 
@@ -94,6 +65,7 @@ There several configuration files involved
 * /etc/disthene/disthene.yaml (location can be changed with -c command line option if needed)
 * /etc/disthene/disthene-log4j.xml (location can be changed with -l command line option if needed)
 * /etc/disthene/blacklist.yaml (location can be changed with -b command line option if needed)
+* /etc/disthene/whitelist.yaml (location can be changed with -w command line option if needed)
 * /etc/disthene/aggregator.yaml (location can be changed with -a command line option if needed)
 
 ##### Main configuration in disthene.yaml
@@ -117,7 +89,6 @@ store:
     - "cassandra-2"
   port: 9042
   keyspace: 'metric'
-  columnFamily: 'metric'
 # maximum connections per host , timeouts in seconds, max requests per host - these are literally used in C* java driver settings
   maxConnections: 2048
   readTimeout: 10
@@ -130,14 +101,12 @@ store:
 # number of threads submitting requests to C*  
   pool: 2
 index:
-# ES cluster name, contact points, native port, index name & type
-  name: "disthene"
+# ES contact points, native port, index name & type
   cluster:
     - "es-1"
     - "es-2"
   port: 9300
   index: "disthene"
-  type: "path"
 # cache paths on disthene side?
   cache: true
 # if cached is used, expire it after seconds below. That is, if we haven't seen metric name on 'expire' seconds - remove it from cache
@@ -151,8 +120,10 @@ stats:
   interval: 60
 # tenant to use for stats
   tenant: "test"
-# hostname to use
+# (optional) hostname to use if not specified system's hostname will be used
   hostname: "disthene-1a"
+# (optional) path prefix for stats metrics, default to ""
+  pathPrefix: ""
 # output stats to log as well
   log: true
 ```
@@ -161,7 +132,10 @@ stats:
 Configuration is straight forward as per log4j
 
 ##### Blacklist configuration in blacklist.yaml
-This is a list of regular expressions per tenant. Matching metrics will NOT be store but they still WILL be aggregated (see below)
+This is a list of regular expressions per tenant. Matching metrics will NOT be store, but they still WILL be aggregated (see below)
+
+##### Whitelist configuration in whitelist.yaml
+This is a list of regular expressions per tenant. Matching metrics will override blacklist rules.
 
 ##### Aggregation configuration in aggregator.yaml
 List of aggregation rules per tenant. By exmaple:
@@ -180,7 +154,7 @@ this project is useless without their work on **cyanite**, **graphite-api**, **g
 
 The MIT License (MIT)
 
-Copyright (C) 2015 Andrei Ivanov
+Copyright (C) 2021 Andrei Ivanov
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

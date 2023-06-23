@@ -6,7 +6,15 @@ carbon:
     - <%= rollup %>
 <% end -%>
   aggregatorDelay: <%= @carbon_aggregator_delay %>
-  aggregateBaseRollup: <%= @carbon_aggregate_base_rollup %>
+<%if @carbon_authorized_tenants.empty? -%>
+  authorizedTenants: []
+<%else -%>
+  authorizedTenants:
+<% @carbon_authorized_tenants.each do |tenant| -%>
+    - "<%= tenant %>"
+<% end -%>
+<% end -%>
+  allowAll: <%= @carbon_allow_all %>
 store:
   cluster:
 <% @store_cluster.each do |node| -%>
@@ -14,7 +22,6 @@ store:
 <% end -%>
   port: <%= @store_port %>
   keyspace: "<%= @store_keyspace %>"
-  columnFamily: "<%= @store_column_family %>"
   maxConnections: <%= @store_max_connections %>
   readTimeout: <%= @store_read_timeout %>
   connectTimeout: <%= @store_connect_timeout %>
@@ -22,6 +29,8 @@ store:
   batch: <%= @store_batch %>
   batchSize: <%= @store_batch_size %>
   pool: <%= @store_pool %>
+  tableTemplate: "<%= @store_table_template %>"
+  tableCreateTemplate: "<%= @store_table_create_template %>"
 index:
   name: "<%= @index_name %>"
   cluster:
@@ -30,7 +39,6 @@ index:
 <% end -%>
   port: <%= @index_port %>
   index: "<%= @index_index %>"
-  type: "<%= @index_type %>"
   cache: <%= @index_cache %>
   expire: <%= @index_expire %>
   bulk:

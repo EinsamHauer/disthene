@@ -11,6 +11,7 @@ public class StatsConfiguration {
     private int interval;
     private String tenant;
     private String hostname;
+    private String pathPrefix;
     private boolean log;
 
     public StatsConfiguration() {
@@ -19,11 +20,13 @@ public class StatsConfiguration {
         } catch (UnknownHostException e) {
             hostname = "unknown";
         }
+        pathPrefix = "";
     }
 
     public int getInterval() {
         return interval;
     }
+
 
     public void setInterval(int interval) {
         this.interval = interval;
@@ -45,6 +48,15 @@ public class StatsConfiguration {
         this.hostname = hostname;
     }
 
+    public String getPathPrefix() {
+        return pathPrefix;
+    }
+
+    public void setPathPrefix(String pathPrefix) {
+        // remove right-trailing dot
+        this.pathPrefix = pathPrefix.endsWith(".") ? pathPrefix.replaceAll("\\.+\\z", "") : pathPrefix;
+    }
+
     public boolean isLog() {
         return log;
     }
@@ -53,12 +65,21 @@ public class StatsConfiguration {
         this.log = log;
     }
 
+    public String getPath() {
+        if (pathPrefix.isEmpty()) {
+            return hostname;
+        } else {
+            return pathPrefix + "." + hostname;
+        }
+    }
+
     @Override
     public String toString() {
         return "StatsConfiguration{" +
                 "interval=" + interval +
                 ", tenant='" + tenant + '\'' +
                 ", hostname='" + hostname + '\'' +
+                ", pathPrefix='" + pathPrefix + '\'' +
                 ", log=" + log +
                 '}';
     }

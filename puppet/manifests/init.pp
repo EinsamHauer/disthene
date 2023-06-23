@@ -10,11 +10,12 @@ class disthene (
   $carbon_port = '2003',
   $carbon_rollups = ['60s:5356800s','900s:62208000s'],
   $carbon_aggregator_delay = '100',
+  $carbon_authorized_tenants = [],
+  $carbon_allow_all = 'true',
 
   $store_cluster = [$::ipaddress],
   $store_port = '9042',
   $store_keyspace = 'metric',
-  $store_column_family = 'metric',
   $store_max_connections = '2048',
   $store_read_timeout = '5',
   $store_connect_timeout = '5',
@@ -22,12 +23,26 @@ class disthene (
   $store_batch = 'true',
   $store_batch_size = '200',
   $store_pool = '2',
+  $store_table_template = "metric_%s_%d",
+  $store_table_create_template = "CREATE TABLE IF NOT EXISTS %s.%s (
+  path text,
+  time bigint,
+  data list<double>,
+  PRIMARY KEY ((path), time)
+) WITH CLUSTERING ORDER BY (time ASC)
+  AND bloom_filter_fp_chance = 0.01
+  AND caching = 'KEYS_ONLY'
+  AND compaction = {'min_threshold': '2', 'unchecked_tombstone_compaction': 'true', 'tombstone_compaction_interval': '86400', 'min_sstable_size': '104857600', 'tombstone_threshold': '0.1', 'bucket_low': '0.5', 'bucket_high': '1.5', 'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy'}
+  AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'}
+  AND dclocal_read_repair_chance = 0.1
+  AND default_time_to_live = 0
+  AND gc_grace_seconds = 43200
+  AND read_repair_chance = 0.1;",
 
   $index_name = 'disthene',
   $index_cluster = [$::ipaddress],
-  $index_port = 9300,
+  $index_port = 9200,
   $index_index = 'disthene_paths',
-  $index_type = 'path',
   $index_cache = 'true',
   $index_expire = '3600',
   $index_bulk_actions = '10000',
@@ -40,6 +55,7 @@ class disthene (
 
   $custom_aggregator_config = false,
   $custom_blacklist_config = false,
+  $custom_whitelist_config = false,
   $custom_log_config = false,
 )
 {
@@ -55,6 +71,13 @@ class disthene (
   }
   else {
     $disthene_blacklist_config = 'puppet:///modules/disthene/blacklist.yaml'
+  }
+
+  if $custom_whitelist_config {
+    $disthene_whitelist_config = 'puppet:///modules/config/whitelist.yaml'
+  }
+  else {
+    $disthene_whitelist_config = 'puppet:///modules/disthene/whitelist.yaml'
   }
 
   if $custom_log_config {
@@ -87,6 +110,14 @@ class disthene (
     notify  => Service['disthene'],
   }
 
+  file { 'disthene_whitelist_config':
+    ensure  => present,
+    path    => '/etc/disthene/whitelist.yaml',
+    source  => $disthene_whitelist_config,
+    require => Package['disthene'],
+    notify  => Service['disthene'],
+  }
+
   file { 'disthene_log_config':
     ensure  => present,
     path    => '/etc/disthene/disthene-log4j.xml',
@@ -107,7 +138,7 @@ class disthene (
   service { 'disthene':
     ensure     => running,
     hasrestart => true,
-    restart    => '/etc/init.d/disthene reload',
+    restart    => '/bin/systemctl reload disthene.service',
     require    => [Package['disthene'],
       File['disthene_config'],
     #Sysctl['net.core.somaxconn']

@@ -7,7 +7,7 @@ import net.iponweb.disthene.bean.Metric;
  */
 public abstract class AbstractMetricEvent implements DistheneEvent {
 
-    private Metric metric;
+    private final Metric metric;
 
     public AbstractMetricEvent(Metric metric) {
         this.metric = metric;

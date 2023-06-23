@@ -14,17 +14,30 @@ import java.util.regex.Pattern;
  * @author Andrei Ivanov
  */
 public class BlacklistService {
-
-    private Map<String, Pattern> rules = new HashMap<>();
+    private Map<String, Pattern> blackListRules = new HashMap<>();
+    private Map<String, Pattern> whiteListRules = new HashMap<>();
 
     public BlacklistService(BlackListConfiguration blackListConfiguration) {
-        for(Map.Entry<String, List<String>> entry : blackListConfiguration.getRules().entrySet()) {
-            rules.put(entry.getKey(), Pattern.compile(Joiner.on("|").skipNulls().join(entry.getValue())));
+        for(Map.Entry<String, List<String>> entry : blackListConfiguration.getBlackListRules().entrySet()) {
+            blackListRules.put(entry.getKey(), Pattern.compile(Joiner.on("|").skipNulls().join(entry.getValue())));
+        }
+        for(Map.Entry<String, List<String>> entry : blackListConfiguration.getWhiteListRules().entrySet()) {
+            whiteListRules.put(entry.getKey(), Pattern.compile(Joiner.on("|").skipNulls().join(entry.getValue())));
         }
     }
 
     public boolean isBlackListed(Metric metric) {
-        Pattern pattern = rules.get(metric.getTenant());
+        Pattern pattern = blackListRules.get(metric.getTenant());
+        if (pattern != null) {
+            Matcher matcher = pattern.matcher(metric.getPath());
+            return matcher.matches() && !isWhiteListed(metric);
+        } else {
+            return false;
+        }
+    }
+
+    public boolean isWhiteListed(Metric metric) {
+        Pattern pattern = whiteListRules.get(metric.getTenant());
         if (pattern != null) {
             Matcher matcher = pattern.matcher(metric.getPath());
             return matcher.matches();
@@ -34,12 +47,21 @@ public class BlacklistService {
     }
 
     public void setRules(BlackListConfiguration blackListConfiguration) {
-        Map<String, Pattern> rules = new HashMap<>();
+        Map<String, Pattern> blackListRules = new HashMap<>();
 
-        for(Map.Entry<String, List<String>> entry : blackListConfiguration.getRules().entrySet()) {
-            rules.put(entry.getKey(), Pattern.compile(Joiner.on("|").skipNulls().join(entry.getValue())));
+        for(Map.Entry<String, List<String>> entry : blackListConfiguration.getBlackListRules().entrySet()) {
+            blackListRules.put(entry.getKey(), Pattern.compile(Joiner.on("|").skipNulls().join(entry.getValue())));
         }
 
-        this.rules = rules;
+        this.blackListRules = blackListRules;
+
+        Map<String, Pattern> whiteListRules = new HashMap<>();
+
+        for(Map.Entry<String, List<String>> entry : blackListConfiguration.getWhiteListRules().entrySet()) {
+            whiteListRules.put(entry.getKey(), Pattern.compile(Joiner.on("|").skipNulls().join(entry.getValue())));
+        }
+
+        this.whiteListRules = whiteListRules;
+
     }
 }

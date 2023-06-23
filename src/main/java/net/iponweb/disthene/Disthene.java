@@ -1,39 +1,38 @@
 package net.iponweb.disthene;
 
-import com.datastax.driver.core.policies.LatencyAwarePolicy;
 import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.bus.common.Properties;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
-import net.engio.mbassy.bus.error.IPublicationErrorHandler;
-import net.engio.mbassy.bus.error.PublicationError;
 import net.iponweb.disthene.carbon.CarbonServer;
 import net.iponweb.disthene.config.AggregationConfiguration;
 import net.iponweb.disthene.config.BlackListConfiguration;
 import net.iponweb.disthene.config.DistheneConfiguration;
 import net.iponweb.disthene.events.DistheneEvent;
-import net.iponweb.disthene.service.aggregate.AggregateService;
 import net.iponweb.disthene.service.aggregate.RollupService;
 import net.iponweb.disthene.service.aggregate.SumService;
+import net.iponweb.disthene.service.auth.TenantService;
 import net.iponweb.disthene.service.blacklist.BlacklistService;
 import net.iponweb.disthene.service.index.IndexService;
 import net.iponweb.disthene.service.metric.MetricService;
 import net.iponweb.disthene.service.stats.StatsService;
 import net.iponweb.disthene.service.store.CassandraService;
 import org.apache.commons.cli.*;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
-import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -43,31 +42,31 @@ import java.util.Map;
 public class Disthene {
     private static Logger logger;
 
-    public static Feature.AsynchronousMessageDispatch dispatch;
-
     private static final String DEFAULT_CONFIG_LOCATION = "/etc/disthene/disthene.yaml";
     private static final String DEFAULT_BLACKLIST_LOCATION = "/etc/disthene/blacklist.yaml";
+    private static final String DEFAULT_WHITELIST_LOCATION = "/etc/disthene/whitelist.yaml";
     private static final String DEFAULT_AGGREGATION_CONFIG_LOCATION = "/etc/disthene/aggregator.yaml";
     private static final String DEFAULT_LOG_CONFIG_LOCATION = "/etc/disthene/disthene-log4j.xml";
 
-    private String configLocation;
-    private String blacklistLocation;
-    private String aggregationConfigLocation;
+    private final String configLocation;
+    private final String blacklistLocation;
+    private final String whitelistLocation;
+    private final String aggregationConfigLocation;
 
     private MBassador<DistheneEvent> bus;
     private BlacklistService blacklistService;
-    private MetricService metricService;
-    private AggregateService aggregateService;
     private StatsService statsService;
     private IndexService indexService;
     private CassandraService cassandraService;
     private SumService sumService;
     private RollupService rollupService;
+    private TenantService tenantService;
     private CarbonServer carbonServer;
 
-    public Disthene(String configLocation, String blacklistLocation, String aggregationConfigLocation) {
+    public Disthene(String configLocation, String blacklistLocation, String whitelistLocation, String aggregationConfigLocation) {
         this.configLocation = configLocation;
         this.blacklistLocation = blacklistLocation;
+        this.whitelistLocation = whitelistLocation;
         this.aggregationConfigLocation = aggregationConfigLocation;
     }
 
@@ -79,32 +78,39 @@ public class Disthene {
             in.close();
             logger.info("Running with the following config: " + distheneConfiguration.toString());
 
-            dispatch = Feature.AsynchronousMessageDispatch.Default();
             logger.info("Creating dispatcher");
             bus = new MBassador<>(new BusConfiguration()
                     .addFeature(Feature.SyncPubSub.Default())
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
-                    .addFeature(dispatch)
-                    .setProperty(Properties.Handler.PublicationError, new IPublicationErrorHandler() {
-                        @Override
-                        public void handleError(PublicationError error) {
-                            logger.error(error);
-                        }
-                    })
+                    .addFeature(Feature.AsynchronousMessageDispatch.Default())
+                    .addPublicationErrorHandler(error -> logger.error(error))
             );
 
-            logger.info("Loading blacklists");
-            in = Files.newInputStream(Paths.get(blacklistLocation));
-            BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
-            in.close();
-            logger.debug("Running with the following blacklist: " + blackListConfiguration.toString());
+            logger.info("Loading blacklists & whitelists");
+            Map<String, List<String>> blacklistRules = Collections.emptyMap();
+            Map<String, List<String>> whitelistRules = Collections.emptyMap();
+
+            if (new File(blacklistLocation).exists()) {
+                in = Files.newInputStream(Paths.get(blacklistLocation));
+                Map<String, List<String>> map = yaml.load(in);
+                if (map != null) blacklistRules = map;
+                in.close();
+            }
+
+            if (new File(whitelistLocation).exists()) {
+                in = Files.newInputStream(Paths.get(whitelistLocation));
+                Map<String, List<String>> map = yaml.load(in);
+                if (map != null) whitelistRules = map;
+                in.close();
+            }
+
+            BlackListConfiguration blackListConfiguration = new BlackListConfiguration(blacklistRules, whitelistRules);
+            logger.debug("Running with the following blacklist: " + blackListConfiguration);
             blacklistService = new BlacklistService(blackListConfiguration);
 
             logger.info("Creating metric service");
-            metricService = new MetricService(bus, blacklistService, distheneConfiguration);
-
-            logger.info("Creating base rollup aggregator");
-            aggregateService = new AggregateService(bus, distheneConfiguration);
+            @SuppressWarnings("unused")
+            MetricService metricService = new MetricService(bus, blacklistService);
 
             logger.info("Creating stats");
             statsService = new StatsService(bus, distheneConfiguration.getStats(), distheneConfiguration.getCarbon().getBaseRollup());
@@ -125,23 +131,34 @@ public class Disthene {
 
             logger.info("Loading aggregation rules");
             in = Files.newInputStream(Paths.get(aggregationConfigLocation));
-            AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
+            AggregationConfiguration aggregationConfiguration = new AggregationConfiguration(yaml.load(in));
             in.close();
-            logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration.toString());
+            logger.debug("Running with the following aggregation rule set: " + aggregationConfiguration);
             logger.info("Creating sum aggregator");
             sumService = new SumService(bus, distheneConfiguration, aggregationConfiguration, blacklistService);
 
             logger.info("Creating rollup aggregator");
             rollupService = new RollupService(bus, distheneConfiguration, distheneConfiguration.getCarbon().getRollups());
 
+            logger.info("Creating tenant authentication service");
+            tenantService = new TenantService(new HashSet<>(distheneConfiguration.getCarbon().getAuthorizedTenants()), distheneConfiguration.getCarbon().isAllowAll());
+
             logger.info("Starting carbon");
-            carbonServer = new CarbonServer(distheneConfiguration, bus);
+            carbonServer = new CarbonServer(distheneConfiguration, bus, tenantService);
             carbonServer.run();
 
             // adding signal handlers
-            Signal.handle(new Signal("HUP"), new SighupSignalHandler());
+            try {
+                Signal.handle(new Signal("HUP"), new SighupSignalHandler());
+            } catch (IllegalArgumentException e) {
+                logger.warn("HUP signal is not available. Will not handle it");
+            }
 
-            Signal.handle(new Signal("TERM"), new SigtermSignalHandler());
+            try {
+                Signal.handle(new Signal("TERM"), new SigtermSignalHandler());
+            } catch (IllegalArgumentException e) {
+                logger.warn("TERM signal is not available. Will not handle it");
+            }
         } catch (IOException e) {
             logger.error(e);
         } catch (InterruptedException e) {
@@ -149,22 +166,24 @@ public class Disthene {
         }
     }
 
-    public static void main(String[] args) throws MalformedURLException {
+    public static void main(String[] args) {
         Options options = new Options();
         options.addOption("c", "config", true, "config location");
         options.addOption("l", "log-config", true, "log config location");
         options.addOption("b", "blacklist", true, "blacklist location");
+        options.addOption("w", "whitelist", true, "whitelist location");
         options.addOption("a", "agg-config", true, "aggregation config location");
 
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
 
         try {
             CommandLine commandLine = parser.parse(options, args);
-            System.getProperties().setProperty("log4j.configuration", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
-            logger = Logger.getLogger(Disthene.class);
+            System.getProperties().setProperty("log4j.configurationFile", "file:" + commandLine.getOptionValue("l", DEFAULT_LOG_CONFIG_LOCATION));
+            logger = LogManager.getLogger(Disthene.class);
 
             new Disthene(commandLine.getOptionValue("c", DEFAULT_CONFIG_LOCATION),
                     commandLine.getOptionValue("b", DEFAULT_BLACKLIST_LOCATION),
+                    commandLine.getOptionValue("w", DEFAULT_WHITELIST_LOCATION),
                     commandLine.getOptionValue("a", DEFAULT_AGGREGATION_CONFIG_LOCATION)
             ).run();
 
@@ -172,8 +191,12 @@ public class Disthene {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("Disthene", options);
         } catch (Exception e) {
-            System.out.println("Start failed");
-            e.printStackTrace();
+            if (logger != null) {
+                logger.fatal("Start failed", e);
+            } else {
+                System.out.println("Start failed");
+                e.printStackTrace();
+            }
         }
 
     }
@@ -187,13 +210,30 @@ public class Disthene {
             logger.info("Reloading blacklists");
             try {
                 Yaml yaml = new Yaml();
+
+                Map<String, List<String>> blacklistRules = Collections.emptyMap();
+                Map<String, List<String>> whitelistRules = Collections.emptyMap();
+
+                if (new File(blacklistLocation).exists()) {
+                    InputStream in = Files.newInputStream(Paths.get(blacklistLocation));
+                    Map<String, List<String>> map = yaml.load(in);
+                    if (map != null) blacklistRules = map;
+                    in.close();
+                }
+
+                if (new File(whitelistLocation).exists()) {
+                    InputStream in = Files.newInputStream(Paths.get(whitelistLocation));
+                    Map<String, List<String>> map = yaml.load(in);
+                    if (map != null) whitelistRules = map;
+                    in.close();
+                }
                 InputStream in = Files.newInputStream(Paths.get(blacklistLocation));
-                BlackListConfiguration blackListConfiguration = new BlackListConfiguration((Map<String, List<String>>) yaml.load(in));
+                BlackListConfiguration blackListConfiguration = new BlackListConfiguration(blacklistRules, whitelistRules);
                 in.close();
 
                 blacklistService.setRules(blackListConfiguration);
 
-                logger.debug("Reloaded blacklist: " + blackListConfiguration.toString());
+                logger.debug("Reloaded blacklist: " + blackListConfiguration);
             } catch (Exception e) {
                 logger.error("Reloading blacklists failed");
                 logger.error(e);
@@ -203,13 +243,29 @@ public class Disthene {
             try {
                 Yaml yaml = new Yaml();
                 InputStream in = Files.newInputStream(Paths.get(aggregationConfigLocation));
-                AggregationConfiguration aggregationConfiguration = new AggregationConfiguration((Map<String, Map<String, String>>) yaml.load(in));
+                AggregationConfiguration aggregationConfiguration = new AggregationConfiguration(yaml.load(in));
                 in.close();
 
                 sumService.setAggregationConfiguration(aggregationConfiguration);
-                logger.debug("Reloaded aggregation rules: " + aggregationConfiguration.toString());
+                logger.debug("Reloaded aggregation rules: " + aggregationConfiguration);
             } catch (Exception e) {
                 logger.error("Reloading aggregation rules failed");
+                logger.error(e);
+            }
+
+            logger.info("Reloading allowed tenants");
+            try {
+                Yaml yaml = new Yaml();
+                InputStream in = Files.newInputStream(Paths.get(configLocation));
+                DistheneConfiguration distheneConfiguration = yaml.loadAs(in, DistheneConfiguration.class);
+                in.close();
+
+                tenantService.setRules(new HashSet<>(distheneConfiguration.getCarbon().getAuthorizedTenants()), distheneConfiguration.getCarbon().isAllowAll());
+                logger.debug("Reloaded allowed tenants: {allowAll="
+                        + distheneConfiguration.getCarbon().isAllowAll()
+                        + ", tenants=" + distheneConfiguration.getCarbon().getAuthorizedTenants());
+            } catch (Exception e) {
+                logger.error("Reloading allowed tenants failed");
                 logger.error(e);
             }
 
@@ -225,12 +281,9 @@ public class Disthene {
             logger.info("Shutting down carbon server");
             carbonServer.shutdown();
 
-            // We will probably loose some last stats here. But leaving it to run will complicate things
+            // We will probably lose some last stats here. But leaving it to run will complicate things
             logger.info("Shutting down stats service");
             statsService.shutdown();
-
-	    logger.info("Shutting down base rollup aggregator");
-            aggregateService.shutdown();
 
             logger.info("Shutting down sum aggregator");
             sumService.shutdown();
